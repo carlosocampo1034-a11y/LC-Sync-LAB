@@ -20,7 +20,7 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:padding="10dp"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:src="@drawable/ic_arrow_back"
             android:contentDescription="Atrás" />
 
         <TextView
@@ -848,18 +848,35 @@
                 android:visibility="gone" />
 
             <!-- FIRMA CLIENTE — Fase 49 -->
-            <TextView
+            <FrameLayout
                 android:id="@+id/btnFirmaCliente"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="&#x1F4DD; FIRMA CLIENTE"
-                android:textColor="#60a5fa"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:padding="4dp"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_signature_dashed"
                 android:clickable="true"
-                android:focusable="true" />
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="&#x270D; Firma del cliente aquí"
+                    android:textColor="#BDBDBD"
+                    android:textSize="14sp"
+                    android:textStyle="italic" />
+
+                <TextView
+                    android:id="@+id/tvFirmaClienteStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:textColor="#137333"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
 
             <!-- FIRMA TÉCNICO — Fase 55 -->
             <TextView
@@ -982,16 +999,19 @@
                 android:textStyle="bold"
                 android:visibility="gone" />
 
-            <TextView
+            <Button
                 android:id="@+id/btnAgregarWorkItem"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="44dp"
                 android:layout_marginTop="10dp"
                 android:text="+ Agregar item"
                 android:textColor="@color/lc_primary"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:padding="4dp" />
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:background="@drawable/bg_btn_outline_red"
+                android:stateListAnimator="@null" />
 
             <!-- REPUESTOS USADOS -->
             <TextView
@@ -1022,27 +1042,33 @@
                 android:textSize="13sp"
                 android:visibility="gone" />
 
-            <TextView
+            <Button
                 android:id="@+id/btnAgregarRepuesto"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="44dp"
                 android:layout_marginTop="10dp"
                 android:text="+ Agregar repuesto"
                 android:textColor="@color/lc_primary"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:padding="4dp" />
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:background="@drawable/bg_btn_outline_red"
+                android:stateListAnimator="@null" />
 
-            <TextView
+            <Button
                 android:id="@+id/btnSolicitarRepuesto"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_height="44dp"
+                android:layout_marginTop="8dp"
                 android:text="+ Solicitar repuesto"
-                android:textColor="#EB1700"
-                android:textSize="14sp"
+                android:textColor="@color/lc_primary"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:padding="4dp" />
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:background="@drawable/bg_btn_outline_red"
+                android:stateListAnimator="@null" />
 
             <!-- SOLICITUDES DE REPUESTOS -->
             <TextView

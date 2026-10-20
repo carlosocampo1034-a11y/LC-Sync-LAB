@@ -44,7 +44,9 @@
         <activity android:name=".ConfiguracionActivity" android:exported="false" />
         <activity android:name=".InspectionActivity" android:exported="false" />
         <activity android:name=".AuditLogActivity" android:exported="false" />
-        <activity android:name=".ProposalActivity" android:exported="false" />
+        <activity android:name=".ProposalActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity android:name=".SignatureActivity" android:exported="false" />
         <activity android:name=".EstadisticasActivity" android:exported="false" />
         <activity android:name=".PartsActivity" android:exported="false" />

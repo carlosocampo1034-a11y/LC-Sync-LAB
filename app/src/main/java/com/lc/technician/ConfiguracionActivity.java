@@ -166,6 +166,18 @@ public class ConfiguracionActivity extends AppCompatActivity {
         Button btnGuardarPropuesta = findViewById(R.id.btnGuardarPropuestaConfig);
         btnGuardarPropuesta.setOnClickListener(v -> guardarPropuestaConfig(config));
 
+        // Accordion: Márgenes y Markup
+        android.widget.LinearLayout headerMarkup = findViewById(R.id.headerMarkup);
+        android.widget.LinearLayout layoutMarkupContent = findViewById(R.id.layoutMarkupContent);
+        android.widget.TextView tvMarkupArrow = findViewById(R.id.tvMarkupArrow);
+        if (headerMarkup != null && layoutMarkupContent != null) {
+            headerMarkup.setOnClickListener(v -> {
+                boolean expanded = layoutMarkupContent.getVisibility() == android.view.View.VISIBLE;
+                layoutMarkupContent.setVisibility(expanded ? android.view.View.GONE : android.view.View.VISIBLE);
+                if (tvMarkupArrow != null) tvMarkupArrow.setText(expanded ? "▼" : "▲");
+            });
+        }
+
         layoutCoberturas = findViewById(R.id.layoutCoberturas);
         cargarCoberturas();
 

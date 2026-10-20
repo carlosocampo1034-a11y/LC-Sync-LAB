@@ -95,7 +95,7 @@ public class JobDetailActivity extends AppCompatActivity {
     private TextView tvFindingCritical, tvFindingHigh, tvFindingMedium, tvFindingLow;
     private TextView btnPropuesta;
     private TextView tvResumenPropuesta;
-    private TextView btnFirmaCliente; // Fase 49
+    private android.widget.FrameLayout btnFirmaCliente; // Fase 49
     private static final int REQUEST_CUSTOMER_SIGN = 5001;
     private TextView btnFirmaTecnico; // Fase 55
     private static final int REQUEST_TECHNICIAN_SIGN = 5002;
@@ -782,14 +782,14 @@ public class JobDetailActivity extends AppCompatActivity {
     private void pintarEstado() {
         int color;
         switch (job.estado != null ? job.estado : "") {
-            case Job.STATUS_DONE:               color = 0xFF137333; break;
-            case Job.STATUS_ARRIVED:            color = 0xFF1B71C9; break;
-            case Job.STATUS_EN_ROUTE:           color = 0xFF9C27B0; break;
-            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF1B71C9; break;
-            case Job.STATUS_EN_REPARACION:      color = 0xFFF57C00; break;
-            case Job.STATUS_PART_HOLD:          color = 0xFFB25E00; break;
-            case Job.STATUS_ON_HOLD:            color = 0xFFF57C00; break;
-            default:                            color = 0xFFEB1700; break;
+            case Job.STATUS_DONE:               color = 0xFF137333; break;  // Verde
+            case Job.STATUS_ARRIVED:            color = 0xFF0D47A1; break;  // Azul oscuro
+            case Job.STATUS_EN_ROUTE:           color = 0xFF1565C0; break;  // Azul claro
+            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF0D47A1; break;  // Azul oscuro
+            case Job.STATUS_EN_REPARACION:      color = 0xFFE65100; break;  // Naranja
+            case Job.STATUS_PART_HOLD:          color = 0xFFB25E00; break;  // Ámbar oscuro
+            case Job.STATUS_ON_HOLD:            color = 0xFFB25E00; break;  // Ámbar oscuro
+            default:                            color = 0xFFE07A00; break;  // PENDIENTE: naranja suave
         }
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
@@ -811,33 +811,33 @@ public class JobDetailActivity extends AppCompatActivity {
 
         switch (job.estado != null ? job.estado : "") {
             case Job.STATUS_PENDING:
-                setBotonPrincipal(bg, "VOY EN CAMINO", 0xFFEB1700, true);
+                setBotonPrincipal(bg, "VOY EN CAMINO", 0xFFEB1700, true);  // Rojo primario
                 if (btnRecordatorio != null) btnRecordatorio.setVisibility(View.VISIBLE);
                 if (btnVerComoCliente != null) btnVerComoCliente.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_EN_ROUTE:
-                setBotonPrincipal(bg, "LLEGUÉ", 0xFF9C27B0, true);
+                setBotonPrincipal(bg, "LLEGUÉ", 0xFF1565C0, true);  // Azul claro
                 break;
             case Job.STATUS_ARRIVED:
-                setBotonPrincipal(bg, "PEDIR APROBACIÓN", 0xFF1B71C9, true);
+                setBotonPrincipal(bg, "PEDIR APROBACIÓN", 0xFF0D47A1, true);  // Azul oscuro
                 botonSecundario.setText("INICIAR REPARACIÓN");
                 botonSecundario.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_AWAITING_APPROVAL:
-                setBotonPrincipal(bg, "CLIENTE APROBÓ", 0xFF137333, true);
+                setBotonPrincipal(bg, "CLIENTE APROBÓ", 0xFF137333, true);  // Verde
                 break;
             case Job.STATUS_EN_REPARACION:
-                setBotonPrincipal(bg, "TERMINÉ", 0xFF137333, true);
+                setBotonPrincipal(bg, "TERMINÉ", 0xFF137333, true);  // Verde
                 botonSecundario.setText("FALTA REPUESTO");
                 botonSecundario.setVisibility(View.VISIBLE);
                 botonSecundario2.setText("PAUSAR");
                 botonSecundario2.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_PART_HOLD:
-                setBotonPrincipal(bg, "REANUDAR REPARACIÓN", 0xFFB25E00, true);
+                setBotonPrincipal(bg, "REANUDAR REPARACIÓN", 0xFFB25E00, true);  // Ámbar
                 break;
             case Job.STATUS_ON_HOLD:
-                setBotonPrincipal(bg, "REANUDAR REPARACIÓN", 0xFFF57C00, true);
+                setBotonPrincipal(bg, "REANUDAR REPARACIÓN", 0xFFB25E00, true);  // Ámbar
                 break;
             default:
                 setBotonPrincipal(bg, "COMPLETADO", 0xFF767676, false);
