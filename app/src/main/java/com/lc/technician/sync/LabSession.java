@@ -10,14 +10,14 @@ import android.content.SharedPreferences;
 public final class LabSession {
 
     private static final String PREFS = "lc_lab_session";
-    public static final String LAB_BASE_URL = "http://127.0.0.1:5055/api/";
+    public static final String LAB_BASE_URL = com.lc.technician.BuildConfig.SUPABASE_URL + "/";
     /** Prueba con dos teléfonos: HTTPS por la Wi-Fi privada, con la CA de laboratorio (network_security_config). */
     public static final String LAB_LAN_URL = "https://10.0.0.121:5443/api/";
 
     /** Servidor elegido: solo dos valores posibles (sin texto libre). Se conserva al cerrar la sesión. */
     public static String urlServidor(Context c) {
         if ("com.lc.technician.dev".equals(c.getPackageName())) {
-            return "https://127.0.0.1:5055/api/";
+            return com.lc.technician.BuildConfig.SUPABASE_URL + "/";
         }
         return "WIFI".equals(p(c).getString("servidor", "LOCAL")) ? LAB_LAN_URL : LAB_BASE_URL;
     }

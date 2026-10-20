@@ -100,6 +100,18 @@ public class SyncWorker extends Worker {
                 return r.sinRespuesta > 0 ? Result.retry() : Result.success(out);
             } catch (Exception e) {
                 android.util.Log.w(TAG, "sync v2 falló: " + e.getClass().getSimpleName());
+                // Bridge directo: replica los jobs locales a Supabase aunque el servidor Lab no responda
+                if (com.lc.technician.BuildConfig.SUPABASE_BRIDGE_ENABLED) {
+                    try {
+                        LcDatabase db2 = LcDatabase.getInstance(getApplicationContext());
+                        List<com.lc.technician.model.JobEntity> allJobs = db2.jobDao().getAll();
+                        com.lc.technician.sync.SupabaseSyncBridge.get(getApplicationContext())
+                                .replicateToSupabase(allJobs);
+                        android.util.Log.i(TAG, "supabase direct push: " + allJobs.size() + " jobs");
+                    } catch (Exception ex2) {
+                        android.util.Log.w(TAG, "supabase direct push falló: " + ex2.getMessage());
+                    }
+                }
                 return Result.retry();
             }
         }
@@ -211,6 +223,17 @@ public class SyncWorker extends Worker {
                 LcDatabase db = LcDatabase.getInstance(getApplicationContext());
                 String err = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                 db.syncStateDao().markError("WORK_ITEM", err);
+                // Bridge directo: replica los jobs locales a Supabase aunque el servidor no responda
+                if (com.lc.technician.BuildConfig.SUPABASE_BRIDGE_ENABLED) {
+                    try {
+                        List<com.lc.technician.model.JobEntity> allJobs = db.jobDao().getAll();
+                        com.lc.technician.sync.SupabaseSyncBridge.get(getApplicationContext())
+                                .replicateToSupabase(allJobs);
+                        android.util.Log.i(TAG, "supabase direct push (legacy path): " + allJobs.size() + " jobs");
+                    } catch (Exception ex2) {
+                        android.util.Log.w(TAG, "supabase direct push falló: " + ex2.getMessage());
+                    }
+                }
             } catch (Exception ignored) {}
             return Result.retry();
         } finally {

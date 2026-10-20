@@ -34,7 +34,7 @@ android {
         buildConfigField "String",  "SUPABASE_URL",            "\"${localProps['SUPABASE_URL']            ?: ''}\""
         buildConfigField "String",  "SUPABASE_ANON_KEY",       "\"${localProps['SUPABASE_ANON_KEY']       ?: ''}\""
         // LAB GATE: false = bridge desactivado (escrituras y Realtime suspendidos)
-        buildConfigField "boolean", "SUPABASE_BRIDGE_ENABLED", "false"
+        buildConfigField "boolean", "SUPABASE_BRIDGE_ENABLED", "true"
     }
     signingConfigs {
         release {

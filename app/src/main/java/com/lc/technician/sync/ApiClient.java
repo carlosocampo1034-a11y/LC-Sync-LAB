@@ -12,7 +12,7 @@ public class ApiClient {
 
     private static final String PREFS = "lc_sync_prefs";
     private static final String KEY_BASE_URL = "sync_base_url";
-    public static final String DEFAULT_BASE_URL = "http://127.0.0.1:5055/api/";
+    public static final String DEFAULT_BASE_URL = com.lc.technician.BuildConfig.SUPABASE_URL + "/";
 
     private static volatile SyncApi instance;
     private static String currentBaseUrl = null;
