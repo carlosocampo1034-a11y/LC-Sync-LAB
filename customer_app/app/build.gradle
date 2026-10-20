@@ -1,0 +1,30 @@
+plugins { id 'com.android.application' }
+
+// L&C Customer — LABORATORIO. Identificador propio: nunca com.lc.technician ni com.lc.technician.dev.
+android {
+    namespace 'com.lc.customer'
+    compileSdk 36
+    defaultConfig {
+        applicationId "com.lc.customer.lab"
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName "0.1.0-lab"
+        buildConfigField "String", "API_BASE", "\"http://127.0.0.1:5055/api/v2\""
+    }
+    buildFeatures { buildConfig true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Igual que la app del técnico: kotlin-stdlib-jdk7/8 duplican clases de kotlin-stdlib 1.8+
+configurations.all {
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}

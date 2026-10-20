@@ -1,0 +1,55 @@
+{% extends "control_base.html" %}{% block body %}
+<a href="{{url_for('control.tablero')}}">← Agenda</a>{% if mensaje %}<p class="msg">{{mensaje}}</p>{% endif %}
+<div class="row"><h2>{{j.cliente or 'Orden'}} <span class="sec">#{{j.id}} · v{{j.version}}</span></h2><span class="badge">{{j.estado}}</span></div>
+<p>{{j.descripcion}}</p><table>
+<tr><th>Dirección</th><td>{{j.direccion}} {% if j.latitud is not none %}<span class="sec">(ubicación verificada)</span>{% endif %}</td></tr>
+<tr><th>Teléfono</th><td>{{j.telefono or '—'}}</td></tr><tr><th>Cita</th><td>{{ j.programadoPara|fecha(j.zonaHoraria) }}{% if j.ventanaPreferida %} <span class="sec">· preferencia del cliente: {{j.ventanaPreferida|preferencia}}</span>{% endif %}</td></tr>
+<tr><th>Equipo</th><td>{{j.equipo or '—'}}</td></tr><tr><th>Propiedad</th><td>{{j.tipoPropiedad or '—'}} · cliente presente: {{ 'sí' if j.clientePresente else ('no' if j.clientePresente is not none else '—') }}</td></tr>
+<tr><th>Acceso</th><td>{{j.tipoAcceso or '—'}}{% if j.codigoAcceso %} · código: {{j.codigoAcceso}}{% endif %}{% if j.ubicacionLlave %} · llave: {{j.ubicacionLlave}}{% endif %}</td></tr>
+<tr><th>Instrucciones</th><td>{{j.instrucciones or '—'}}</td></tr><tr><th>Mascotas</th><td>{{j.mascota or '—'}}</td></tr>
+<tr><th>Respaldo</th><td>{{j.contactoRespaldo or '—'}}</td></tr><tr><th>Técnico</th><td>{{j.technicianId or 'sin asignar'}}</td></tr></table>
+{% if conflictos %}<h3 class="err">Conflictos pendientes ({{conflictos|length}})</h3>
+{% for c in conflictos %}<div class="card"><b>{{c.campo}}</b> <span class="sec">· técnico {{c.actor}} · base v{{c.baseVersion}}</span>
+<table><tr><th>Centro de mando</th><td>{{c.valorServidor or '∅'}}</td></tr><tr><th>Técnico</th><td>{{c.valorTecnico or '∅'}}</td></tr></table>
+<form class="inline" method="post" action="{{url_for('control.resolver', cid=c.id)}}"><input type="hidden" name="csrf" value="{{csrf}}">
+<input type="hidden" name="version" value="{{j.version}}">
+<button name="decision" value="SERVIDOR">Mantener centro de mando</button><button name="decision" value="TECNICO">Usar lo del técnico</button></form>
+<form class="inline" method="post" action="{{url_for('control.resolver', cid=c.id)}}"><input type="hidden" name="csrf" value="{{csrf}}">
+<input type="hidden" name="version" value="{{j.version}}"><input type="hidden" name="decision" value="COMBINAR">
+<textarea name="valor" required>{{c.valorServidor or ''}}
+{{c.valorTecnico or ''}}</textarea><button>Guardar combinado</button></form></div>{% endfor %}{% endif %}
+{% if propuestas %}<h3>Propuestas</h3>{% for p in propuestas %}<div class="card"><b>Versión {{p.revision}}</b> · {{p.estado}}
+{% if p.estado == 'APROBADA' %}{% for o in p.opciones %}{% if o.nivel == p.opcionElegida %} · OPCIÓN {{ {'GOOD': 1, 'BETTER': 2, 'BEST': 3}[o.nivel] }}{% endif %}{% endfor %} ${{'%.2f'|format(p.totalAceptado)}} · firmó {{p.firmante}}{% endif %}
+<table>{% for o in p.opciones %}<tr><td><b>OPCIÓN {{ {'GOOD': 1, 'BETTER': 2, 'BEST': 3}[o.nivel] }}</b> — {{o.titulo}}{% if o.equipoPropuesto %}<br><span class="sec">Equipo: {{o.equipoPropuesto}}</span>{% endif %}{% if o.especificaciones %}<br><span class="sec">Especificaciones: {{o.especificaciones}}</span>{% endif %}{% if o.garantia %}<br><span class="sec">Garantía: {{o.garantia}}</span>{% endif %}</td><td>${{'%.2f'|format(o.total)}}</td></tr>{% endfor %}</table></div>{% endfor %}{% endif %}
+{% if firmas %}<h3>Firmas</h3><table>{% for s in firmas %}<tr><td>{{s.tipo}}</td><td>{{s.firmante}}{% if s.opcion %} · {{s.opcion}} ${{'%.2f'|format(s.total)}}{% endif %}</td>
+<td>{{s.firmadaAt|fecha}} · capturó {{s.capturadaPor}}</td><td><a href="{{url_for('control.ver_firma', sid=s.id)}}">ver</a></td></tr>{% endfor %}</table>{% endif %}
+<h3>Factura</h3>{% if factura %}<div class="card"><b>{{factura.numero or 'borrador'}}</b> · {{factura.estado}} · subtotal ${{'%.2f'|format(factura.subtotal)}}
+{% if factura.descuento %} · descuento −${{'%.2f'|format(factura.descuento)}}{% endif %} · impuesto ${{'%.2f'|format(factura.impuesto)}} · <b>total ${{'%.2f'|format(factura.total)}}</b>
+· pagado ${{'%.2f'|format(factura.pagado)}} · saldo ${{'%.2f'|format(factura.saldo)}}{% if factura.tienePdf %} · PDF recibido{% endif %}
+{% if factura.propuestaAprobada %}<br><span class="sec">Propuesta aprobada: {{factura.propuestaAprobada.opcion}} ${{'%.2f'|format(factura.propuestaAprobada.total)}}</span>{% endif %}</div>
+{% else %}<p class="sec">Sin factura.</p>{% endif %}
+{% if comparacion and comparacion.tipo != 'IGUAL' %}<p class="err"><b>{% if comparacion.diferencia > 0 %}⚠ Factura ${{'%.2f'|format(comparacion.diferencia)}} por encima de lo aprobado{% else %}ℹ Factura ${{'%.2f'|format(-comparacion.diferencia)}} por debajo de lo aprobado{% endif %}</b>
+(aprobado ${{'%.2f'|format(comparacion.aprobado)}} · facturado ${{'%.2f'|format(comparacion.facturado)}}){% if factura and factura.variacionId %} · diferencia aprobada por el cliente{% elif factura and factura.confirmacionMenorPor %} · confirmada por {{factura.confirmacionMenorPor}}{% elif factura and factura.estado != 'BORRADOR' %} · emitida sin aprobación adicional{% endif %}</p>{% endif %}
+{% for v in variaciones %}<p class="sec">Aprobación adicional #{{v.id}} · {{v.tipo}} {{'%+.2f'|format(v.diferencia)}} · {{v.estado}}{% if v.firmante %} · firmó {{v.firmante}}{% endif %}</p>{% endfor %}
+{% if not factura or factura.estado == 'BORRADOR' %}<form class="inline" method="post" action="{{url_for('control.descuento', jid=j.id)}}">
+<input type="hidden" name="csrf" value="{{csrf}}"><input type="number" step="0.01" min="0.01" name="monto" placeholder="Descuento $" required>
+<input name="motivo" placeholder="Motivo" required><button>Autorizar descuento</button></form>{% endif %}
+{% for d in descuentos %}<p class="sec">Descuento autorizado ${{'%.2f'|format(d.monto)}} · {{d.motivo}} · {{d.autorizado_por}}</p>{% endfor %}
+{% if pagos %}<h3>Pagos</h3><table>{% for p in pagos %}<tr><td>${{'%.2f'|format(p.monto)}} · {{p.metodo}}</td><td>{{p.estado}}{% if p.revisadoPor %} ({{p.revisadoPor}}){% endif %}</td>
+<td>{% if p.estado == 'REPORTADO' %}<form class="inline" method="post" action="{{url_for('control.revisar_pago', pid=p.id)}}"><input type="hidden" name="csrf" value="{{csrf}}">
+<button name="decision" value="CONFIRMADO">Confirmar (comprobado)</button><input name="motivo" placeholder="Motivo si rechazas"><button name="decision" value="RECHAZADO">Rechazar</button></form>{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+<h3>Programar</h3><form class="inline" method="post" action="{{url_for('control.programar', jid=j.id)}}">
+<input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="version" value="{{j.version}}">
+<input type="date" name="fecha" required><input type="time" name="hora" required><button>Programar</button></form>
+<h3>Asignar técnico</h3><form class="inline" method="post" action="{{url_for('control.asignar', jid=j.id)}}">
+<input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="version" value="{{j.version}}">
+<select name="technicianId"><option value="">— sin asignar —</option>{% for t in tecnicos %}
+<option value="{{t['technician_code']}}" {{'selected' if t['technician_code']==j.technicianId}}>{{t['display_name']}}</option>{% endfor %}</select><button>Asignar</button></form>
+<h3>Estado</h3><form class="inline" method="post" action="{{url_for('control.estado', jid=j.id)}}">
+<input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="version" value="{{j.version}}">
+<select name="estado">{% for e in estados %}<option {{'selected' if e==j.estado}}>{{e}}</option>{% endfor %}</select><button>Cambiar</button></form>
+<h3>Evidencias</h3><p class="sec">{{fotos|length}} foto(s) · {{eventos|length}} nota(s)/medición(es)</p>
+{% for e in eventos %}<div class="card"><b>{{e.tipo}}</b> <span class="sec">{{e.actor}} · {{e.ts|fecha}}</span><div>{{e.payload}}</div></div>{% endfor %}
+<h3>Historial</h3><table><tr><th>v</th><th>Campo</th><th>Nuevo</th><th>Actor</th><th>Origen</th><th>Cuándo</th></tr>
+{% for h in hist %}<tr><td>{{h['version']}}</td><td>{{h['field']}}</td><td>{{h['new_value'] or '—'}}</td><td>{{h['actor']}}</td><td>{{h['source']}}</td><td>{{h['ts']|fecha}}</td></tr>{% endfor %}</table>
+{% endblock %}

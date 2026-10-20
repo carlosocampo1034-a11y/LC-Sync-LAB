@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@color/lc_bg"
+    android:paddingStart="36dp"
+    android:paddingEnd="36dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="L&amp;C"
+        android:textColor="@color/lc_primary"
+        android:textSize="52sp"
+        android:textStyle="bold"
+        android:letterSpacing="-0.03" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Technician"
+        android:textColor="@color/lc_text_secondary"
+        android:textSize="18sp"
+        android:letterSpacing="0.02" />
+
+    <View android:layout_width="match_parent" android:layout_height="56dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ingresá tu PIN"
+        android:textColor="@color/lc_text"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:paddingBottom="10dp" />
+
+    <EditText
+        android:id="@+id/etPin"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:inputType="numberPassword"
+        android:hint="••••"
+        android:textSize="22sp"
+        android:gravity="center"
+        android:background="@drawable/bg_input"
+        android:padding="12dp"
+        android:textColor="@color/lc_text"
+        android:textColorHint="@color/lc_text_tertiary" />
+
+    <TextView
+        android:id="@+id/btnIngresar"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="18dp"
+        android:text="Ingresar"
+        android:textColor="#FFFFFF"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:background="@drawable/bg_button_primary" />
+
+</LinearLayout>

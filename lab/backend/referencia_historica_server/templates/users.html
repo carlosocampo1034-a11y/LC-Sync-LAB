@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% set active = 'users' %}
+{% block title %}Usuarios{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>👤 Gestión de Usuarios</h1>
+  <span class="page-sub">Solo accesible para admin</span>
+</div>
+
+<div style="margin-bottom:1rem;">
+  <button class="btn-primary" onclick="openModal('create')">+ NUEVO USUARIO</button>
+</div>
+
+<div class="backup-card" style="padding:0;overflow:hidden;">
+  <table class="backup-table" style="margin:0;">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Nombre</th>
+        <th>Rol</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="usersTableBody">
+      {% for u in users %}
+      <tr id="row-{{ u.username }}">
+        <td><strong>{{ u.username }}</strong></td>
+        <td>{{ u.name }}</td>
+        <td><span class="badge {% if u.role=='admin' %}badge-red{% elif u.role=='dispatcher' %}badge-blue{% else %}badge-orange{% endif %}">{{ u.role }}</span></td>
+        <td>
+          <button class="btn-secondary" style="font-size:0.75rem;padding:3px 10px;"
+                  onclick="openModal('edit', '{{ u.username }}', '{{ u.name }}', '{{ u.role }}')">
+            ✏ Editar
+          </button>
+          {% if u.username != 'admin' %}
+          <button class="backup-btn-delete" style="font-size:0.75rem;padding:3px 10px;"
+                  onclick="deleteUser('{{ u.username }}')">
+            🗑
+          </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal -->
+<div id="userModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border-radius:12px;padding:2rem;width:90%;max-width:420px;border:1px solid #334155;">
+    <h2 id="modalTitle" style="margin:0 0 1.5rem;color:#f1f5f9;">Nuevo Usuario</h2>
+    <input type="hidden" id="modalMode" value="create">
+    <input type="hidden" id="modalUsername" value="">
+
+    <label style="display:block;color:#9ca3af;font-size:0.85rem;margin-bottom:0.25rem;">Username</label>
+    <input id="fUsername" type="text" placeholder="username"
+           style="width:100%;background:#0f172a;border:1px solid #334155;color:#f1f5f9;padding:0.6rem;border-radius:6px;margin-bottom:1rem;box-sizing:border-box;">
+
+    <label style="display:block;color:#9ca3af;font-size:0.85rem;margin-bottom:0.25rem;">Nombre</label>
+    <input id="fName" type="text" placeholder="Nombre completo"
+           style="width:100%;background:#0f172a;border:1px solid #334155;color:#f1f5f9;padding:0.6rem;border-radius:6px;margin-bottom:1rem;box-sizing:border-box;">
+
+    <label style="display:block;color:#9ca3af;font-size:0.85rem;margin-bottom:0.25rem;">Rol</label>
+    <select id="fRole"
+            style="width:100%;background:#0f172a;border:1px solid #334155;color:#f1f5f9;padding:0.6rem;border-radius:6px;margin-bottom:1rem;">
+      <option value="admin">admin</option>
+      <option value="dispatcher">dispatcher</option>
+      <option value="viewer" selected>viewer</option>
+    </select>
+
+    <label style="display:block;color:#9ca3af;font-size:0.85rem;margin-bottom:0.25rem;">
+      Contraseña <span id="pwHint" style="font-size:0.75rem;color:#6b7280;">(dejar en blanco = no cambiar)</span>
+    </label>
+    <input id="fPassword" type="password" placeholder="••••••••"
+           style="width:100%;background:#0f172a;border:1px solid #334155;color:#f1f5f9;padding:0.6rem;border-radius:6px;margin-bottom:1.5rem;box-sizing:border-box;">
+
+    <div id="modalMsg" style="margin-bottom:0.75rem;font-size:0.85rem;"></div>
+
+    <div style="display:flex;gap:0.75rem;">
+      <button class="btn-primary" onclick="submitUser()" style="flex:1;">Guardar</button>
+      <button onclick="closeModal()"
+              style="flex:1;background:#374151;color:#d1d5db;border:none;padding:0.75rem;border-radius:8px;cursor:pointer;font-weight:bold;">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+function openModal(mode, username, name, role) {
+  document.getElementById('userModal').style.display = 'flex';
+  document.getElementById('modalMode').value = mode;
+  document.getElementById('modalMsg').textContent = '';
+  document.getElementById('fPassword').value = '';
+  if (mode === 'create') {
+    document.getElementById('modalTitle').textContent = 'Nuevo Usuario';
+    document.getElementById('fUsername').value = '';
+    document.getElementById('fUsername').disabled = false;
+    document.getElementById('fName').value = '';
+    document.getElementById('fRole').value = 'viewer';
+    document.getElementById('pwHint').style.display = 'none';
+  } else {
+    document.getElementById('modalTitle').textContent = 'Editar Usuario: ' + username;
+    document.getElementById('modalUsername').value = username;
+    document.getElementById('fUsername').value = username;
+    document.getElementById('fUsername').disabled = true;
+    document.getElementById('fName').value = name || '';
+    document.getElementById('fRole').value = role || 'viewer';
+    document.getElementById('pwHint').style.display = 'inline';
+  }
+}
+function closeModal() {
+  document.getElementById('userModal').style.display = 'none';
+}
+function submitUser() {
+  const mode = document.getElementById('modalMode').value;
+  const username = document.getElementById('fUsername').value.trim();
+  const name = document.getElementById('fName').value.trim();
+  const role = document.getElementById('fRole').value;
+  const password = document.getElementById('fPassword').value;
+  const msg = document.getElementById('modalMsg');
+
+  if (mode === 'create' && !username) { msg.textContent = '❌ Username requerido'; msg.style.color='#ef4444'; return; }
+  if (mode === 'create' && !password) { msg.textContent = '❌ Contraseña requerida'; msg.style.color='#ef4444'; return; }
+
+  const url = mode === 'create' ? '/api/users' : '/api/users/' + document.getElementById('modalUsername').value;
+  const method = mode === 'create' ? 'POST' : 'PUT';
+  const body = {name, role};
+  if (mode === 'create') body.username = username;
+  if (password) body.password = password;
+
+  fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { msg.textContent = '❌ ' + d.error; msg.style.color='#ef4444'; return; }
+      msg.textContent = '✅ Guardado'; msg.style.color='#22c55e';
+      setTimeout(() => location.reload(), 800);
+    })
+    .catch(e => { msg.textContent = '❌ Error: ' + e; msg.style.color='#ef4444'; });
+}
+function deleteUser(username) {
+  if (!confirm('¿Eliminar usuario ' + username + '?')) return;
+  fetch('/api/users/' + username, {method:'DELETE'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { alert('❌ ' + d.error); return; }
+      location.reload();
+    });
+}
+document.getElementById('userModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Auditoría{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Auditoría del Sistema</h1>
+  <span class="page-sub">{{ total }} entradas encontradas</span>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-val">{{ kpi_total }}</div>
+    <div class="kpi-label">Total Entradas</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-val">{{ kpi_creates }}</div>
+    <div class="kpi-label">Creaciones</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-val">{{ kpi_updates }}</div>
+    <div class="kpi-label">Modificaciones</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-val">{{ kpi_deletes }}</div>
+    <div class="kpi-label">Eliminaciones</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<form class="filter-bar" method="get" action="/audit_log">
+  <select name="action">
+    <option value="">— Acción —</option>
+    {% for a in actions %}
+    <option value="{{ a }}" {% if a == action_filter %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <select name="entity_type">
+    <option value="">— Entidad —</option>
+    {% for et in entity_types %}
+    <option value="{{ et }}" {% if et == entity_filter %}selected{% endif %}>{{ et }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="q" placeholder="Buscar actor, acción…" value="{{ q }}">
+  <button type="submit" class="btn-primary">Filtrar</button>
+  {% if action_filter or entity_filter or q %}
+  <a href="/audit_log" class="btn-secondary">Limpiar</a>
+  {% endif %}
+  {% if current_role in ('admin', 'dispatcher') %}
+  <a href="/api/audit_log/export?action={{ action_filter }}&entity_type={{ entity_filter }}&q={{ q }}" class="btn-secondary" style="margin-left:auto">⬇ Exportar CSV</a>
+  {% endif %}
+</form>
+
+<!-- Table -->
+{% if entries %}
+<div class="table-wrapper table-container">
+  <table class="audit-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Acción</th>
+        <th>Entidad</th>
+        <th>EntidadID</th>
+        <th>JobID</th>
+        <th>Campo</th>
+        <th>Valor Anterior</th>
+        <th>Valor Nuevo</th>
+        <th>Actor</th>
+        <th>Fecha/Hora</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td class="text-muted">{{ e.id }}</td>
+        <td>
+          <span class="audit-action audit-{{ e.action|lower|default('default') }}">
+            {{ e.action or '—' }}
+          </span>
+        </td>
+        <td>{{ e.entityType or '—' }}</td>
+        <td>{{ e.entityId or '—' }}</td>
+        <td>{% if e.jobId %}<a href="/jobs?q={{ e.jobId }}">#{{ e.jobId }}</a>{% else %}—{% endif %}</td>
+        <td class="text-muted">{{ e.field or '—' }}</td>
+        <td class="text-muted audit-old">{{ e.oldValue or '—' }}</td>
+        <td class="audit-new">{{ e.newValue or '—' }}</td>
+        <td>{{ e.actor or '—' }}</td>
+        <td class="text-muted">{{ e.ts_str }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="?page={{ page - 1 }}&action={{ action_filter }}&entity_type={{ entity_filter }}&q={{ q }}" class="page-btn">‹ Anterior</a>
+  {% endif %}
+  <span class="page-info">Página {{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="?page={{ page + 1 }}&action={{ action_filter }}&entity_type={{ entity_filter }}&q={{ q }}" class="page-btn">Siguiente ›</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <p>No hay entradas de auditoría{% if action_filter or entity_filter or q %} para los filtros aplicados{% endif %}.</p>
+  {% if not (action_filter or entity_filter or q) %}
+  <p class="text-muted">Las entradas aparecerán aquí después de que la app Android sincronice.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

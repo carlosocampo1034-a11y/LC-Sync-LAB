@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Setup Inicial{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>LC Technician — Setup Inicial</h1>
+  <p style="color:#9ca3af">Configura el sistema en minutos</p>
+</div>
+
+<div id="wizardContainer" style="max-width:600px;margin:0 auto;">
+  <!-- Step indicator -->
+  <div class="wizard-steps" style="display:flex;gap:0.5rem;margin-bottom:2rem;justify-content:center;">
+    {% for i in range(1,6) %}
+    <div class="wizard-step" id="step-dot-{{ i }}" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;background:{% if step >= i %}#3b82f6{% else %}#374151{% endif %};color:{% if step >= i %}#fff{% else %}#9ca3af{% endif %};">{{ i }}</div>
+    {% endfor %}
+  </div>
+
+  {% if step == 1 %}
+  <div class="backup-card">
+    <div class="backup-card-title">Paso 1 — Usuario Administrador</div>
+    <form method="post" action="/setup">
+      <input type="hidden" name="step" value="1">
+      <div style="margin-bottom:1rem;">
+        <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">Usuario Admin</label>
+        <input name="admin_user" value="{{ config.get('admin_user','admin') }}" required style="width:100%;padding:0.6rem;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;">
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">Contrasena</label>
+        <input name="admin_pass" type="password" placeholder="minimo 8 caracteres" required style="width:100%;padding:0.6rem;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;">
+      </div>
+      <button type="submit" style="width:100%;padding:0.75rem;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">SIGUIENTE</button>
+    </form>
+  </div>
+
+  {% elif step == 2 %}
+  <div class="backup-card">
+    <div class="backup-card-title">Paso 2 — Informacion de Empresa</div>
+    <form method="post" action="/setup">
+      <input type="hidden" name="step" value="2">
+      <div style="margin-bottom:1rem;">
+        <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">Nombre de Empresa</label>
+        <input name="company_name" value="{{ config.get('company_name','LC Technician') }}" style="width:100%;padding:0.6rem;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;">
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">Telefono de Soporte</label>
+        <input name="support_phone" value="{{ config.get('support_phone','') }}" style="width:100%;padding:0.6rem;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;">
+      </div>
+      <button type="submit" style="width:100%;padding:0.75rem;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">SIGUIENTE</button>
+    </form>
+  </div>
+
+  {% elif step == 3 %}
+  <div class="backup-card">
+    <div class="backup-card-title">Paso 3 — Servidor de Sync Android</div>
+    <form method="post" action="/setup">
+      <input type="hidden" name="step" value="3">
+      <div style="margin-bottom:1rem;">
+        <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">URL del Servidor (ej: http://192.168.1.100:5000)</label>
+        <input name="sync_url" value="{{ config.get('sync_url','http://127.0.0.1:5000') }}" style="width:100%;padding:0.6rem;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;">
+      </div>
+      <button type="submit" style="width:100%;padding:0.75rem;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">SIGUIENTE</button>
+    </form>
+  </div>
+
+  {% elif step == 4 %}
+  <div class="backup-card">
+    <div class="backup-card-title">Paso 4 — Backup Inicial</div>
+    <p style="color:#9ca3af;">Crear un backup de seguridad antes de comenzar.</p>
+    <form method="post" action="/setup">
+      <input type="hidden" name="step" value="4">
+      <button type="submit" style="width:100%;padding:0.75rem;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">CREAR BACKUP INICIAL</button>
+    </form>
+  </div>
+
+  {% elif step == 5 %}
+  <div class="backup-card" style="text-align:center;">
+    <div style="font-size:3rem;margin-bottom:1rem;">&#10003;</div>
+    <div class="backup-card-title">Setup Completado!</div>
+    <p style="color:#9ca3af;margin:1rem 0;">LC Technician esta listo para usar.</p>
+    <div style="background:#0f172a;border-radius:8px;padding:1rem;text-align:left;margin:1rem 0;font-size:0.85rem;">
+      <div style="color:#4ade80">OK Empresa: {{ config.get('company_name','LC Technician') }}</div>
+      <div style="color:#4ade80">OK Admin: {{ config.get('admin_user','admin') }}</div>
+      <div style="color:#4ade80">OK Sync URL: {{ config.get('sync_url','localhost:5000') }}</div>
+      <div style="color:#4ade80">OK Backup inicial creado</div>
+    </div>
+    <a href="/dashboard" style="display:block;width:100%;padding:0.75rem;background:#3b82f6;color:#fff;border-radius:6px;font-weight:bold;text-decoration:none;text-align:center;">IR AL DASHBOARD</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

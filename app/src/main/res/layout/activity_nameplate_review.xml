@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Datos detectados de la placa"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Revisa y edita los valores detectados. Toca CONFIRMAR para guardar."
+            android:textSize="14sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Marca -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Marca / Fabricante"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpMarca"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Modelo -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Modelo"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpModelo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Serial -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Número de serie"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpSerial"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Tons -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Toneladas (tons)"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpTons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="numberDecimal"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Refrigerante -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Refrigerante"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpRefrigerante"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Voltaje -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Voltaje"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpVoltaje"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Fase -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Fase"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpFase"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <!-- SEER -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SEER"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpSeer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="numberDecimal"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Fecha de fabricación -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Fecha de fabricación"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="2dp" />
+        <EditText
+            android:id="@+id/etNpManufDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="(no detectado)"
+            android:inputType="text"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Collapsible raw OCR -->
+        <TextView
+            android:id="@+id/tvToggleRaw"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ Ver texto OCR completo"
+            android:textSize="13sp"
+            android:textColor="#EB1700"
+            android:padding="4dp"
+            android:layout_marginBottom="4dp" />
+
+        <LinearLayout
+            android:id="@+id/sectionRaw"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#F5F5F5"
+            android:padding="8dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Texto OCR sin procesar:"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#424242"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvRawOcr"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="#757575"
+                android:fontFamily="monospace" />
+        </LinearLayout>
+
+        <!-- Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btnNpCancelar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="CANCELAR"
+                android:textColor="#757575"
+                android:backgroundTint="#E0E0E0"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnNpConfirmar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="CONFIRMAR"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#EB1700" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

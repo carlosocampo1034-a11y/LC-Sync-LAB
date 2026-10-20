@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <EditText
+            android:id="@+id/etContactoNombre"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_surface"
+            android:hint="Nombre *"
+            android:inputType="textPersonName|textCapWords"
+            android:padding="14dp"
+            android:textColor="@color/lc_text"
+            android:textColorHint="@color/lc_text_tertiary"
+            android:textSize="15sp" />
+
+        <EditText
+            android:id="@+id/etContactoTelefono"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_surface"
+            android:hint="Teléfono"
+            android:inputType="phone"
+            android:padding="14dp"
+            android:textColor="@color/lc_text"
+            android:textColorHint="@color/lc_text_tertiary"
+            android:textSize="15sp" />
+
+        <EditText
+            android:id="@+id/etContactoEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_surface"
+            android:hint="Email (opcional)"
+            android:inputType="textEmailAddress"
+            android:padding="14dp"
+            android:textColor="@color/lc_text"
+            android:textColorHint="@color/lc_text_tertiary"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="10dp"
+            android:text="ROL"
+            android:textColor="@color/lc_text_tertiary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+
+        <RadioGroup
+            android:id="@+id/rgRol"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rbDueno"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:text="Dueño"
+                android:textColor="@color/lc_text"
+                android:textSize="15sp"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/rbInquilino"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:text="Inquilino"
+                android:textColor="@color/lc_text"
+                android:textSize="15sp" />
+
+            <RadioButton
+                android:id="@+id/rbPagador"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:text="Pagador"
+                android:textColor="@color/lc_text"
+                android:textSize="15sp" />
+
+            <RadioButton
+                android:id="@+id/rbFirmante"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:text="Firmante"
+                android:textColor="@color/lc_text"
+                android:textSize="15sp" />
+
+        </RadioGroup>
+
+        <CheckBox
+            android:id="@+id/checkPrincipal"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp"
+            android:text="Es contacto principal"
+            android:textColor="@color/lc_text"
+            android:textSize="15sp" />
+
+        <CheckBox
+            android:id="@+id/checkParaCliente"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:text="Guardar para todos los trabajos de este cliente"
+            android:textColor="@color/lc_text"
+            android:textSize="14sp"
+            android:checked="true" />
+
+        <CheckBox
+            android:id="@+id/checkParaPropiedad"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:text="Solo para esta propiedad"
+            android:textColor="@color/lc_text"
+            android:textSize="14sp"
+            android:checked="false" />
+
+        <Button
+            android:id="@+id/btnGuardarContacto"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_button_primary"
+            android:text="GUARDAR"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:letterSpacing="0.03"
+            android:stateListAnimator="@null" />
+
+    </LinearLayout>
+</ScrollView>

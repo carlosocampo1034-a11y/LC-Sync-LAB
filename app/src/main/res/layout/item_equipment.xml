@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/bg_surface"
+    android:layout_marginTop="8dp">
+
+    <!-- fila 1: nombre + tipo chip -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvEqNombre"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/lc_text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvEqTipo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:background="@drawable/bg_chip_unselected"
+            android:textColor="@color/lc_text_secondary"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- fila 2: marca · modelo -->
+    <TextView
+        android:id="@+id/tvEqMarcaModelo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textColor="@color/lc_text_secondary"
+        android:textSize="12sp" />
+
+    <!-- fila 3: serial + linked -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="3dp">
+
+        <TextView
+            android:id="@+id/tvEqSerial"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/lc_text_tertiary"
+            android:textSize="11sp"
+            android:fontFamily="monospace" />
+
+        <TextView
+            android:id="@+id/tvEqLinked"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Vinculado"
+            android:textColor="@color/lc_primary"
+            android:textSize="11sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- fila 4: specs técnicas (tons, refrigerante, systemRole) -->
+    <LinearLayout
+        android:id="@+id/rowEqSpecs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvEqTons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/bg_chip_unselected"
+            android:textColor="@color/lc_text_secondary"
+            android:textSize="11sp"
+            android:layout_marginEnd="5dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvEqRefrigerante"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/bg_chip_unselected"
+            android:textColor="@color/lc_text_secondary"
+            android:textSize="11sp"
+            android:layout_marginEnd="5dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvEqSystemRole"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/bg_chip_unselected"
+            android:textColor="@color/lc_text_secondary"
+            android:textSize="11sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</LinearLayout>

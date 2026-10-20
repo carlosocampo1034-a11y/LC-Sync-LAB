@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <EditText
+            android:id="@+id/etPartNombre"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nombre *"
+            android:inputType="textCapWords"
+            android:layout_marginBottom="10dp" />
+
+        <EditText
+            android:id="@+id/etPartSku"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="SKU / Código"
+            android:inputType="text"
+            android:layout_marginBottom="10dp" />
+
+        <EditText
+            android:id="@+id/etPartCategoria"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Categoría"
+            android:inputType="textCapWords"
+            android:layout_marginBottom="10dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp">
+
+            <EditText
+                android:id="@+id/etPartCosto"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:hint="Costo"
+                android:inputType="numberDecimal" />
+
+            <EditText
+                android:id="@+id/etPartPrecio"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Precio venta"
+                android:inputType="numberDecimal" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp">
+
+            <EditText
+                android:id="@+id/etPartStock"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:hint="Stock actual"
+                android:inputType="number" />
+
+            <EditText
+                android:id="@+id/etPartStockMin"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Stock mínimo"
+                android:inputType="number" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/etPartProveedor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Proveedor"
+            android:inputType="textCapWords"
+            android:layout_marginBottom="10dp" />
+
+        <EditText
+            android:id="@+id/etPartNotas"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Notas"
+            android:inputType="textMultiLine"
+            android:minLines="2" />
+    </LinearLayout>
+</ScrollView>

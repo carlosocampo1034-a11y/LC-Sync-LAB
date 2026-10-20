@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Reportes PDF{% endblock %}
+{% block content %}
+<div class="page-header" style="margin-bottom:1.5rem;">
+  <h1>📄 Reportes PDF</h1>
+  <p style="color:#9ca3af;margin-top:0.5rem;">Exporta reportes del sistema en formato PDF</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;">
+
+  <div class="backup-card">
+    <div class="backup-title">📊 Reporte General</div>
+    <p class="backup-desc">KPIs del sistema + listado de jobs, técnicos y métricas clave.</p>
+    <a href="/api/reports/pdf?type=general" class="btn-backup-download">⬇ DESCARGAR PDF</a>
+  </div>
+
+  <div class="backup-card">
+    <div class="backup-title">🔧 Reporte de Jobs</div>
+    <p class="backup-desc">Listado completo de trabajos con estado, cliente y técnico asignado.</p>
+    <a href="/api/reports/pdf?type=jobs" class="btn-backup-download">⬇ DESCARGAR PDF</a>
+  </div>
+
+  <div class="backup-card">
+    <div class="backup-title">💳 Reporte de Membresías</div>
+    <p class="backup-desc">Estado de membresías, vencimientos próximos y historial de check-ins.</p>
+    <a href="/api/reports/pdf?type=memberships" class="btn-backup-download">⬇ DESCARGAR PDF</a>
+  </div>
+
+  <div class="backup-card">
+    <div class="backup-title">📋 Reporte de Auditoría</div>
+    <p class="backup-desc">Últimas 100 acciones registradas en el log de auditoría.</p>
+    <a href="/api/reports/pdf?type=audit" class="btn-backup-download">⬇ DESCARGAR PDF</a>
+  </div>
+
+</div>
+
+<h2 style="margin:2rem 0 1rem;color:#f1f5f9;">📊 Exportar a Excel</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;">
+
+  <div class="backup-card">
+    <div class="backup-title">🔧 Jobs — Excel</div>
+    <p class="backup-desc">Exporta todos los jobs a formato Excel (.xlsx) con columnas formateadas.</p>
+    <a href="/api/export/jobs.xlsx" class="btn-backup-download" style="background:#16a34a;">⬇ DESCARGAR JOBS.XLSX</a>
+  </div>
+
+  <div class="backup-card">
+    <div class="backup-title">🔩 Work Items — Excel</div>
+    <p class="backup-desc">Exporta todos los work items con precios, cantidades y subtotales.</p>
+    <a href="/api/export/work_items.xlsx" class="btn-backup-download" style="background:#16a34a;">⬇ DESCARGAR WI.XLSX</a>
+  </div>
+
+</div>
+{% endblock %}

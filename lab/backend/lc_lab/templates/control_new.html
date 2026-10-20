@@ -1,0 +1,10 @@
+{% extends "control_base.html" %}{% block body %}
+<a href="{{url_for('control.tablero')}}">← Agenda</a><h2>Nueva orden</h2>
+<form method="post" style="display:grid;gap:10px;max-width:520px"><input type="hidden" name="csrf" value="{{csrf}}">
+<input name="cliente" placeholder="Cliente" value="{{f.get('cliente','')}}" required>
+<input name="telefono" placeholder="Teléfono" value="{{f.get('telefono','')}}">
+<input name="direccion" placeholder="Dirección" value="{{f.get('direccion','')}}" required>
+<input name="categoria" placeholder="Categoría (HVAC, plomería, electrodomésticos…)" value="{{f.get('categoria','')}}">
+<input name="equipo" placeholder="Equipo / modelo" value="{{f.get('equipo','')}}">
+<textarea name="descripcion" placeholder="Descripción del problema (mín. 10)" required>{{f.get('descripcion','')}}</textarea>
+<button>Crear orden</button>{% if error %}<div class="err">{{error}}</div>{% endif %}</form>{% endblock %}

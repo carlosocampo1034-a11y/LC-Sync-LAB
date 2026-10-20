@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set active = 'work_items' %}
+{% block title %}Work Items{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Work Items</h1>
+  <span class="badge-count">Total: <strong>${{ "%.2f"|format(total) }}</strong></span>
+</div>
+
+<div class="filter-bar">
+  <form method="get" action="/work_items">
+    <select class="filter-select" name="job_id" onchange="this.form.submit()">
+      <option value="">Todos los jobs</option>
+      {% for j in jobs_list %}
+      <option value="{{ j.id }}" {% if job_filter==j.id|string %}selected{% endif %}>
+        #{{ j.id }} — {{ j.cliente or 'Sin nombre' }}
+      </option>
+      {% endfor %}
+    </select>
+    {% if job_filter %}
+    <a class="btn btn-outline" href="/work_items">Ver todos</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+<table class="table">
+  <thead>
+    <tr>
+      <th>Job</th><th>Cliente</th><th>Tipo</th><th>Descripción</th>
+      <th class="amount">Cant.</th><th class="amount">Precio</th><th class="amount">Subtotal</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% set ns = namespace(cur_job=None, job_total=0) %}
+  {% for item in items %}
+    {% if ns.cur_job != item.jobId %}
+      {% if ns.cur_job is not none %}
+      <tr class="subtotal-row">
+        <td colspan="6" class="amount">Subtotal Job #{{ ns.cur_job }}</td>
+        <td class="amount"><strong>${{ "%.2f"|format(ns.job_total) }}</strong></td>
+      </tr>
+      {% endif %}
+      {% set ns.cur_job = item.jobId %}
+      {% set ns.job_total = 0 %}
+    {% endif %}
+    {% set ns.job_total = ns.job_total + (item.subtotal or 0) %}
+    <tr>
+      <td class="muted"><a href="/work_items?job_id={{ item.jobId }}">#{{ item.jobId }}</a></td>
+      <td>{{ item.cliente or '—' }}</td>
+      <td><span class="badge badge-{{ (item.tipo or 'other')|lower }}">{{ item.tipo or '—' }}</span></td>
+      <td>{{ item.descripcion or '—' }}</td>
+      <td class="amount">{{ item.cantidad or 1 }}</td>
+      <td class="amount">${{ "%.2f"|format(item.precioUnitario or 0) }}</td>
+      <td class="amount"><strong>${{ "%.2f"|format(item.subtotal or 0) }}</strong></td>
+    </tr>
+  {% endfor %}
+  {% if ns.cur_job is not none %}
+  <tr class="subtotal-row">
+    <td colspan="6" class="amount">Subtotal Job #{{ ns.cur_job }}</td>
+    <td class="amount"><strong>${{ "%.2f"|format(ns.job_total) }}</strong></td>
+  </tr>
+  {% endif %}
+  {% if not items %}
+  <tr><td colspan="7" class="empty">No hay work items.</td></tr>
+  {% endif %}
+  </tbody>
+  <tfoot>
+    <tr class="total-row">
+      <td colspan="6" class="amount">TOTAL GLOBAL</td>
+      <td class="amount"><strong>${{ "%.2f"|format(total) }}</strong></td>
+    </tr>
+  </tfoot>
+</table>
+</div>
+{% endblock %}

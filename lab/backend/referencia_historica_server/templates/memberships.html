@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% set active = 'memberships' %}
+{% block title %}Membresías{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Membresías</h1>
+  <span class="badge-count">{{ memberships|length }} tarjetas</span>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <form method="get" action="/memberships">
+    <input type="text" name="q" class="filter-input" placeholder="Buscar nº tarjeta…"
+           value="{{ search }}" style="max-width:180px;">
+    <select name="status" class="filter-select">
+      <option value="">Todos los estados</option>
+      <option value="ACTIVE"    {% if status_filter=='ACTIVE'    %}selected{% endif %}>Activas</option>
+      <option value="EXPIRED"   {% if status_filter=='EXPIRED'   %}selected{% endif %}>Vencidas</option>
+      <option value="SUSPENDED" {% if status_filter=='SUSPENDED' %}selected{% endif %}>Suspendidas</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+    {% if status_filter or search %}
+    <a href="/memberships" class="btn btn-outline">Limpiar</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Summary KPIs -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); margin-bottom:1rem;">
+  <div class="kpi-card kpi-green">
+    <div class="kpi-label">Activas</div>
+    <div class="kpi-value" style="font-size:1.5rem;">{{ active_count }}</div>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="kpi-label">Vencidas</div>
+    <div class="kpi-value" style="font-size:1.5rem;">{{ memberships|selectattr('status','equalto','EXPIRED')|list|length }}</div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="kpi-label">Suspendidas</div>
+    <div class="kpi-value" style="font-size:1.5rem;">{{ memberships|selectattr('status','equalto','SUSPENDED')|list|length }}</div>
+  </div>
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-label">Total</div>
+    <div class="kpi-value" style="font-size:1.5rem;">{{ memberships|length }}</div>
+  </div>
+</div>
+
+{% if memberships %}
+<!-- Membership cards grid -->
+<div class="mem-grid">
+  {% for m in memberships %}
+  <div class="mem-card {% if m.expired %}mem-expired{% elif m.expiring_soon %}mem-warning{% endif %}" onclick="window.location='/memberships/{{ m.id }}'" style="cursor:pointer">
+
+    <!-- Card number header -->
+    <div class="mem-card-number">
+      {% set parts = (m.cardNumber or 'LC-000').split('-') %}
+      {% if parts|length >= 2 %}
+        {% set tier = parts[1] %}
+      {% else %}
+        {% set tier = 'BASIC' %}
+      {% endif %}
+      <span class="mem-tier-badge
+        {% if tier=='GOLD' %}mem-tier-gold
+        {% elif tier=='SILVER' %}mem-tier-silver
+        {% elif tier=='BRONZE' %}mem-tier-bronze
+        {% else %}mem-tier-basic{% endif %}">
+        {{ tier }}
+      </span>
+      <span class="mem-number-text">{{ m.cardNumber or '—' }}</span>
+    </div>
+
+    <!-- Status badges row -->
+    <div class="mem-badges">
+      {% if m.status == 'ACTIVE' %}
+        <span class="badge badge-green">ACTIVA</span>
+      {% elif m.status == 'EXPIRED' %}
+        <span class="badge badge-red">VENCIDA</span>
+      {% elif m.status == 'SUSPENDED' %}
+        <span class="badge badge-orange">SUSPENDIDA</span>
+      {% else %}
+        <span class="badge badge-gray">{{ m.status or '—' }}</span>
+      {% endif %}
+
+      {% if m.paymentStatus == 'PAID' %}
+        <span class="badge badge-green">PAGADO</span>
+      {% elif m.paymentStatus == 'PENDING' %}
+        <span class="badge badge-orange">PAGO PEND.</span>
+      {% elif m.paymentStatus == 'OVERDUE' %}
+        <span class="badge badge-red">VENCIDO</span>
+      {% endif %}
+
+      {% if m.expiring_soon %}
+        <span class="badge mem-badge-alert">⚠ VENCE PRONTO</span>
+      {% endif %}
+    </div>
+
+    <!-- Dates -->
+    <div class="mem-dates">
+      <div class="mem-date-row">
+        <span class="mem-date-label">Emisión</span>
+        <span class="mem-date-val">{{ m.issue_str }}</span>
+      </div>
+      <div class="mem-date-row">
+        <span class="mem-date-label">Vence</span>
+        <span class="mem-date-val {% if m.expired %}mem-date-red{% elif m.expiring_soon %}mem-date-orange{% endif %}">
+          {{ m.expiry_str }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    {% if m.notes %}
+    <div class="mem-notes">{{ m.notes }}</div>
+    {% endif %}
+
+    <!-- Footer: customer ID -->
+    <div class="mem-footer">
+      <span class="muted" style="font-size:0.75rem;">Cliente #{{ m.customerId or '—' }}</span>
+      {% if m.coverageTypeId %}
+      <span class="muted" style="font-size:0.75rem;">Cobertura #{{ m.coverageTypeId }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty">No hay membresías registradas.
+    {% if status_filter or search %}
+    <br><a href="/memberships" class="btn-link">Limpiar filtros</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Check-ins recientes (si existen) -->
+{% if checkins %}
+<div class="card" style="margin-top:1.5rem">
+  <div class="card-header">
+    <h3>Check-ins Recientes</h3>
+  </div>
+  <div class="table-container">
+  <table class="table">
+    <thead>
+      <tr><th>#ID</th><th>Tarjeta</th><th>Fecha</th><th>Notas</th></tr>
+    </thead>
+    <tbody>
+    {% for c in checkins %}
+    <tr>
+      <td class="muted">#{{ c.id }}</td>
+      <td>{{ c.cardNumber or '—' }}</td>
+      <td>{{ c.fecha or '—' }}</td>
+      <td>{{ c.notas or '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="empty">No hay check-ins.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

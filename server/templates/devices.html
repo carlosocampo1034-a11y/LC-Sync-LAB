@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Dispositivos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>📱 Dispositivos</h1>
+  <span class="page-sub">{{ devices|length }} dispositivo(s) registrado(s)</span>
+</div>
+
+<div class="backup-card">
+  {% if devices %}
+  <table class="backup-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Device ID</th>
+        <th>Primer sync</th>
+        <th>Último sync</th>
+        <th>Push count</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in devices %}
+      {% set age_ms = now_ms - d.lastSeenAt %}
+      {% set is_active = age_ms < 3600000 %}
+      <tr>
+        <td>{{ d.deviceName or 'Desconocido' }}</td>
+        <td style="font-family:monospace;font-size:0.85rem">{{ d.deviceId[:16] }}...</td>
+        <td>{{ (d.firstSeenAt / 1000)|int }}</td>
+        <td>{{ (d.lastSeenAt / 1000)|int }}</td>
+        <td>{{ d.pushCount }}</td>
+        <td>
+          {% if is_active %}
+          <span style="color:#10b981;font-weight:bold">● Activo</span>
+          {% else %}
+          <span style="color:#6b7280">● Offline</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:3rem;color:#9ca3af">
+    <p style="font-size:1.1rem">No hay dispositivos registrados aún.</p>
+    <p style="font-size:0.85rem;margin-top:0.5rem">Los dispositivos aparecerán aquí cuando sincronicen con el servidor.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div style="margin-top:1rem;color:#6b7280;font-size:0.85rem;text-align:center">
+  Un dispositivo se considera <span style="color:#10b981">Activo</span> si sincronizó en la última hora.
+</div>
+{% endblock %}

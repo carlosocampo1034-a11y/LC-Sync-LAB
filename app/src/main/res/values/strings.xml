@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">L&amp;C</string>
+    <string name="favoritos">Favoritos</string>
+    <string name="mis_favoritos">Mis clientes favoritos</string>
+    <string name="sin_favoritos">Sin favoritos aún</string>
+    <string name="agregar_favorito">Agregar a favoritos</string>
+    <string name="quitar_favorito">Quitar de favoritos</string>
+    <string name="lista_precios">Lista de precios</string>
+    <string name="historial_fotos">Historial de fotos</string>
+</resources>

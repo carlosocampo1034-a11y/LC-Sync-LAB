@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Conflictos{% endblock %}
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+  <h1>⚡ Conflictos de Sincronización</h1>
+  <span id="conflictCount" class="badge-count">cargando...</span>
+</div>
+
+<div style="margin-bottom:1rem;">
+  <button onclick="loadConflicts(false)" class="btn-filter">Pendientes</button>
+  <button onclick="loadConflicts(true)" class="btn-filter">Resueltos</button>
+</div>
+
+<div id="conflictsTable">
+  <div class="loading">Cargando conflictos...</div>
+</div>
+
+<div id="detailModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;">
+  <div style="background:#1f2937;margin:5% auto;padding:2rem;max-width:800px;border-radius:12px;max-height:80vh;overflow-y:auto;">
+    <h3 id="modalTitle">Detalle del Conflicto</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;">
+      <div>
+        <h4 style="color:#ef4444;">Cliente (enviado)</h4>
+        <pre id="clientJson" style="background:#111;padding:1rem;border-radius:6px;font-size:0.75rem;overflow:auto;max-height:300px;color:#fca5a5;"></pre>
+      </div>
+      <div>
+        <h4 style="color:#10b981;">Servidor (actual)</h4>
+        <pre id="serverJson" style="background:#111;padding:1rem;border-radius:6px;font-size:0.75rem;overflow:auto;max-height:300px;color:#6ee7b7;"></pre>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button onclick="resolveConflict('server')" class="btn-resolve-server">✅ Usar Servidor</button>
+      <button onclick="resolveConflict('client')" class="btn-resolve-client">📱 Usar Cliente</button>
+      <button onclick="resolveConflict('ignore')" class="btn-resolve-ignore">🚫 Ignorar</button>
+      <button onclick="closeModal()" style="margin-left:auto;background:#374151;color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.badge-count { background:#374151;color:#9ca3af;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.85rem; }
+.btn-filter { background:#374151;color:#d1d5db;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;margin-right:0.5rem; }
+.conflict-row { background:#1f2937;padding:0.75rem 1rem;border-radius:8px;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center; }
+.conflict-entity { font-weight:bold;color:#60a5fa; }
+.conflict-dates { font-size:0.8rem;color:#9ca3af; }
+.btn-detail { background:#1d4ed8;color:#fff;border:none;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer; }
+.btn-resolve-server { background:#059669;color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer; }
+.btn-resolve-client { background:#dc2626;color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer; }
+.btn-resolve-ignore { background:#374151;color:#9ca3af;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer; }
+.empty-conflicts { text-align:center;padding:3rem;color:#6b7280; }
+</style>
+
+<script>
+let currentConflictId = null;
+let allConflictsData = [];
+
+function loadConflicts(showResolved) {
+  fetch('/api/conflicts?resolved=' + (showResolved ? '1' : '0'))
+    .then(r => r.json())
+    .then(data => {
+      allConflictsData = data;
+      document.getElementById('conflictCount').textContent = data.length + ' conflicto(s)';
+      if (data.length === 0) {
+        document.getElementById('conflictsTable').innerHTML =
+          '<div class="empty-conflicts">✅ No hay conflictos ' + (showResolved ? 'resueltos' : 'pendientes') + '</div>';
+        return;
+      }
+      let html = '';
+      data.forEach(c => {
+        html += `<div class="conflict-row">
+          <div>
+            <div class="conflict-entity">${c.entityType} #${c.entityId}</div>
+            <div class="conflict-dates">Cliente: ${c.clientUpdatedAt} · Servidor: ${c.serverUpdatedAt}</div>
+          </div>
+          <button class="btn-detail" onclick="showDetail(${c.id}, '${c.entityType}', ${c.entityId})">Ver Detalle</button>
+        </div>`;
+      });
+      document.getElementById('conflictsTable').innerHTML = html;
+    });
+}
+
+function showDetail(id, type, entityId) {
+  currentConflictId = id;
+  const c = allConflictsData.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('modalTitle').textContent = type + ' #' + entityId;
+  try { document.getElementById('clientJson').textContent = JSON.stringify(JSON.parse(c.clientValue), null, 2); }
+  catch(e) { document.getElementById('clientJson').textContent = c.clientValue; }
+  try { document.getElementById('serverJson').textContent = JSON.stringify(JSON.parse(c.serverValue), null, 2); }
+  catch(e) { document.getElementById('serverJson').textContent = c.serverValue; }
+  document.getElementById('detailModal').style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('detailModal').style.display = 'none';
+  currentConflictId = null;
+}
+
+function resolveConflict(resolution) {
+  if (!currentConflictId) return;
+  fetch('/api/conflicts/' + currentConflictId + '/resolve', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({resolution: resolution, note: 'Manual resolution'})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status === 'ok') {
+      closeModal();
+      loadConflicts(false);
+    }
+  });
+}
+
+window.onload = () => loadConflicts(false);
+</script>
+{% endblock %}

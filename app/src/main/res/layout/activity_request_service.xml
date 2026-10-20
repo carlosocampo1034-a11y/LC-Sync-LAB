@@ -1,0 +1,717 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootRequest"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/lc_bg">
+
+    <!-- TOP PROGRESS STRIP: 1/4 rojo + 3/4 gris -->
+    <LinearLayout
+        android:id="@+id/progressStrip"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/progressDone"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@color/lc_primary" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:id="@+id/progressRest"
+            android:layout_weight="3"
+            android:background="@color/lc_border" />
+    </LinearLayout>
+
+    <!-- HEADER AREA -->
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/progressStrip"
+        android:orientation="vertical"
+        android:background="@color/lc_bg">
+
+        <!-- Fila: Atrás + Título + Espacio -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="6dp">
+
+            <ImageView
+                android:id="@+id/btnAtras"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="12dp"
+                android:src="@drawable/ic_arrow_back"
+                android:contentDescription="Atrás" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Solicitar servicio"
+                    android:textColor="@color/lc_text"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="-0.02" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Dirección y acceso"
+                    android:textColor="@color/lc_text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- Spacer para balancear la flecha -->
+            <View
+                android:layout_width="48dp"
+                android:layout_height="1dp" />
+        </LinearLayout>
+
+        <!-- Pasos del progreso -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="16dp">
+
+            <!-- Paso 1: Dirección (activo) -->
+            <LinearLayout
+                android:id="@+id/stepItem1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <View
+                    android:id="@+id/stepDot1"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_step_dot_active" />
+
+                <TextView
+                    android:id="@+id/stepLabel1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Dirección"
+                    android:textColor="@color/lc_primary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1.5dp"
+                android:layout_weight="0.6"
+                android:layout_marginBottom="18dp"
+                android:background="@color/lc_border" />
+
+            <!-- Paso 2: Acceso -->
+            <LinearLayout
+                android:id="@+id/stepItem2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <View
+                    android:id="@+id/stepDot2"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_step_dot_inactive" />
+
+                <TextView
+                    android:id="@+id/stepLabel2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Acceso"
+                    android:textColor="@color/lc_text_tertiary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1.5dp"
+                android:layout_weight="0.6"
+                android:layout_marginBottom="18dp"
+                android:background="@color/lc_border" />
+
+            <!-- Paso 3: Contacto -->
+            <LinearLayout
+                android:id="@+id/stepItem3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <View
+                    android:id="@+id/stepDot3"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_step_dot_inactive" />
+
+                <TextView
+                    android:id="@+id/stepLabel3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Contacto"
+                    android:textColor="@color/lc_text_tertiary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1.5dp"
+                android:layout_weight="0.6"
+                android:layout_marginBottom="18dp"
+                android:background="@color/lc_border" />
+
+            <!-- Paso 4: Confirmar -->
+            <LinearLayout
+                android:id="@+id/stepItem4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <View
+                    android:id="@+id/stepDot4"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_step_dot_inactive" />
+
+                <TextView
+                    android:id="@+id/stepLabel4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Confirmar"
+                    android:textColor="@color/lc_text_tertiary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <View
+        android:id="@+id/dividerTop"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@id/header"
+        android:background="@color/lc_border" />
+
+    <!-- BOTÓN FIJO ABAJO -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:background="@color/lc_bg"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="24dp"
+        android:paddingTop="0dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginBottom="14dp"
+            android:background="@color/lc_border" />
+
+        <Button
+            android:id="@+id/btnSolicitar"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_button_primary"
+            android:text="SOLICITAR SERVICIO"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:letterSpacing="0.05"
+            android:stateListAnimator="@null" />
+    </LinearLayout>
+
+    <!-- CONTENIDO SCROLLABLE -->
+    <ScrollView
+        android:id="@+id/scrollForm"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/dividerTop"
+        android:layout_above="@id/bottomBar"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="24dp">
+
+            <!-- ═══ DIRECCIÓN ═══ -->
+            <TextView
+                android:id="@+id/secDireccion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Dirección del servicio"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="¿Dónde realizamos el servicio?"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <AutoCompleteTextView
+                android:id="@+id/etDireccion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Buscar dirección..."
+                android:inputType="textPostalAddress"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp"
+                android:drawableEnd="@android:drawable/ic_menu_search"
+                android:drawablePadding="8dp"
+                android:imeOptions="actionSearch"
+                android:completionThreshold="1" />
+
+            <!-- Placeholder de mapa con chip flotante -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="160dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_surface"
+                android:clipChildren="false">
+
+                <TextView
+                    android:id="@+id/tvMapaPin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:alpha="0.45"
+                    android:text="&#128205;"
+                    android:textSize="30sp" />
+
+                <!-- Estado real de la ubicación: sin verificar / verificada (Geocoder) / sin conexión -->
+                <TextView
+                    android:id="@+id/tvUbicacionEstado"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top"
+                    android:layout_marginTop="62dp"
+                    android:layout_marginBottom="66dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:gravity="center"
+                    android:text="Ubicación sin verificar · se guardará la dirección escrita"
+                    android:textColor="@color/lc_text_secondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/btnAjustarMarcador"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:layout_marginBottom="14dp"
+                    android:background="@drawable/bg_chip_float"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:text="Ajustar marcador"
+                    android:textColor="@color/lc_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </FrameLayout>
+
+            <!-- ═══ DATOS DEL SERVICIO ═══ -->
+            <TextView
+                android:id="@+id/secDatos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="Datos del servicio"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Información del cliente y del trabajo"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <AutoCompleteTextView
+                android:id="@+id/etCliente"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Nombre del cliente"
+                android:inputType="textPersonName|textCapWords"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp"
+                android:completionThreshold="1" />
+
+            <EditText
+                android:id="@+id/etTelefono"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Teléfono del cliente"
+                android:inputType="phone"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <EditText
+                android:id="@+id/etHora"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Fecha y hora del servicio"
+                android:inputType="none"
+                android:focusable="false"
+                android:cursorVisible="false"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <EditText
+                android:id="@+id/etDescripcion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Descripción del problema (ej: Aire acondicionado no enfría)"
+                android:inputType="textMultiLine|textCapSentences"
+                android:minLines="3"
+                android:gravity="top|start"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <AutoCompleteTextView
+                android:id="@+id/etEquipo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Equipo / modelo (ej: Rheem 2.5 ton · Serial ABC123)"
+                android:inputType="textCapSentences"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp"
+                android:completionThreshold="1" />
+
+            <!-- ═══ TIPO DE PROPIEDAD ═══ -->
+            <TextView
+                android:id="@+id/secPropiedad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="Tipo de propiedad"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Selecciona el tipo de lugar"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:id="@+id/containerTipoLugar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical" />
+
+            <!-- ═══ ¿ESTARÁS EN CASA? ═══ -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="¿Estarás en casa?"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Nos ayuda a preparar el servicio"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:padding="4dp">
+
+                <RadioGroup
+                    android:id="@+id/radioEnCasa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/radioSi"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:padding="18dp"
+                        android:text="Sí, estaré"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:buttonTint="@color/lc_text"
+                        android:checked="true" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:background="@color/lc_border" />
+
+                    <RadioButton
+                        android:id="@+id/radioNo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:padding="18dp"
+                        android:text="No estaré"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:buttonTint="@color/lc_text" />
+                </RadioGroup>
+            </LinearLayout>
+
+            <!-- ═══ MÉTODO DE ACCESO ═══ -->
+            <TextView
+                android:id="@+id/secAcceso"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="Método de acceso"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="¿Cómo ingresamos a tu propiedad?"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:id="@+id/containerMetodoAcceso"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical" />
+
+            <!-- Campo código (oculto por defecto, visible según lógica Java) -->
+            <LinearLayout
+                android:id="@+id/codigoContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvCodigoLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:text="Código de acceso"
+                    android:textColor="@color/lc_text"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/etCodigo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_input_gray"
+                    android:hint="Ej. 1234"
+                    android:inputType="text"
+                    android:padding="16dp"
+                    android:textColor="@color/lc_text"
+                    android:textColorHint="@color/lc_text_tertiary"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- ═══ INSTRUCCIONES DE ACCESO ═══ -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="Instrucciones de acceso"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Ayuda al técnico a encontrarte y entrar"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/etInstrucciones"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Ej. Tocar el timbre y esperar. La puerta lateral siempre está abierta..."
+                android:inputType="textMultiLine"
+                android:minLines="4"
+                android:gravity="top|start"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <!-- ═══ MASCOTAS ═══ -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="¿Hay mascotas en el lugar?"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etMascota"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Ej. Perro pequeño, no muerde (opcional)"
+                android:inputType="textCapSentences"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <!-- ═══ CONTACTO DE RESPALDO ═══ -->
+            <TextView
+                android:id="@+id/secRespaldo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="Contacto de respaldo"
+                android:textColor="@color/lc_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Por si necesitamos comunicarnos contigo"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/etContactoNombre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Nombre completo"
+                android:inputType="textPersonName|textCapWords"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <EditText
+                android:id="@+id/etContactoTelefono"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_input_gray"
+                android:hint="Número de teléfono"
+                android:inputType="phone"
+                android:padding="16dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="32dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</RelativeLayout>

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% set active = 'analytics' %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Analytics</h1>
+  <span class="page-sub" id="analytics-updated">Cargando...</span>
+</div>
+
+<!-- KPI Row -->
+<div class="kpi-row" id="analytics-kpis">
+  <div class="kpi-card"><div class="kpi-val" id="kpi-jobs">—</div><div class="kpi-label">Total Jobs</div></div>
+  <div class="kpi-card"><div class="kpi-val" id="kpi-revenue">—</div><div class="kpi-label">Revenue Total</div></div>
+  <div class="kpi-card"><div class="kpi-val" id="kpi-ticket">—</div><div class="kpi-label">Ticket Promedio</div></div>
+  <div class="kpi-card"><div class="kpi-val" id="kpi-techs">—</div><div class="kpi-label">Técnicos Activos</div></div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="charts-row">
+  <div class="chart-card">
+    <div class="chart-title">Work Items por Tipo</div>
+    <canvas id="chartWiTypes" height="200"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Jobs por Estado</div>
+    <canvas id="chartJobStatus" height="200"></canvas>
+  </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="charts-row">
+  <div class="chart-card">
+    <div class="chart-title">Top Clientes (por Revenue)</div>
+    <canvas id="chartTopCustomers" height="220"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Top Técnicos (por Jobs)</div>
+    <canvas id="chartTopTechs" height="220"></canvas>
+  </div>
+</div>
+
+<!-- Top WI Table -->
+<div class="card" id="analytics-top-table">
+  <h3 style="padding:1rem 1rem 0; font-size:0.95rem; color:var(--muted)">TOP WORK ITEM TYPES</h3>
+  <table class="table" id="wi-types-table"><tbody></tbody></table>
+</div>
+
+<!-- FASE 49: Advanced Analytics Cards -->
+
+<!-- Range filter -->
+<div class="filter-bar" style="margin-bottom:1.5rem;margin-top:2rem;">
+  <label style="color:#9ca3af;">Rango análisis:</label>
+  <select id="analyticsRange" onchange="loadAdvancedAnalytics()" class="filter-select">
+    <option value="7">7 días</option>
+    <option value="30" selected>30 días</option>
+    <option value="90">90 días</option>
+    <option value="365">1 año</option>
+  </select>
+</div>
+
+<!-- YoY Comparison Card -->
+<div class="card" style="margin-bottom:1rem;">
+  <div class="card-header" style="padding:1rem 1rem 0;"><h3 style="font-size:0.95rem;color:var(--muted)">COMPARATIVA AÑO A AÑO</h3></div>
+  <div id="yoyContent" style="padding:1rem;">Cargando...</div>
+</div>
+
+<!-- Forecast Card -->
+<div class="card" style="margin-bottom:1rem;">
+  <div class="card-header" style="padding:1rem 1rem 0;"><h3 style="font-size:0.95rem;color:var(--muted)">PROYECCIÓN PRÓXIMOS 30 DÍAS</h3></div>
+  <div id="forecastContent" style="padding:1rem;">Cargando...</div>
+</div>
+
+<!-- Top Customers -->
+<div class="card" style="margin-bottom:1rem;">
+  <div class="card-header" style="padding:1rem 1rem 0;"><h3 style="font-size:0.95rem;color:var(--muted)">TOP 5 CLIENTES (RANGO SELECCIONADO)</h3></div>
+  <div id="topCustomersContent" style="padding:1rem;">Cargando...</div>
+</div>
+
+<!-- Top Services -->
+<div class="card" style="margin-bottom:1rem;">
+  <div class="card-header" style="padding:1rem 1rem 0;"><h3 style="font-size:0.95rem;color:var(--muted)">TOP 5 SERVICIOS (RANGO SELECCIONADO)</h3></div>
+  <div id="topServicesContent" style="padding:1rem;">Cargando...</div>
+</div>
+
+<script>
+function loadAdvancedAnalytics() {
+  var days = document.getElementById('analyticsRange').value;
+
+  fetch('/api/analytics/yoy').then(function(r){return r.json();}).then(function(d) {
+    var jd = d.delta.jobs, rd = d.delta.revenue;
+    var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">';
+    html += '<div style="text-align:center;padding:1rem;background:#1f2937;border-radius:8px;">';
+    html += '<div style="color:#9ca3af;font-size:0.8rem;">JOBS — ' + d.period + '</div>';
+    html += '<div style="font-size:1.8rem;color:#fff;font-weight:bold;">' + d.current.jobs + '</div>';
+    html += '<div style="color:' + (jd >= 0 ? '#10b981' : '#ef4444') + ';">' + (jd >= 0 ? '▲' : '▼') + ' ' + Math.abs(jd) + '% vs año anterior (' + d.previous.jobs + ')</div>';
+    html += '</div>';
+    html += '<div style="text-align:center;padding:1rem;background:#1f2937;border-radius:8px;">';
+    html += '<div style="color:#9ca3af;font-size:0.8rem;">REVENUE</div>';
+    html += '<div style="font-size:1.8rem;color:#fff;font-weight:bold;">$' + d.current.revenue.toFixed(2) + '</div>';
+    html += '<div style="color:' + (rd >= 0 ? '#10b981' : '#ef4444') + ';">' + (rd >= 0 ? '▲' : '▼') + ' ' + Math.abs(rd) + '% vs año anterior</div>';
+    html += '</div></div>';
+    document.getElementById('yoyContent').innerHTML = html;
+  }).catch(function(){ document.getElementById('yoyContent').innerHTML = '<span style="color:#6b7280;">No disponible</span>'; });
+
+  fetch('/api/analytics/forecast').then(function(r){return r.json();}).then(function(d) {
+    var html = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">';
+    html += '<div style="text-align:center;padding:1rem;background:#1f2937;border-radius:8px;">';
+    html += '<div style="color:#9ca3af;font-size:0.8rem;">JOBS EST.</div>';
+    html += '<div style="font-size:1.8rem;color:#60a5fa;font-weight:bold;">' + d.next_30d_jobs + '</div>';
+    html += '<div style="color:#6b7280;font-size:0.75rem;">' + d.daily_avg_jobs + ' jobs/día</div></div>';
+    html += '<div style="text-align:center;padding:1rem;background:#1f2937;border-radius:8px;">';
+    html += '<div style="color:#9ca3af;font-size:0.8rem;">REVENUE EST.</div>';
+    html += '<div style="font-size:1.8rem;color:#10b981;font-weight:bold;">$' + d.next_30d_revenue.toFixed(0) + '</div>';
+    html += '<div style="color:#6b7280;font-size:0.75rem;">$' + d.daily_avg_revenue + '/día</div></div>';
+    html += '<div style="text-align:center;padding:1rem;background:#1f2937;border-radius:8px;">';
+    html += '<div style="color:#9ca3af;font-size:0.8rem;">CONFIANZA</div>';
+    html += '<div style="font-size:1.8rem;color:#f59e0b;font-weight:bold;">' + d.confidence + '%</div>';
+    html += '<div style="color:#6b7280;font-size:0.75rem;">basado en 30 días</div></div>';
+    html += '</div>';
+    document.getElementById('forecastContent').innerHTML = html;
+  }).catch(function(){ document.getElementById('forecastContent').innerHTML = '<span style="color:#6b7280;">No disponible</span>'; });
+
+  fetch('/api/analytics/top_customers?days=' + days).then(function(r){return r.json();}).then(function(data) {
+    if (!data.length) { document.getElementById('topCustomersContent').innerHTML = '<span style="color:#6b7280;">Sin datos</span>'; return; }
+    var html = '<table style="width:100%;border-collapse:collapse;"><thead><tr style="color:#9ca3af;font-size:0.8rem;border-bottom:1px solid #374151;"><th style="text-align:left;padding:0.5rem;">Cliente</th><th style="text-align:right;">Jobs</th><th style="text-align:right;">Revenue</th></tr></thead><tbody>';
+    data.forEach(function(r,i) {
+      html += '<tr style="border-bottom:1px solid #1f2937;"><td style="padding:0.5rem;color:#d1d5db;">' + (i+1) + '. ' + (r.cliente || 'Sin nombre') + '</td><td style="text-align:right;padding:0.5rem;color:#60a5fa;">' + r.jobs + '</td><td style="text-align:right;padding:0.5rem;color:#10b981;">$' + r.revenue.toFixed(2) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('topCustomersContent').innerHTML = html;
+  }).catch(function(){ document.getElementById('topCustomersContent').innerHTML = '<span style="color:#6b7280;">No disponible</span>'; });
+
+  fetch('/api/analytics/top_services?days=' + days).then(function(r){return r.json();}).then(function(data) {
+    if (!data.length) { document.getElementById('topServicesContent').innerHTML = '<span style="color:#6b7280;">Sin datos</span>'; return; }
+    var html = '<table style="width:100%;border-collapse:collapse;"><thead><tr style="color:#9ca3af;font-size:0.8rem;border-bottom:1px solid #374151;"><th style="text-align:left;padding:0.5rem;">Servicio</th><th style="text-align:right;">Cant.</th><th style="text-align:right;">Revenue</th></tr></thead><tbody>';
+    data.forEach(function(r,i) {
+      html += '<tr style="border-bottom:1px solid #1f2937;"><td style="padding:0.5rem;color:#d1d5db;">' + (i+1) + '. ' + r.service + '</td><td style="text-align:right;padding:0.5rem;color:#60a5fa;">' + r.count + '</td><td style="text-align:right;padding:0.5rem;color:#10b981;">$' + r.revenue.toFixed(2) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('topServicesContent').innerHTML = html;
+  }).catch(function(){ document.getElementById('topServicesContent').innerHTML = '<span style="color:#6b7280;">No disponible</span>'; });
+}
+
+document.addEventListener('DOMContentLoaded', loadAdvancedAnalytics);
+
+// Phase 59: Load predictions
+fetch('/api/analytics/predict')
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    document.getElementById('predJobVal').textContent = d.next_week_jobs_est;
+    document.getElementById('predJobConf').textContent = 'Confianza: ' + d.confidence_jobs + '%';
+    document.getElementById('predJobBar').style.width = d.confidence_jobs + '%';
+    document.getElementById('predRevVal').textContent = '$' + (d.next_week_revenue_est || 0).toFixed(2);
+    document.getElementById('predRevConf').textContent = 'Confianza: ' + d.confidence_revenue + '%';
+
+    var trending = d.trending_services || [];
+    document.getElementById('trendingList').innerHTML = trending.length ?
+      trending.map(function(s){ return '<div>' + s.service + ': ' + s.count + ' (' + (s.delta_pct >= 0 ? '+' : '') + s.delta_pct + '%)</div>'; }).join('') :
+      '<div>Sin datos</div>';
+
+    var risks = d.high_risk_memberships || [];
+    document.getElementById('riskList').innerHTML = risks.length ?
+      risks.map(function(m){ return '<div style="color:#f59e0b">' + (m.name || m.card) + ': ' + m.days_left + 'd</div>'; }).join('') :
+      '<div style="color:#4ade80">Sin membresias en riesgo</div>';
+  })
+  .catch(function(e){ console.warn('predict error:', e); });
+</script>
+
+<!-- Phase 59: Predictive Analytics Card -->
+<div class="analytics-section" id="predictSection" style="margin-top:2rem;">
+  <h2 style="color:#f1f5f9;margin-bottom:1rem;">PREDICCION PROXIMA SEMANA</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+    <div class="kpi-card" id="predictJobs">
+      <div class="kpi-label">Jobs Estimados</div>
+      <div class="kpi-value" id="predJobVal">-</div>
+      <div class="kpi-sub" id="predJobConf">Cargando...</div>
+      <div style="margin-top:0.5rem;background:#1e3a5f;height:6px;border-radius:3px;">
+        <div id="predJobBar" style="height:100%;background:#3b82f6;border-radius:3px;width:0%;transition:width 1s;"></div>
+      </div>
+    </div>
+    <div class="kpi-card" id="predictRev">
+      <div class="kpi-label">Revenue Estimado</div>
+      <div class="kpi-value" id="predRevVal">-</div>
+      <div class="kpi-sub" id="predRevConf">Cargando...</div>
+    </div>
+    <div class="kpi-card" id="trendingCard">
+      <div class="kpi-label">Servicios en Tendencia</div>
+      <div id="trendingList" style="font-size:0.85rem;margin-top:0.5rem;">Cargando...</div>
+    </div>
+    <div class="kpi-card" id="riskCard">
+      <div class="kpi-label" style="color:#f59e0b;">Membresias en Riesgo</div>
+      <div id="riskList" style="font-size:0.85rem;margin-top:0.5rem;">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script><script src="/static/analytics.js"></script>{% endblock %}

@@ -1,0 +1,101 @@
+plugins { id 'com.android.application' }
+
+// Load local.properties (NOT tracked by git)
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localProps.load(new FileInputStream(localPropsFile))
+}
+
+android {
+    namespace 'com.lc.technician'
+    compileSdk 36
+    defaultConfig {
+        applicationId "com.lc.technician"
+        minSdk 24
+        targetSdk 36
+        versionCode 7
+        versionName "0.3.3"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
+            }
+        }
+
+        // PINs loaded from local.properties (not tracked by git)
+        buildConfigField "String", "PIN_TECNICO",    "\"${localProps['PIN_TECNICO']    ?: ''}\""
+        buildConfigField "String", "PIN_DISPATCHER", "\"${localProps['PIN_DISPATCHER'] ?: ''}\""
+        buildConfigField "String", "PIN_ADMIN",      "\"${localProps['PIN_ADMIN']      ?: ''}\""
+    }
+    signingConfigs {
+        release {
+            storeFile file(localProps['KEYSTORE_FILE'] ?: 'keystore_not_configured.jks')
+            storePassword localProps['KEYSTORE_PASSWORD'] ?: ''
+            keyAlias localProps['KEY_ALIAS'] ?: ''
+            keyPassword localProps['KEY_PASSWORD'] ?: ''
+        }
+    }
+    buildTypes {
+        // Lab/dev variant: installs side-by-side with the production app
+        // (com.lc.technician) and is signed with the local debug key only.
+        debug {
+            applicationIdSuffix '.dev'
+            versionNameSuffix '-dev'
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+configurations.all {
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.room:room-runtime:2.6.1'
+    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+
+    // ML Kit on-device text recognition (OCR) — no cloud, no API key
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+
+    // ML Kit Barcode Scanning
+    implementation 'com.google.mlkit:barcode-scanning:17.3.0'
+    // ZXing for barcode/QR generation in PDF
+    implementation 'com.google.zxing:core:3.5.2'
+    // WorkManager for background tasks
+    implementation 'androidx.work:work-runtime:2.9.0'
+    // Retrofit + OkHttp for Flask sync
+    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+    // CameraX
+    implementation 'androidx.camera:camera-core:1.4.2'
+    implementation 'androidx.camera:camera-camera2:1.4.2'
+    implementation 'androidx.camera:camera-lifecycle:1.4.2'
+    implementation 'androidx.camera:camera-view:1.4.2'
+
+    // Unit tests (JVM — no emulador necesario)
+    testImplementation 'junit:junit:4.13.2'
+
+    // Instrumented tests (require connected device/emulator)
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:core:1.5.0'
+    androidTestImplementation 'androidx.room:room-testing:2.6.1'
+}

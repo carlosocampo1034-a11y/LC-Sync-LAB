@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% set active = 'dashboard' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <small class="muted">Actualizado: <span id="lastRefresh">{{ now }}</span></small>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-label">Total Jobs</div>
+    <div class="kpi-value" id="kpi-total-jobs">{{ total_jobs }}</div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="kpi-label">Completados</div>
+    <div class="kpi-value" id="kpi-completed">{{ completed }}</div>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="kpi-label">Revenue Total</div>
+    <div class="kpi-value" id="kpi-revenue">${{ "%.0f"|format(revenue) }}</div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="kpi-label">Técnicos Activos</div>
+    <div class="kpi-value" id="kpi-technicians">{{ active_t }}</div>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-label">Work Items</div>
+    <div class="kpi-value" id="kpi-wi">{{ total_wi }}</div>
+  </div>
+  <div class="kpi-card kpi-teal">
+    <div class="kpi-label">Ticket Promedio</div>
+    <div class="kpi-value" id="kpi-avg">${{ avg_ticket }}</div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="charts-row">
+  <div class="chart-card">
+    <div class="chart-title">Jobs por Estado</div>
+    <canvas id="pieChart" height="220"></canvas>
+  </div>
+  <div class="chart-card chart-wide">
+    <div class="chart-title">Revenue últimos 7 días</div>
+    <canvas id="lineChart" height="220"></canvas>
+  </div>
+</div>
+
+<!-- Bar chart -->
+<div class="card">
+  <div class="chart-title">Top Técnicos por Jobs Asignados</div>
+  <canvas id="barChart" height="160"></canvas>
+</div>
+
+<!-- Recent work items -->
+<div class="card">
+  <div class="card-header">
+    <h3>Últimos Work Items</h3>
+    <a href="/work_items" class="btn-link">Ver todos →</a>
+  </div>
+  <div class="table-container">
+  <table class="table">
+    <thead><tr><th>Job</th><th>Cliente</th><th>Tipo</th><th>Descripción</th><th>Subtotal</th></tr></thead>
+    <tbody>
+    {% for w in recent_wi %}
+    <tr>
+      <td><a href="/work_items?job_id={{ w.jobId }}">#{{ w.jobId }}</a></td>
+      <td>{{ w.cliente or '—' }}</td>
+      <td><span class="badge badge-{{ w.tipo|lower }}">{{ w.tipo }}</span></td>
+      <td>{{ w.descripcion }}</td>
+      <td class="amount">${{ "%.2f"|format(w.subtotal or 0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Pie chart — jobs por estado
+const pieData = {
+  labels: [{% for s in jobs_status %}"{{ s.s }}"{% if not loop.last %},{% endif %}{% endfor %}],
+  datasets:[{data:[{% for s in jobs_status %}{{ s.n }}{% if not loop.last %},{% endif %}{% endfor %}],
+  backgroundColor:["#E53935","#FB8C00","#43A047","#1E88E5","#8E24AA","#00ACC1"]}]
+};
+new Chart(document.getElementById("pieChart"), {type:"pie",data:pieData,
+  options:{plugins:{legend:{position:"bottom"}},responsive:true}});
+
+// Bar chart — top técnicos
+const barData = {
+  labels:[{% for t in top_techs %}"{{ t.nombre }}"{% if not loop.last %},{% endif %}{% endfor %}],
+  datasets:[{label:"Jobs asignados",
+    data:[{% for t in top_techs %}{{ t.cnt }}{% if not loop.last %},{% endif %}{% endfor %}],
+    backgroundColor:"#1E88E5"}]
+};
+new Chart(document.getElementById("barChart"), {type:"bar",data:barData,
+  options:{responsive:true,plugins:{legend:{display:false}},
+    scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+// Line chart — revenue (fetched from API)
+fetch("/api/dashboard/revenue_by_day?days=7")
+  .then(r=>r.json()).then(data=>{
+    new Chart(document.getElementById("lineChart"), {
+      type:"line",
+      data:{
+        labels: data.map(d=>d.date||"hoy"),
+        datasets:[{label:"Revenue ($)",data:data.map(d=>d.amount),
+          fill:true,borderColor:"#43A047",backgroundColor:"rgba(67,160,71,0.15)",tension:0.4}]
+      },
+      options:{responsive:true,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true}}}
+    });
+  }).catch(()=>{
+    new Chart(document.getElementById("lineChart"),{type:"line",
+      data:{labels:["Sin datos"],datasets:[{data:[0]}]},options:{}});
+  });
+
+// Auto-refresh KPIs every 30s
+setInterval(()=>{
+  fetch("/api/dashboard/summary").then(r=>r.json()).then(d=>{
+    document.getElementById("kpi-total-jobs").textContent = d.total_jobs;
+    document.getElementById("kpi-completed").textContent  = d.completed_jobs;
+    document.getElementById("kpi-revenue").textContent    = "$"+Math.round(d.total_revenue);
+    document.getElementById("kpi-technicians").textContent= d.active_technicians;
+    document.getElementById("kpi-wi").textContent         = d.total_work_items;
+    document.getElementById("kpi-avg").textContent        = "$"+d.avg_ticket;
+    document.getElementById("lastRefresh").textContent    = new Date().toLocaleTimeString("es");
+  });
+}, 30000);
+</script>
+{% endblock %}

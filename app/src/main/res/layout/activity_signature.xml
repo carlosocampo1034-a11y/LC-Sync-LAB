@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/lc_bg">
+
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp" android:paddingEnd="20dp"
+        android:paddingTop="14dp" android:paddingBottom="14dp">
+        <ImageView android:id="@+id/btnAtras"
+            android:layout_width="44dp" android:layout_height="44dp"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Atrás" />
+        <TextView
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:layout_marginStart="6dp"
+            android:text="FIRMA DEL CLIENTE"
+            android:textColor="@color/lc_text"
+            android:textSize="20sp" android:textStyle="bold"
+            android:letterSpacing="-0.02" />
+    </LinearLayout>
+
+    <View android:id="@+id/divider"
+        android:layout_width="match_parent" android:layout_height="1dp"
+        android:layout_below="@id/header"
+        android:background="@color/lc_border" />
+
+    <ScrollView
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_below="@id/divider"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="20dp">
+
+            <!-- Summary card -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_surface"
+                android:padding="16dp">
+                <TextView android:id="@+id/tvResumenFirma"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:textColor="@color/lc_text"
+                    android:textSize="16sp" android:textStyle="bold" />
+                <TextView android:id="@+id/tvTotalFirma"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/lc_text_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Signer name -->
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="NOMBRE DEL FIRMANTE"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp" android:textStyle="bold"
+                android:letterSpacing="0.08" />
+            <EditText android:id="@+id/etNombreFirmante"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_surface"
+                android:hint="Nombre completo del cliente"
+                android:inputType="textPersonName|textCapWords"
+                android:padding="14dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="15sp" />
+
+            <!-- Signature pad -->
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="FIRMA"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp" android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <com.lc.technician.ui.SignatureView
+                android:id="@+id/signaturePad"
+                android:layout_width="match_parent"
+                android:layout_height="280dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_signature_pad" />
+
+            <TextView
+                android:id="@+id/tvTimestampFirma"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:gravity="end" />
+
+            <!-- Notes -->
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="COMENTARIOS DEL CLIENTE (opcional)"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp" android:textStyle="bold"
+                android:letterSpacing="0.08" />
+            <EditText android:id="@+id/etNotasFirma"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_surface"
+                android:hint="Comentarios opcionales"
+                android:inputType="textMultiLine"
+                android:minLines="3"
+                android:gravity="top|start"
+                android:padding="14dp"
+                android:textColor="@color/lc_text"
+                android:textColorHint="@color/lc_text_tertiary"
+                android:textSize="14sp" />
+
+            <!-- Buttons row -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal">
+                <Button android:id="@+id/btnLimpiar"
+                    android:layout_width="0dp" android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_btn_secondary"
+                    android:text="LIMPIAR Y REINTENTAR"
+                    android:textColor="#F57C00"
+                    android:textStyle="bold" android:textSize="12sp"
+                    android:letterSpacing="0.02"
+                    android:stateListAnimator="@null" />
+                <Button android:id="@+id/btnGuardarFirma"
+                    android:layout_width="0dp" android:layout_height="52dp"
+                    android:layout_weight="2"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="GUARDAR FIRMA"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold" android:textSize="14sp"
+                    android:letterSpacing="0.03"
+                    android:stateListAnimator="@null" />
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="32dp" />
+        </LinearLayout>
+    </ScrollView>
+</RelativeLayout>

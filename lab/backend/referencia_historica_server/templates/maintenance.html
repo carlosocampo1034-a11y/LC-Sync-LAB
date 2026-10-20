@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% set active = 'maintenance' %}
+{% block title %}Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="maint-header">
+  <h1>Mantenimiento del Sistema</h1>
+  <div class="maint-subtitle">Solo administrador · Flask v{{ flask_version }} · PID {{ server_pid }}</div>
+</div>
+
+<!-- 4-Card Grid -->
+<div class="maint-grid">
+
+  <!-- Card Servidor -->
+  <div class="maint-card">
+    <div class="maint-card-title">⚙️ Servidor</div>
+    <div class="maint-rows">
+      <div class="maint-row"><span>Versión Flask</span><strong>v{{ flask_version }}</strong></div>
+      <div class="maint-row"><span>Python</span><strong>{{ python_version }}</strong></div>
+      <div class="maint-row"><span>PID</span><strong>{{ server_pid }}</strong></div>
+      <div class="maint-row"><span>Uptime</span><strong>{{ uptime_str }}</strong></div>
+    </div>
+  </div>
+
+  <!-- Card DB -->
+  <div class="maint-card">
+    <div class="maint-card-title">🗄️ Base de Datos</div>
+    <div class="maint-rows">
+      <div class="maint-row"><span>Tamaño DB</span><strong>{{ db_size_kb }} KB</strong></div>
+      <div class="maint-row"><span>WAL</span><strong>{{ wal_size_kb }} KB</strong></div>
+      <div class="maint-row"><span>Modificada</span><strong>{{ db_mtime }}</strong></div>
+      <div class="maint-row"><span>Espacio libre</span><strong>{{ disk_free_gb }} GB</strong></div>
+    </div>
+  </div>
+
+  <!-- Card Backups -->
+  <div class="maint-card">
+    <div class="maint-card-title">💾 Backups</div>
+    <div class="maint-rows">
+      <div class="maint-row"><span>Total backups</span><strong>{{ backup_count }}</strong></div>
+      <div class="maint-row"><span>Espacio total</span><strong>{{ backup_total_kb }} KB</strong></div>
+      <div class="maint-row"><span>Último backup</span><strong>{{ last_backup or '—' }}</strong></div>
+    </div>
+    <a href="/backup" class="maint-link-btn">→ Gestionar Backups</a>
+  </div>
+
+  <!-- Card Disco -->
+  <div class="maint-card">
+    <div class="maint-card-title">💿 Disco</div>
+    <div class="maint-rows">
+      <div class="maint-row"><span>Usado</span><strong>{{ disk_used_gb }} GB</strong></div>
+      <div class="maint-row"><span>Libre</span><strong>{{ disk_free_gb }} GB</strong></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tablas DB -->
+<div class="maint-card maint-card-full">
+  <div class="maint-card-title">📊 Conteo de Registros por Tabla</div>
+  <table class="maint-table">
+    <thead><tr><th>Tabla</th><th class="num">Registros</th></tr></thead>
+    <tbody>
+      {% for tname, cnt in tables.items() %}
+      <tr>
+        <td><code>{{ tname }}</code></td>
+        <td class="num"><strong>{{ cnt }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Acciones -->
+<div class="maint-card maint-card-full">
+  <div class="maint-card-title">🔧 Acciones de Mantenimiento</div>
+  <div class="maint-actions">
+    <button class="maint-action-btn maint-btn-primary" onclick="doVacuum()">
+      🧹 VACUUM DB (Compactar)
+    </button>
+    <button class="maint-action-btn maint-btn-warn" onclick="doCleanLogs()">
+      🗑️ LIMPIAR LOGS ANTIGUOS (+7 días)
+    </button>
+    <a href="/backup" class="maint-action-btn maint-btn-blue">
+      💾 IR A BACKUP
+    </a>
+  </div>
+  <div class="maint-result" id="maintResult"></div>
+</div>
+
+<!-- Log Viewer -->
+<div class="maint-card maint-card-full">
+  <div class="maint-card-title">
+    📋 Logs del Servidor
+    {% if log_source %}<span class="maint-log-source">{{ log_source }}</span>{% endif %}
+  </div>
+  {% if log_lines %}
+  <div class="log-viewer">
+    {% for line in log_lines %}<div>{{ line }}</div>{% endfor %}
+  </div>
+  {% else %}
+  <div class="jd-empty">Sin archivos de log encontrados.</div>
+  {% endif %}
+</div>
+
+<script>
+function showResult(msg, ok) {
+  var el = document.getElementById('maintResult');
+  el.textContent = msg;
+  el.className = 'maint-result ' + (ok ? 'maint-result-ok' : 'maint-result-err');
+  el.style.display = 'block';
+}
+function doVacuum() {
+  fetch('/api/maintenance/vacuum', {method:'POST'})
+    .then(r => r.json())
+    .then(d => showResult('VACUUM OK · Antes: ' + d.size_before_kb + ' KB → Después: ' + d.size_after_kb + ' KB · Ahorrado: ' + d.saved_kb + ' KB', true))
+    .catch(e => showResult('Error: ' + e, false));
+}
+function doCleanLogs() {
+  fetch('/api/maintenance/clean_logs', {method:'POST'})
+    .then(r => r.json())
+    .then(d => showResult('Logs eliminados: ' + d.deleted + ' · Liberado: ' + d.freed_kb + ' KB', true))
+    .catch(e => showResult('Error: ' + e, false));
+}
+</script>
+{% endblock %}

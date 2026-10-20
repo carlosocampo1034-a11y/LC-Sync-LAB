@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-files-path name="fotos" path="fotos/" />
+    <files-path name="fotos_int" path="fotos/" />
+    <external-files-path name="reportes" path="reportes/" />
+    <external-files-path name="facturas" path="facturas/" />
+    <external-files-path name="firmas" path="firmas/" />
+    <external-files-path name="exports" path="exports/" />
+</paths>

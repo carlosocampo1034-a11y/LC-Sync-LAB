@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% set active = 'jobs' %}
+{% block title %}Job #{{ job.id }}{% endblock %}
+
+{% block content %}
+<!-- Header / Nav -->
+<div class="jd-header">
+  <div class="jd-nav-row">
+    <a href="/jobs" class="btn-back">← Volver a Jobs</a>
+    <div class="jd-nav-arrows">
+      {% if prev_id %}<a href="/jobs/{{ prev_id }}" class="btn-nav">‹ #{{ prev_id }}</a>{% endif %}
+      {% if next_id %}<a href="/jobs/{{ next_id }}" class="btn-nav">#{{ next_id }} ›</a>{% endif %}
+      <a href="/jobs/{{ job.id }}/pdf" class="btn-nav" style="background:#1d4ed8;color:#fff;">⬇ PDF</a>
+    </div>
+  </div>
+  <div class="jd-title-row">
+    <h1>Trabajo <span class="jd-id">#{{ job.id }}</span></h1>
+    <div class="jd-estado">
+      {% if 'COMPLET' in (job.estado or '') or 'REALIZ' in (job.estado or '') %}
+        <span class="badge badge-green">{{ job.estado }}</span>
+      {% elif 'RUTA' in (job.estado or '') %}
+        <span class="badge badge-blue">{{ job.estado }}</span>
+      {% else %}
+        <span class="badge badge-orange">{{ job.estado or 'PENDIENTE' }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Info Card -->
+<div class="jd-grid">
+  <div class="jd-card">
+    <div class="jd-card-title">Información del Trabajo</div>
+    <div class="jd-info-rows">
+      <div class="jd-info-row">
+        <span class="jd-label">Cliente</span>
+        <span class="jd-val">{{ job.cliente or '—' }}</span>
+      </div>
+      <div class="jd-info-row">
+        <span class="jd-label">Hora</span>
+        <span class="jd-val">{{ job.hora or '—' }}</span>
+      </div>
+      <div class="jd-info-row">
+        <span class="jd-label">Técnico</span>
+        <span class="jd-val">{{ job.technicianId or '—' }}</span>
+      </div>
+      <div class="jd-info-row">
+        <span class="jd-label">Revenue</span>
+        <span class="jd-val jd-revenue">${{ "%.2f"|format(revenue) }}</span>
+      </div>
+      <div class="jd-info-row">
+        <span class="jd-label">Work Items</span>
+        <span class="jd-val">{{ work_items|length }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Work Items Card -->
+  <div class="jd-card">
+    <div class="jd-card-title">Work Items <span class="jd-count">{{ work_items|length }}</span></div>
+    {% if work_items %}
+    <table class="jd-table">
+      <thead>
+        <tr>
+          <th>Descripción</th>
+          <th>Tipo</th>
+          <th class="num">Cant</th>
+          <th class="num">Precio</th>
+          <th class="num">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for wi in work_items %}
+        <tr>
+          <td>{{ wi.descripcion or '—' }}</td>
+          <td>
+            {% if wi.tipo == 'PART' %}
+              <span class="wi-badge wi-part">PART</span>
+            {% elif wi.tipo == 'LABOR' %}
+              <span class="wi-badge wi-labor">LABOR</span>
+            {% else %}
+              <span class="wi-badge wi-other">{{ wi.tipo or '—' }}</span>
+            {% endif %}
+          </td>
+          <td class="num">{{ wi.cantidad or 0 }}</td>
+          <td class="num">${{ "%.2f"|format(wi.precioUnitario or 0) }}</td>
+          <td class="num"><strong>${{ "%.2f"|format(wi.subtotal or 0) }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" class="num jd-total-label">TOTAL</td>
+          <td class="num jd-total"><strong>${{ "%.2f"|format(revenue) }}</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <div class="jd-empty">Sin work items registrados para este trabajo.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Photos Gallery Card -->
+<div class="jd-card jd-card-full">
+  <div class="jd-card-title">Fotos <span class="jd-count">{{ photos|length }}</span></div>
+  {% if photos %}
+  <div class="photo-grid">
+    {% for p in photos %}
+    <div class="photo-thumb" onclick="openLightbox({{ loop.index0 }})">
+      <img src="/api/photos/{{ p.id }}/image" alt="{{ p.filename or 'foto' }}" loading="lazy">
+      <div class="photo-label">{{ p.filename or ('foto_%d'|format(loop.index)) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="jd-empty">📷 Sin fotos registradas para este trabajo.</div>
+  {% endif %}
+</div>
+
+<!-- Lightbox Modal -->
+{% if photos %}
+<div class="photo-lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="photo-close" onclick="closeLightbox()">✕</button>
+  <button class="photo-nav photo-nav-prev" onclick="event.stopPropagation(); navPhoto(-1)">‹</button>
+  <img class="photo-lightbox-img" id="lightboxImg" src="" alt="">
+  <div class="photo-lightbox-caption" id="lightboxCaption"></div>
+  <button class="photo-nav photo-nav-next" onclick="event.stopPropagation(); navPhoto(1)">›</button>
+</div>
+<script>
+var _photos = [{% for p in photos %}{"id":{{ p.id }},"name":"{{ p.filename or 'foto' }}"}{% if not loop.last %},{% endif %}{% endfor %}];
+var _cur = 0;
+function openLightbox(idx) {
+  _cur = idx;
+  var lb = document.getElementById('lightbox');
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  updateLightbox();
+}
+function updateLightbox() {
+  var p = _photos[_cur];
+  document.getElementById('lightboxImg').src = '/api/photos/' + p.id + '/image';
+  document.getElementById('lightboxCaption').textContent = (_cur+1) + ' / ' + _photos.length + ' · ' + p.name;
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function navPhoto(dir) {
+  _cur = (_cur + dir + _photos.length) % _photos.length;
+  updateLightbox();
+}
+document.addEventListener('keydown', function(e) {
+  var lb = document.getElementById('lightbox');
+  if (lb.style.display !== 'flex') return;
+  if (e.key === 'ArrowRight') navPhoto(1);
+  else if (e.key === 'ArrowLeft') navPhoto(-1);
+  else if (e.key === 'Escape') closeLightbox();
+});
+</script>
+{% endif %}
+
+<!-- Audit Log Card -->
+<div class="jd-card jd-card-full">
+  <div class="jd-card-title">Historial de Auditoría <span class="jd-count">{{ audit|length }}</span></div>
+  {% if audit %}
+  <table class="audit-table">
+    <thead>
+      <tr>
+        <th>Acción</th>
+        <th>Entidad</th>
+        <th>ID</th>
+        <th>Campo</th>
+        <th>Anterior</th>
+        <th>Nuevo</th>
+        <th>Actor</th>
+        <th>Fecha</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in audit %}
+      <tr>
+        <td><span class="audit-action audit-{{ e.action|lower|default('default') }}">{{ e.action or '—' }}</span></td>
+        <td>{{ e.entityType or '—' }}</td>
+        <td class="text-muted">{{ e.entityId or '—' }}</td>
+        <td class="text-muted">{{ e.field or '—' }}</td>
+        <td class="text-muted audit-old">{{ e.oldValue or '—' }}</td>
+        <td class="audit-new">{{ e.newValue or '—' }}</td>
+        <td>{{ e.actor or '—' }}</td>
+        <td class="text-muted">{{ e.ts_str }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="jd-empty">Sin entradas de auditoría para este trabajo.</div>
+  {% endif %}
+  {% if audit|length == 30 %}
+  <div class="jd-audit-note text-muted">Mostrando las últimas 30 entradas · <a href="/audit_log?entity_type=JOB">Ver auditoría completa</a></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Backup & Restore{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Backup &amp; Restore</h1>
+  <span class="page-sub">Solo accesible para admin</span>
+</div>
+
+<!-- Estado de la DB -->
+<div class="backup-card">
+  <div class="backup-card-title">Estado de la Base de Datos</div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Tamaño actual</span>
+    <span class="backup-info-val">{{ db_size_kb }} KB</span>
+  </div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Última modificación</span>
+    <span class="backup-info-val">{{ last_mod }}</span>
+  </div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Ruta</span>
+    <span class="backup-info-val text-muted" style="font-size:0.8rem">lc_sync.db</span>
+  </div>
+  <table class="backup-table" style="margin-top:1rem">
+    <thead>
+      <tr><th>Tabla</th><th>Registros</th></tr>
+    </thead>
+    <tbody>
+      {% for tbl, cnt in tables.items() %}
+      <tr><td>{{ tbl }}</td><td>{{ cnt }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Hacer Backup -->
+<div class="backup-card">
+  <div class="backup-card-title">Descargar Backup</div>
+  <p class="backup-desc">Genera y descarga una copia de lc_sync.db con checkpoint WAL aplicado.</p>
+  <a href="/api/backup/download" class="backup-btn-download">⬇ DESCARGAR BACKUP (.db)</a>
+  <p class="backup-warning" style="margin-top:0.75rem">El archivo se genera al vuelo y no se guarda en el servidor.</p>
+</div>
+
+<!-- Restaurar Backup -->
+<div class="backup-card">
+  <div class="backup-card-title">Restaurar Backup</div>
+  <p class="backup-desc">Sube un archivo .db para reemplazar la base de datos actual.</p>
+  <div class="backup-warning">⚠ Se creará un backup automático antes de restaurar. Esta acción es irreversible (a menos que uses ese backup).</div>
+  <form id="restoreForm" style="margin-top:1rem">
+    <input type="file" id="dbFile" accept=".db" class="backup-file-input">
+    <button type="button" class="backup-btn-restore" onclick="doRestore()">⚠ RESTAURAR</button>
+  </form>
+  <div id="restoreMsg" style="margin-top:0.5rem"></div>
+</div>
+
+<!-- Export Completo ZIP -->
+<div class="backup-card">
+  <div class="backup-card-title">📦 EXPORT COMPLETO (ZIP)</div>
+  <p class="backup-desc">
+    Exporta toda la base de datos + JSON de cada tabla + README.
+    Útil para migrar o archivar todo el sistema.
+  </p>
+  <a href="/api/export/full_zip" class="backup-btn-download">⬇ DESCARGAR ZIP</a>
+  <p class="backup-warning" style="margin-top:0.75rem">El ZIP incluye: lc_sync.db, 7 archivos JSON y README.txt. Las fotos sin base64Data.</p>
+</div>
+
+<!-- IMPORTAR ZIP -->
+<div class="backup-card">
+  <div class="backup-card-title">📥 IMPORTAR ZIP</div>
+  <p class="backup-desc">
+    Sube un ZIP exportado para restaurar la base de datos o tablas selectivas.
+    Se crea backup automático antes de restaurar.
+  </p>
+  <form action="/api/import/full_zip" method="post"
+        enctype="multipart/form-data" id="importZipForm">
+    <input type="file" name="zip_file" accept=".zip" required
+           style="margin-bottom:0.5rem; width:100%; color:#ccc;">
+    <select name="mode" style="width:100%; margin-bottom:0.75rem; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.5rem; border-radius:6px;">
+      <option value="full">Reemplazar DB completa (full)</option>
+      <option value="tables">Importar solo tablas (JSON)</option>
+    </select>
+    <button type="submit" class="backup-btn-restore"
+            onclick="return confirm('⚠ ¿Restaurar? Se creará backup automático.')">
+      ⚠ IMPORTAR ZIP
+    </button>
+  </form>
+  <div class="backup-warning" style="margin-top:0.5rem; font-size:0.8rem; color:#f59e0b;">
+    ⚠ Se creará un backup automático antes de restaurar.
+  </div>
+</div>
+
+<!-- Export Incremental -->
+<div class="backup-card">
+  <div class="backup-card-title">⚡ EXPORT INCREMENTAL</div>
+  <p class="backup-desc">
+    Exporta solo los cambios desde el último export incremental.
+    Ideal para backups frecuentes y livianos.
+  </p>
+  <a href="/api/export/incremental" class="backup-btn-download">
+    ⬇ DESCARGAR INCREMENTAL
+  </a>
+  <form action="/api/export/incremental/reset" method="post"
+        style="margin-top:0.5rem;"
+        onsubmit="return confirm('¿Resetear cursor? El próximo export incluirá todos los datos.')">
+    <button type="submit" style="width:100%; margin-top:0.5rem; background:#374151; color:#9ca3af; border:none; padding:0.5rem; border-radius:6px; cursor:pointer;">
+      🔄 Resetear cursor (próximo export será completo)
+    </button>
+  </form>
+  <p class="backup-warning" style="margin-top:0.75rem">META.json incluido con counts por tabla y timestamps.</p>
+</div>
+
+<!-- Backups manuales (pre-restore) -->
+<div class="backup-card">
+  <div class="backup-card-title">Backups Manuales (pre-restore)</div>
+  {% if backups %}
+  <table class="backup-table">
+    <thead>
+      <tr><th>Archivo</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      {% for b in backups %}
+      <tr>
+        <td class="text-muted" style="font-size:0.8rem">{{ b.name }}</td>
+        <td>{{ b.size_kb }} KB</td>
+        <td class="text-muted">{{ b.modified }}</td>
+        <td>
+          <a href="/api/backup/download_file/{{ b.name }}" class="btn-secondary" style="font-size:0.75rem;padding:2px 8px">⬇</a>
+          <button onclick="deleteBackup('{{ b.name }}')" class="backup-btn-delete">🗑</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>No hay backups manuales.</p></div>
+  {% endif %}
+</div>
+
+<!-- Backups automáticos del scheduler -->
+<div class="backup-card">
+  <div class="backup-card-title">🤖 Backups del Scheduler (auto_*.db)</div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Último run</span>
+    <span class="backup-info-val">{{ sched_status.last_run or 'Pendiente' }}</span>
+  </div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Próximo run</span>
+    <span class="backup-info-val">{{ sched_status.next_run or 'En ~24h' }}</span>
+  </div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Total auto backups</span>
+    <span class="backup-info-val">{{ sched_status.count }}</span>
+  </div>
+  {% if auto_backups %}
+  <table class="backup-table" style="margin-top:1rem">
+    <thead>
+      <tr><th>Archivo</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      {% for b in auto_backups %}
+      <tr>
+        <td class="text-muted" style="font-size:0.8rem">{{ b.name }}</td>
+        <td>{{ b.size_kb }} KB</td>
+        <td class="text-muted">{{ b.modified }}</td>
+        <td>
+          <a href="/api/backup/download_file/{{ b.name }}" class="btn-secondary" style="font-size:0.75rem;padding:2px 8px">⬇</a>
+          <button onclick="deleteBackup('{{ b.name }}')" class="backup-btn-delete">🗑</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>No hay backups automáticos aún. El scheduler crea uno cada 24h.</p></div>
+  {% endif %}
+</div>
+
+<!-- Backup Scheduler Automático -->
+<div class="backup-card" id="schedCard">
+  <div class="backup-card-title">⏰ Backup Scheduler (Automático)</div>
+  <p class="backup-desc">Backup automático cada 24 horas. Se mantienen los últimos 7 días de backups auto_*.db</p>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Último backup</span>
+    <span class="backup-info-val" id="schedLastRun">Cargando...</span>
+  </div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Próximo backup</span>
+    <span class="backup-info-val" id="schedNextRun">Cargando...</span>
+  </div>
+  <div class="backup-info-row">
+    <span class="backup-info-label">Backups auto existentes</span>
+    <span class="backup-info-val" id="schedCount">—</span>
+  </div>
+  <div style="margin:1rem 0;">
+    <button class="backup-btn-download" onclick="forceBackup()" id="btnForce">▶ EJECUTAR AHORA</button>
+    <span id="forceMsg" style="margin-left:0.75rem;font-size:0.85rem;"></span>
+  </div>
+  <table class="backup-table" id="schedTable" style="display:none;">
+    <thead>
+      <tr><th>Archivo</th><th>Tamaño</th><th>Fecha</th><th>Acción</th></tr>
+    </thead>
+    <tbody id="schedTableBody"></tbody>
+  </table>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+function doRestore() {
+  const file = document.getElementById('dbFile').files[0];
+  if (!file) { alert('Selecciona un archivo .db primero.'); return; }
+  if (!confirm('¿Confirmas restaurar la base de datos? Se creará un backup automático antes.')) return;
+  const fd = new FormData();
+  fd.append('db_file', file);
+  document.getElementById('restoreMsg').textContent = 'Restaurando...';
+  fetch('/api/backup/restore', {method:'POST', body:fd})
+    .then(r => r.json())
+    .then(d => {
+      if (d.status === 'ok') {
+        document.getElementById('restoreMsg').innerHTML =
+          '<span style="color:var(--green)">✅ Restaurado. Backup automático: ' + d.backup_auto + '</span>';
+        setTimeout(() => location.reload(), 2000);
+      } else {
+        document.getElementById('restoreMsg').innerHTML =
+          '<span style="color:var(--red)">❌ Error: ' + (d.error || 'desconocido') + '</span>';
+      }
+    })
+    .catch(e => {
+      document.getElementById('restoreMsg').innerHTML = '<span style="color:var(--red)">❌ Error: ' + e + '</span>';
+    });
+}
+function deleteBackup(name) {
+  if (!confirm('¿Eliminar ' + name + '?')) return;
+  fetch('/api/backup/delete_file/' + name, {method:'POST'})
+    .then(r => r.json())
+    .then(() => location.reload());
+}
+
+// Scheduler functions
+function loadSchedStatus() {
+  fetch('/api/backup/scheduled/status')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('schedLastRun').textContent = d.last_run || 'Nunca';
+      document.getElementById('schedNextRun').textContent = d.next_run || '—';
+      document.getElementById('schedCount').textContent = d.count + ' archivos';
+      if (d.backups && d.backups.length > 0) {
+        document.getElementById('schedTable').style.display = '';
+        const tbody = document.getElementById('schedTableBody');
+        tbody.innerHTML = '';
+        d.backups.forEach(b => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td style="font-size:0.8rem">' + b.name + '</td>' +
+            '<td>' + b.size_kb + ' KB</td>' +
+            '<td>' + b.modified + '</td>' +
+            '<td><a href="/api/backup/download_file/' + b.name + '" class="btn-secondary" style="font-size:0.75rem;padding:2px 8px">⬇</a></td>';
+          tbody.appendChild(tr);
+        });
+      }
+    })
+    .catch(() => {});
+}
+function forceBackup() {
+  const btn = document.getElementById('btnForce');
+  const msg = document.getElementById('forceMsg');
+  btn.disabled = true;
+  msg.textContent = 'Ejecutando...';
+  fetch('/api/backup/scheduled/force', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      msg.textContent = '✅ Backup creado: ' + (d.last_run || '');
+      msg.style.color = '#22c55e';
+      btn.disabled = false;
+      loadSchedStatus();
+    })
+    .catch(e => {
+      msg.textContent = '❌ Error';
+      msg.style.color = '#ef4444';
+      btn.disabled = false;
+    });
+}
+document.addEventListener('DOMContentLoaded', loadSchedStatus);
+</script>
+{% endblock %}

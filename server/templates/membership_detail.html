@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Membresía {{ card.cardNumber or card.id }}{% endblock %}
+{% block content %}
+
+<div class="jd-header">
+  <div class="jd-nav">
+    <a href="/memberships" class="btn-secondary">← Volver a Membresías</a>
+    <div class="jd-nav-arrows">
+      {% if prev_id %}<a href="/memberships/{{ prev_id }}" class="btn-secondary">‹ Anterior</a>{% endif %}
+      {% if next_id %}<a href="/memberships/{{ next_id }}" class="btn-secondary">Siguiente ›</a>{% endif %}
+    </div>
+  </div>
+  <h1 class="jd-title">
+    {% set parts = (card.cardNumber or 'LC-000').split('-') %}
+    {% set tier = parts[1] if parts|length >= 2 else 'BASIC' %}
+    <span class="mem-tier-badge
+      {% if tier=='GOLD' %}mem-tier-gold
+      {% elif tier=='SILVER' %}mem-tier-silver
+      {% elif tier=='BRONZE' %}mem-tier-bronze
+      {% else %}mem-tier-basic{% endif %}">{{ tier }}</span>
+    {{ card.cardNumber or '—' }}
+    {% if card.status == 'ACTIVE' %}<span class="badge badge-green">ACTIVA</span>
+    {% elif card.status == 'EXPIRED' %}<span class="badge badge-red">VENCIDA</span>
+    {% elif card.status == 'SUSPENDED' %}<span class="badge badge-orange">SUSPENDIDA</span>
+    {% endif %}
+  </h1>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row" style="margin-bottom:1.5rem">
+  <div class="kpi-card">
+    <div class="kpi-val">{{ checkins|length }}</div>
+    <div class="kpi-label">Total Check-ins</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-val">{{ checkins[0].date_str if checkins else '—' }}</div>
+    <div class="kpi-label">Último Check-in</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-val">
+      {% if checkins %}
+        {% set names = checkins | map(attribute='technicianName') | list %}
+        {{ names[0] or '—' }}
+      {% else %}—{% endif %}
+    </div>
+    <div class="kpi-label">Último Técnico</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-val">{{ card.paymentStatus or '—' }}</div>
+    <div class="kpi-label">Pago</div>
+  </div>
+</div>
+
+<!-- Info de tarjeta -->
+<div class="jd-grid" style="display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;margin-bottom:1.5rem">
+  <div class="card">
+    <div class="card-header"><h3>Información de Tarjeta</h3></div>
+    <div class="jd-info-row"><span class="jd-info-label">Nº Tarjeta</span><span>{{ card.cardNumber or '—' }}</span></div>
+    <div class="jd-info-row"><span class="jd-info-label">Estado</span><span>{{ card.status or '—' }}</span></div>
+    <div class="jd-info-row"><span class="jd-info-label">Pago</span><span>{{ card.paymentStatus or '—' }}</span></div>
+    <div class="jd-info-row"><span class="jd-info-label">Emisión</span><span>{{ card.issue_str }}</span></div>
+    <div class="jd-info-row"><span class="jd-info-label">Vencimiento</span>
+      <span class="{% if card.expired %}mem-date-red{% elif card.expiring_soon %}mem-date-orange{% endif %}">
+        {{ card.expiry_str }}{% if card.expiring_soon %} ⚠{% endif %}
+      </span>
+    </div>
+    <div class="jd-info-row"><span class="jd-info-label">Cliente #</span><span>{{ card.customerId or '—' }}</span></div>
+    <div class="jd-info-row"><span class="jd-info-label">Cobertura #</span><span>{{ card.coverageTypeId or '—' }}</span></div>
+    {% if card.notes %}
+    <div class="jd-info-row"><span class="jd-info-label">Notas</span><span class="text-muted">{{ card.notes }}</span></div>
+    {% endif %}
+
+    <!-- Renewal Section -->
+    <div class="renew-section">
+      {% if current_role in ('admin', 'dispatcher') %}
+        <button class="btn-renew" onclick="renewCard()">
+          🔄 RENOVAR POR 1 AÑO
+        </button>
+      {% endif %}
+      <div id="renewResult"></div>
+    </div>
+  </div>
+
+  <!-- Check-ins timeline -->
+  <div class="card">
+    <div class="card-header"><h3>Timeline de Check-ins ({{ checkins|length }})</h3></div>
+    {% if checkins %}
+    <div class="checkin-timeline">
+      {% for ci in checkins %}
+      <div class="checkin-item">
+        <div class="checkin-dot"></div>
+        <div class="checkin-body">
+          <div class="checkin-date">{{ ci.date_str }}</div>
+          <div class="checkin-tech">👷 {{ ci.technicianName or '—' }}</div>
+          {% if ci.jobId %}<div class="checkin-job text-muted">Job #{{ ci.jobId }}</div>{% endif %}
+          {% if ci.notes %}<div class="checkin-notes text-muted">{{ ci.notes }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>No hay check-ins registrados para esta tarjeta.</p>
+      <p class="text-muted">Los check-ins aparecerán aquí después de que la app Android sincronice.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Renewal History -->
+{% if renewal_history %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="card-header"><h3>Historial de Renovaciones ({{ renewal_history|length }})</h3></div>
+  <div class="timeline">
+    {% for r in renewal_history %}
+    <div class="timeline-item">
+      <span class="timeline-date">{{ r.timestamp }}</span>
+      <span class="timeline-actor">{{ r.actor }}</span>
+      <span class="timeline-detail">{{ r.details }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+function renewCard() {
+  if (!confirm('¿Confirmar renovación por 1 año?')) return;
+  fetch('/api/memberships/{{ card.id }}/renew', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({days: 365, note: 'Renovación anual'})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status === 'ok') {
+      document.getElementById('renewResult').innerHTML =
+        '<div class="alert-green">✅ Renovado: ' + d.old_expiry +
+        ' → ' + d.new_expiry + ' (+' + d.days_added + ' días)</div>';
+      setTimeout(() => location.reload(), 2500);
+    } else {
+      document.getElementById('renewResult').innerHTML =
+        '<div class="alert-red">❌ ' + (d.error || 'Error') + '</div>';
+    }
+  })
+  .catch(e => {
+    document.getElementById('renewResult').innerHTML =
+      '<div class="alert-red">❌ Error de red: ' + e.message + '</div>';
+  });
+}
+</script>
+
+{% endblock %}

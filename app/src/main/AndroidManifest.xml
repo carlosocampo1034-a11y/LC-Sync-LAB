@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:name=".LcApplication"
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/Theme.LC">
+
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".MainActivity" android:exported="false" />
+        <activity android:name=".DispatchActivity" android:exported="false" />
+
+        <activity android:name=".JobDetailActivity" android:exported="false" />
+        <activity android:name=".RequestServiceActivity" android:exported="false" />
+        <activity android:name=".PhotoViewActivity" android:exported="false" />
+        <activity android:name=".ProfileActivity" android:exported="false" />
+        <activity android:name=".JobCompletedActivity" android:exported="false" />
+        <activity android:name=".ConfiguracionActivity" android:exported="false" />
+        <activity android:name=".InspectionActivity" android:exported="false" />
+        <activity android:name=".AuditLogActivity" android:exported="false" />
+        <activity android:name=".ProposalActivity" android:exported="false" />
+        <activity android:name=".SignatureActivity" android:exported="false" />
+        <activity android:name=".EstadisticasActivity" android:exported="false" />
+        <activity android:name=".PartsActivity" android:exported="false" />
+        <activity android:name=".EquipmentActivity" android:exported="false" />
+        <activity android:name=".ReportesActivity" android:exported="false" />
+        <activity android:name=".InvoiceActivity" android:exported="false" />
+        <activity android:name=".PagosActivity" android:exported="false" />
+        <activity android:name=".FavoritosActivity" android:exported="false" />
+        <activity android:name=".TechnicianRosterActivity" android:exported="false" />
+        <activity android:name=".NameplateReviewActivity" android:exported="false" />
+        <activity android:name=".FindingDetailActivity" android:exported="false" />
+        <activity android:name=".StatusPublicoActivity" android:exported="true" />
+        <activity
+            android:name=".MembershipScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity android:name=".OnboardingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity android:name=".CustomerSignatureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity android:name=".TechnicianSignatureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <receiver android:name=".RecordatorioReceiver"
+            android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+            <activity android:name=".StockMovementActivity" android:exported="false" />
+            <activity android:name=".PartsRequestActivity" android:exported="false" />
+            <activity android:name=".MembershipHistoryActivity" android:exported="false" />
+            <activity android:name=".PartDetailActivity" android:exported="false" />
+            <activity android:name=".EquipmentDetailActivity" android:exported="false" />
+    </application>
+</manifest>

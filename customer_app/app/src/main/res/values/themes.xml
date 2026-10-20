@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.LCCustomer" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/lc_rojo</item>
+        <item name="colorAccent">@color/lc_rojo</item>
+        <item name="android:windowBackground">@color/lc_fondo</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- el teléfono tiene oscurecimiento forzado (debug.hwui.force_dark): sin esto el fondo se oscurecía y los
+             iconos oscuros de la barra de estado quedaban ilegibles -->
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>

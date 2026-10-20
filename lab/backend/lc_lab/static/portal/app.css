@@ -1,0 +1,70 @@
+/* L&C Cliente (web) — mismos colores que L&C Customer Android */
+:root {
+  --rojo: #EB1700; --texto: #191919; --sec: #6B6B6B; --borde: #E5E5E5; --suave: #F6F6F6; --fondo: #FFFFFF;
+  --ok: #137333; --naranja: #B45309;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--fondo); color: var(--texto);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.barra {
+  position: sticky; top: 0; z-index: 5; background: var(--fondo); border-bottom: 1px solid var(--borde);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px;
+}
+.marca { font-weight: 800; font-size: 20px; color: var(--rojo); }
+.lab { font-size: 11px; font-weight: 600; color: var(--naranja); background: #FEF3C7; border-radius: 6px; padding: 2px 6px; vertical-align: middle; }
+.usuario { font-size: 13px; color: var(--sec); text-align: right; }
+main { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; }
+h1 { font-size: 26px; margin: 8px 0 4px; }
+h2 { font-size: 18px; margin: 24px 0 8px; }
+.sec { color: var(--sec); font-size: 14px; margin: 4px 0; }
+.tarjeta { border: 1px solid var(--borde); border-radius: 14px; padding: 14px; margin: 10px 0; background: var(--fondo); }
+.tarjeta.click { cursor: pointer; }
+.tarjeta.click:active { background: var(--suave); }
+.fila { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.chip { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: var(--suave); color: var(--texto); white-space: nowrap; }
+.chip.ok { background: #E6F4EA; color: var(--ok); }
+.chip.rojo { background: #FDE7E4; color: var(--rojo); }
+label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+input, select, textarea {
+  width: 100%; font: inherit; font-size: 16px; /* 16px evita el zoom automático de Safari */
+  padding: 12px; border: 1px solid var(--borde); border-radius: 10px; background: var(--fondo); color: var(--texto);
+}
+textarea { min-height: 96px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--rojo); outline-offset: 0; }
+button, .boton {
+  display: block; width: 100%; min-height: 50px; margin: 10px 0; border-radius: 12px; border: 0;
+  font: inherit; font-weight: 700; font-size: 16px; text-align: center; text-decoration: none; cursor: pointer;
+  background: var(--rojo); color: #fff; padding: 12px;
+}
+button.sec2, .boton.sec2 { background: var(--suave); color: var(--texto); border: 1px solid var(--borde); }
+button.enlace { background: none; color: var(--rojo); min-height: 44px; font-weight: 600; }
+button:disabled { opacity: .5; }
+.error { color: var(--rojo); font-size: 14px; min-height: 20px; margin: 8px 0; }
+.ok { color: var(--ok); }
+.fotos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; }
+.fotos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--suave); }
+.opcion { border: 2px solid var(--borde); border-radius: 14px; padding: 14px; margin: 10px 0; cursor: pointer; }
+.opcion.elegida { border-color: var(--rojo); background: #FFF5F4; }
+.opcion .titulo { font-weight: 800; font-size: 17px; }
+.opcion .precio { font-weight: 800; font-size: 20px; color: var(--rojo); }
+.firma { width: 100%; height: 180px; border: 1px dashed var(--sec); border-radius: 12px; background: #fff; touch-action: none; display: block; }
+.franja { border-radius: 12px; padding: 12px; margin: 10px 0; font-weight: 600; font-size: 14px; }
+.franja.roja { background: #FDE7E4; color: #9F1100; }
+.franja.naranja { background: #FEF3C7; color: #92400E; }
+.franja.verde { background: #E6F4EA; color: var(--ok); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td { padding: 6px 0; border-bottom: 1px solid var(--borde); vertical-align: top; }
+td.num { text-align: right; white-space: nowrap; padding-left: 8px; }
+.total td { font-weight: 800; font-size: 16px; border-bottom: 0; }
+.historial li { font-size: 14px; color: var(--sec); margin: 4px 0; }
+.aviso {
+  position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 10;
+  background: var(--texto); color: #fff; border-radius: 12px; padding: 12px 14px; font-size: 14px;
+  pointer-events: none;   /* nunca tapa un botón */
+}
+.miniatura { display: inline-block; font-size: 13px; color: var(--sec); margin: 2px 6px 2px 0; }

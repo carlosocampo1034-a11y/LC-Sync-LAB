@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/lc_bg">
+
+    <!-- Header -->
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
+
+        <ImageView
+            android:id="@+id/btnAtras"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Atrás" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="Ajustes"
+            android:textColor="@color/lc_text"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:letterSpacing="-0.02" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/lc_border" />
+
+    <ScrollView
+        android:id="@+id/scrollConfig"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Sección SISTEMA -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="SISTEMA"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <TextView
+                android:id="@+id/tvVersion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btnHacerBackup"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_button_primary"
+                android:text="HACER BACKUP AHORA"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:letterSpacing="0.03"
+                android:stateListAnimator="@null" />
+
+            <TextView
+                android:id="@+id/tvEstadoBackup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/lc_text"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <!-- Sección ÚLTIMO BACKUP -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="ÚLTIMO BACKUP"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <TextView
+                android:id="@+id/tvUltimoBackup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="14sp" />
+
+            <!-- Sección BACKUP Y RESTAURACIÓN -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="BACKUP Y RESTAURACIÓN"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="@drawable/bg_surface">
+
+                <TextView
+                    android:id="@+id/tvUltimoBackupDB"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/lc_text_secondary"
+                    android:textSize="12sp"
+                    android:text="Sin backups DB aún." />
+
+                <Button
+                    android:id="@+id/btnExportarBackup"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="EXPORTAR BACKUP"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:letterSpacing="0.03"
+                    android:stateListAnimator="@null" />
+
+                <Button
+                    android:id="@+id/btnRestaurarBackup"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_chip_inactive"
+                    android:text="RESTAURAR BACKUP"
+                    android:textColor="@color/lc_text"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:letterSpacing="0.03"
+                    android:stateListAnimator="@null" />
+
+                <Button
+                    android:id="@+id/btnCompartirBackup"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_chip_inactive"
+                    android:text="COMPARTIR BACKUP"
+                    android:textColor="@color/lc_text"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:letterSpacing="0.03"
+                    android:stateListAnimator="@null" />
+
+                <TextView
+                    android:id="@+id/tvEstadoBackupDB"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/lc_text"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Sección ADMINISTRACIÓN (27A/27D) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="ADMINISTRACIÓN"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <TextView
+                    android:id="@+id/btnPartesInventario"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:text="Partes e Inventario  →"
+                    android:textColor="@color/lc_text"
+                    android:textSize="15sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"/>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="#E0E0E0"/>
+
+                <TextView
+                    android:id="@+id/btnTecnicos"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:text="Técnicos  →"
+                    android:textColor="@color/lc_text"
+                    android:textSize="15sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"/>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:background="#E0E0E0"/>
+
+                <TextView
+                    android:id="@+id/btnDispatchConfig"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:text="Dispatch / Cola  →"
+                    android:textColor="@color/lc_text"
+                    android:textSize="15sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"/>
+            </LinearLayout>
+
+            <!-- Sección MANTENIMIENTO -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="MANTENIMIENTO"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <TextView
+                android:id="@+id/btnVerAuditoria"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_surface"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Ver auditoría →"
+                android:textColor="@color/lc_text"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/btnLimpiarAudit"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_surface"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Limpiar auditoría antigua"
+                android:textColor="@color/lc_text_secondary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="RENDIMIENTO"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_surface"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvRamUsada"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/lc_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvRamMax"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/lc_text_secondary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvCacheJobs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/lc_text_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Sección COBERTURAS -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="COBERTURAS"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <LinearLayout
+                android:id="@+id/layoutCoberturas"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_surface"
+                android:orientation="vertical"
+                android:padding="16dp" />
+
+            <!-- Sección PROPUESTAS -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="PROPUESTAS"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_surface"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Markup Good -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Markup Good"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp" />
+                    <EditText
+                        android:id="@+id/etMarkupGood"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp"
+                        android:gravity="center"
+                        android:padding="8dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="%"
+                        android:textColor="@color/lc_text_secondary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <!-- Markup Better -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Markup Better"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp" />
+                    <EditText
+                        android:id="@+id/etMarkupBetter"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp"
+                        android:gravity="center"
+                        android:padding="8dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="%"
+                        android:textColor="@color/lc_text_secondary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <!-- Markup Best -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Markup Best"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp" />
+                    <EditText
+                        android:id="@+id/etMarkupBest"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp"
+                        android:gravity="center"
+                        android:padding="8dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="%"
+                        android:textColor="@color/lc_text_secondary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <!-- Tax Rate -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Impuesto (tax)"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp" />
+                    <EditText
+                        android:id="@+id/etTaxRate"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/lc_text"
+                        android:textSize="15sp"
+                        android:gravity="center"
+                        android:padding="8dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="%"
+                        android:textColor="@color/lc_text_secondary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnGuardarPropuestaConfig"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_button_primary"
+                    android:text="GUARDAR PROPUESTA"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:letterSpacing="0.03"
+                    android:stateListAnimator="@null" />
+
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="32dp" />
+
+            <!-- SECCIÓN MEMBRESÍAS -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="MEMBRESÍAS"
+                android:textSize="11sp"
+                android:textColor="#9A9A9A"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:paddingTop="24dp"
+                android:paddingBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnGenerarTarjeta"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                android:text="+ GENERAR TARJETA"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#EB1700" />
+
+            <LinearLayout
+                android:id="@+id/layoutMemberships"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp" />
+
+            <View android:layout_width="match_parent" android:layout_height="32dp" />
+
+            <!-- SECCIÓN SINCRONIZACIÓN -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SINCRONIZACIÓN"
+                android:textSize="11sp"
+                android:textColor="#9A9A9A"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:paddingTop="24dp"
+                android:paddingBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp">
+
+                <TextView
+                    android:id="@+id/tvUltimaSync"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Última sincronización: Nunca"
+                    android:textSize="13sp"
+                    android:textColor="#555555"
+                    android:paddingBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvPendientesSync"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pendientes de subir: calculando…"
+                    android:textSize="13sp"
+                    android:textColor="#555555"
+                    android:paddingBottom="12dp" />
+
+                <EditText
+                    android:id="@+id/etSyncUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="URL del servidor (ej: http://127.0.0.1:5000/api/)"
+                    android:textSize="13sp"
+                    android:inputType="textUri"
+                    android:paddingBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <Button
+                        android:id="@+id/btnTestConexion"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="PROBAR CONEXIÓN"
+                        android:textSize="12sp"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#555555" />
+
+                    <Button
+                        android:id="@+id/btnSyncAhora"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:text="SINCRONIZAR AHORA"
+                        android:textSize="11sp"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#EB1700"
+                        android:maxLines="1"
+                        android:stateListAnimator="@null" />
+
+                </LinearLayout>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switchSyncAuto"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Sincronización automática (cada 15 min)"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tvLastSync"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Última sync: calculando..."
+                    android:textSize="12sp"
+                    android:textColor="#9E9E9E"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+
+                <!-- Backend de laboratorio (sync v2, datos ficticios, 127.0.0.1) -->
+                <TextView
+                    android:id="@+id/tvLabEstado"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="16dp"
+                    android:text="Laboratorio: sin conectar"
+                    android:textColor="@color/lc_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/etLabUsuario"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Usuario técnico (laboratorio)"
+                    android:importantForAutofill="no"
+                    android:inputType="text"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/etLabClave"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Contraseña"
+                    android:importantForAutofill="no"
+                    android:inputType="textPassword"
+                    android:textSize="14sp" />
+
+                <Button
+                    android:id="@+id/btnLabConectar"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:text="CONECTAR AL LABORATORIO" />
+
+                <Button
+                    android:id="@+id/btnAbrirDashboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="16dp"
+                    android:text="ABRIR DASHBOARD WEB"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#1565C0" />
+
+                <Button
+                    android:id="@+id/btnCompartirDashboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="8dp"
+                    android:text="COMPARTIR URL DEL DASHBOARD"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#555555" />
+
+                <TextView
+                    android:id="@+id/tvDashboardUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textSize="11sp"
+                    android:textColor="#888888"
+                    android:text="URL: —" />
+
+                <ImageView
+                    android:id="@+id/ivDashboardQR"
+                    android:layout_width="160dp"
+                    android:layout_height="160dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_gravity="center_horizontal"
+                    android:background="#FFFFFF"
+                    android:padding="8dp" />
+
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="32dp" />
+
+            <!-- ADMINISTRAR DATOS LOCALES -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ADMINISTRAR DATOS LOCALES"
+                android:textColor="@color/lc_text_tertiary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_surface"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvDatosLocalCuenta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cuenta: —"
+                    android:textColor="@color/lc_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDatosLocalStats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Calculando…"
+                    android:textColor="@color/lc_text_secondary"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="3dp" />
+
+                <Button
+                    android:id="@+id/btnVaciarDatosLocales"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="16dp"
+                    android:text="VACIAR DATOS LOCALES"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="#B71C1C"
+                    android:stateListAnimator="@null" />
+
+                <TextView
+                    android:id="@+id/tvEstadoVaciar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/lc_text"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="32dp" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -1,0 +1,14 @@
+{% extends "control_base.html" %}{% block body %}
+<div class="row"><h2 style="margin:0">Agenda y despacho</h2><a href="{{url_for('control.nueva')}}">+ Nueva orden</a></div>
+<div class="tabs" style="margin-top:12px">{% for k,label in etiquetas %}
+<a class="tab {{'on' if k==vista}}" href="?vista={{k}}&dias={{dias}}">{{label}}<span class="n">{{grupos[k]|length}}</span></a>{% endfor %}</div>
+{% if vista=='PROXIMOS' %}<form class="inline"><input type="hidden" name="vista" value="PROXIMOS">
+Próximos <input type="number" name="dias" value="{{dias}}" min="1" max="366" style="width:90px"> días <button>Ver</button>
+{% if fuera %}<span class="sec">· {{fuera}} orden(es) más adelante — amplía el rango</span>{% endif %}</form>{% endif %}
+{% for j in grupos[vista] %}<a class="card" href="{{url_for('control.detalle', jid=j.id)}}">
+<div class="row"><b>{{ j.programadoPara|fecha(j.zonaHoraria) if j.programadoPara else 'Sin fecha' }}</b>
+<span class="badge {{'ok' if j.estado=='COMPLETADO'}}">{{j.estado}}</span></div>
+<div style="font-size:18px;font-weight:700;margin-top:6px">{{j.cliente or '—'}}</div>
+<div class="sec">{{j.direccion or ''}}</div><div>{{j.descripcion or ''}}</div>
+<div class="sec">Técnico: {{j.technicianId or 'sin asignar'}} · Origen: {{j.origin}} · v{{j.version}}</div></a>
+{% else %}<p class="sec">No hay órdenes en esta categoría.</p>{% endfor %}{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "control_base.html" %}{% block body %}
+<h2>Clientes</h2>
+{% if mensaje %}<p class="msg">{{mensaje}}</p>{% endif %}
+{% if error %}<p class="msg err">{{error}}</p>{% endif %}
+
+<table>
+<tr><th>Id</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Propiedades</th><th>Órdenes</th><th>Alta</th></tr>
+{% for c in clientes %}<tr>
+<td class="sec">#{{c.id}}</td>
+<td><b>{{c.nombre}}</b></td>
+<td class="sec">{{c.telefono or '—'}}</td>
+<td class="sec">{{c.email or '—'}}</td>
+<td>{{c.n_prop}}</td>
+<td>{{c.n_jobs}}</td>
+<td class="sec">{{c.created_at|fecha}}</td>
+</tr>{% else %}<tr><td colspan="7" class="sec">Sin clientes registrados aún.</td></tr>{% endfor %}
+</table>
+
+<h3 id="agregar">Agregar cliente</h3>
+<form method="post" action="{{url_for('control.crear_cliente')}}" class="card" autocomplete="off">
+<input type="hidden" name="csrf" value="{{csrf}}">
+<p><label>Nombre<br><input name="nombre" required minlength="2" maxlength="80" value="{{f.nombre or ''}}"></label></p>
+<p><label>Teléfono (opcional)<br><input name="telefono" maxlength="32" value="{{f.telefono or ''}}" placeholder="+1 954 555 0100"></label></p>
+<p><label>Email (opcional)<br><input name="email" type="email" maxlength="120" value="{{f.email or ''}}"></label></p>
+<button>Guardar cliente</button>
+</form>
+<p class="sec">Las propiedades, equipos y órdenes se agregan después desde el detalle del cliente o al crear una orden.</p>
+{% endblock %}

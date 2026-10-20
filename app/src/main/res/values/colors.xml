@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="lc_primary">#EB1700</color>
+    <color name="lc_primary_dark">#B01429</color>
+    <color name="lc_bg">#FFFFFF</color>
+    <color name="lc_surface">#F7F7F7</color>
+    <color name="lc_surface_strong">#EFEFEF</color>
+    <color name="lc_text">#191919</color>
+    <color name="lc_text_secondary">#767676</color>
+    <color name="lc_text_tertiary">#9A9A9A</color>
+    <color name="lc_border">#E4E4E4</color>
+    <color name="lc_border_strong">#191919</color>
+    <color name="status_pending">#EB1700</color>
+    <color name="status_arrived">#1B71C9</color>
+    <color name="status_done">#137333</color>
+    <color name="warning_text">#B25E00</color>
+</resources>

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% set active = 'jobs' %}
+{% block title %}Jobs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Jobs</h1>
+  <span class="badge-count">{{ jobs|length }} encontrados</span>
+</div>
+
+<div class="filter-bar">
+  <form method="get" action="/jobs">
+    <input class="filter-input" type="text" name="q" value="{{ search }}" placeholder="Buscar cliente...">
+    <select class="filter-select" name="status">
+      <option value="">Todos los estados</option>
+      <option value="PEND" {% if status_filter=='PEND' %}selected{% endif %}>Pendiente</option>
+      <option value="EN RUT" {% if status_filter=='EN RUT' %}selected{% endif %}>En Ruta</option>
+      <option value="COMPLET" {% if status_filter=='COMPLET' %}selected{% endif %}>Completado</option>
+    </select>
+    <button class="btn btn-primary" type="submit">Filtrar</button>
+    <a class="btn btn-outline" href="/jobs">Limpiar</a>
+  </form>
+</div>
+
+<div class="card">
+<div class="table-container">
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>#ID</th>
+      <th>Cliente</th>
+      <th>Hora</th>
+      <th>Estado</th>
+      <th>Técnico</th>
+      <th class="amount">Revenue</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for j in jobs %}
+  <tr onclick="window.location='/jobs/{{ j.id }}'" style="cursor:pointer">
+    <td class="muted">#{{ j.id }}</td>
+    <td><strong>{{ j.cliente or '—' }}</strong></td>
+    <td>{{ j.hora or '—' }}</td>
+    <td>
+      {% if 'COMPLET' in (j.estado or '') or 'REALIZ' in (j.estado or '') %}
+        <span class="badge badge-green">{{ j.estado }}</span>
+      {% elif 'RUTA' in (j.estado or '') %}
+        <span class="badge badge-blue">{{ j.estado }}</span>
+      {% else %}
+        <span class="badge badge-orange">{{ j.estado or 'PENDIENTE' }}</span>
+      {% endif %}
+    </td>
+    <td>{{ j.technicianId or '—' }}</td>
+    <td class="amount">{% if j.revenue %}<strong>${{ "%.2f"|format(j.revenue) }}</strong>{% else %}—{% endif %}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="empty">No hay jobs que coincidan.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+
+{% if jobs %}
+<div class="summary-bar">
+  Total revenue: <strong>${{ "%.2f"|format(jobs|sum(attribute='revenue')) }}</strong>
+  &nbsp;·&nbsp; {{ jobs|length }} jobs
+</div>
+{% endif %}
+{% endblock %}

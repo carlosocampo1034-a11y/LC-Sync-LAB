@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_surface"
+    android:padding="16dp">
+
+    <!-- Header row: chip + title + accepted badge -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/tvNivelChip"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:paddingStart="10dp" android:paddingEnd="10dp"
+            android:paddingTop="4dp" android:paddingBottom="4dp"
+            android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" />
+        <EditText android:id="@+id/etTitulo"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:layout_marginStart="10dp"
+            android:background="@null"
+            android:textColor="@color/lc_text"
+            android:textSize="16sp" android:textStyle="bold"
+            android:inputType="text"
+            android:maxLines="1" />
+        <TextView android:id="@+id/tvAceptadaChip"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="&#x2713; ACEPTADA"
+            android:paddingStart="8dp" android:paddingEnd="8dp"
+            android:paddingTop="3dp" android:paddingBottom="3dp"
+            android:textColor="#FFFFFF" android:textSize="10sp" android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Description -->
+    <EditText android:id="@+id/etDescripcion"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@null"
+        android:hint="Descripci&#243;n del servicio..."
+        android:textColor="@color/lc_text"
+        android:textColorHint="@color/lc_text_tertiary"
+        android:textSize="13sp"
+        android:inputType="textMultiLine"
+        android:minLines="2" />
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:layout_marginTop="12dp" android:layout_marginBottom="12dp"
+        android:background="@color/lc_border" />
+
+    <!-- Cost fields: each is a row with label + $ + EditText -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Equipo"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="$" android:textColor="@color/lc_text_secondary" android:textSize="13sp" android:layout_marginEnd="2dp" />
+        <EditText android:id="@+id/etEquipo"
+            android:layout_width="100dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="0" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Mano de obra"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="$" android:textColor="@color/lc_text_secondary" android:textSize="13sp" android:layout_marginEnd="2dp" />
+        <EditText android:id="@+id/etManoObra"
+            android:layout_width="100dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="0" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Materiales"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="$" android:textColor="@color/lc_text_secondary" android:textSize="13sp" android:layout_marginEnd="2dp" />
+        <EditText android:id="@+id/etMateriales"
+            android:layout_width="100dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="0" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Permiso"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="$" android:textColor="@color/lc_text_secondary" android:textSize="13sp" android:layout_marginEnd="2dp" />
+        <EditText android:id="@+id/etPermiso"
+            android:layout_width="100dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="0" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Remoci&#243;n"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="$" android:textColor="@color/lc_text_secondary" android:textSize="13sp" android:layout_marginEnd="2dp" />
+        <EditText android:id="@+id/etRemocion"
+            android:layout_width="100dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="0" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Accesorios"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="$" android:textColor="@color/lc_text_secondary" android:textSize="13sp" android:layout_marginEnd="2dp" />
+        <EditText android:id="@+id/etAccesorios"
+            android:layout_width="100dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="0" android:maxLines="1" />
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:layout_marginTop="4dp" android:layout_marginBottom="12dp"
+        android:background="@color/lc_border" />
+
+    <!-- Markup, Discount, Tax -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Markup %"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <EditText android:id="@+id/etMarkup"
+            android:layout_width="80dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="20" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Descuento $"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <EditText android:id="@+id/etDescuento"
+            android:layout_width="80dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="0" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Impuesto %"
+            android:textColor="@color/lc_text_secondary" android:textSize="13sp" />
+        <EditText android:id="@+id/etImpuesto"
+            android:layout_width="80dp" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" android:textSize="13sp"
+            android:textColor="@color/lc_text" android:gravity="end"
+            android:text="7" android:maxLines="1" />
+    </LinearLayout>
+
+    <!-- Total -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingTop="8dp"
+        android:background="@color/lc_surface">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="TOTAL"
+            android:textColor="@color/lc_text" android:textSize="15sp" android:textStyle="bold" />
+        <TextView android:id="@+id/tvTotal"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="$0"
+            android:textColor="@color/lc_text" android:textSize="18sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Coverage breakdown (FASE 16) — visible only when job has coverage -->
+    <LinearLayout
+        android:id="@+id/layoutCoverageBreakdown"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="10dp"
+        android:paddingBottom="4dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="#FFF3E0"
+        android:visibility="gone">
+
+        <TextView android:id="@+id/tvCovTotalTrabajo"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#795548" android:textSize="13sp" />
+
+        <TextView android:id="@+id/tvCovDeducible"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#795548" android:textSize="13sp" />
+
+        <TextView android:id="@+id/tvCovInsurer"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#795548" android:textSize="13sp" />
+
+        <TextView android:id="@+id/tvCovClientePaga"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="#2E7D32" android:textSize="15sp" android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

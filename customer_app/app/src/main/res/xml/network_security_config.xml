@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- L&C Customer LAB: HTTP permitido hacia el backend local (127.0.0.1) y la IP del servidor Wi-Fi del laboratorio
+     (10.0.0.121). El servidor Flask de laboratorio es HTTP puro; sin HTTPS. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.0.121</domain>
+    </domain-config>
+</network-security-config>

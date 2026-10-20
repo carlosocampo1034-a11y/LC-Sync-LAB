@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp"
+    android:background="@drawable/bg_surface"
+    android:layout_marginTop="6dp">
+
+    <TextView
+        android:id="@+id/tvJobPartNombre"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/lc_text"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/tvJobPartCantidad"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/lc_text_secondary"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+</LinearLayout>
