@@ -50,17 +50,6 @@
             android:layout_marginEnd="24dp"
             android:background="#BDBDBD" />
 
-        <TextView
-            android:id="@+id/signHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="Firme aquí"
-            android:textColor="#BDBDBD"
-            android:gravity="center"
-            android:textSize="16sp"
-            android:textStyle="italic"
-            android:padding="8dp" />
     </FrameLayout>
 
     <LinearLayout
