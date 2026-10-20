@@ -1152,34 +1152,32 @@ public class JobDetailActivity extends AppCompatActivity {
             return;
         }
         Toast.makeText(this, "Generando reporte…", Toast.LENGTH_SHORT).show();
-        // All reads here run in a background thread — no allowMainThreadQueries needed
-        List<PhotoEntity>  fotosSnap     = JobRepository.get().getPhotosForJob(job.id);
-        List<ContactEntity> contactSnap  = JobRepository.get().getContactsForJob(job.id);
-        List<JobEventEntity> eventSnap   = JobRepository.get().getEventsForJob(job.id);
-
-        List<InspectionItemEntity> inspecSnap = JobRepository.get().getInspectionItems(job.id);
-        List<FieldMeasurementEntity> medSnap  = JobRepository.get().getFieldMeasurements(job.id);
-        ProposalEntity propSnap = JobRepository.get().getProposalForJob(job.id);
-        List<ProposalOptionEntity> propOptSnap = propSnap != null
-                ? JobRepository.get().getOptionsForProposal(propSnap.id)
-                : new java.util.ArrayList<>();
-        SignatureEntity firmaSnap = JobRepository.get().getSignatureForJob(job.id);
-        TimeStats tiemposSnap = JobRepository.get().calcularTiempos(job.id);
-        CustomerEntity customerSnap = (job.customerId != null && job.customerId > 0)
-                ? JobRepository.get().getCustomerById(job.customerId) : null;
-        List<Job> prevJobsSnap = (job.customerId != null && job.customerId > 0)
-                ? JobRepository.get().getJobsByCustomer(job.customerId, job.id)
-                : new java.util.ArrayList<>();
-        List<JobPartEntity> partesSnap = JobRepository.get().getJobPartsForJob(job.id);
-        java.util.Map<Long, PartEntity> partesMapSnap = new java.util.HashMap<>();
-        for (JobPartEntity jp : partesSnap) {
-            PartEntity pe = JobRepository.get().getPartById(jp.partId);
-            if (pe != null) partesMapSnap.put(pe.id, pe);
-        }
-        List<WorkItemEntity> workItemsSnap = JobRepository.get().getWorkItemsForJob(job.id);
-
         new Thread(() -> {
             try {
+                List<PhotoEntity>  fotosSnap     = JobRepository.get().getPhotosForJob(job.id);
+                List<ContactEntity> contactSnap  = JobRepository.get().getContactsForJob(job.id);
+                List<JobEventEntity> eventSnap   = JobRepository.get().getEventsForJob(job.id);
+                List<InspectionItemEntity> inspecSnap = JobRepository.get().getInspectionItems(job.id);
+                List<FieldMeasurementEntity> medSnap  = JobRepository.get().getFieldMeasurements(job.id);
+                ProposalEntity propSnap = JobRepository.get().getProposalForJob(job.id);
+                List<ProposalOptionEntity> propOptSnap = propSnap != null
+                        ? JobRepository.get().getOptionsForProposal(propSnap.id)
+                        : new java.util.ArrayList<>();
+                SignatureEntity firmaSnap = JobRepository.get().getSignatureForJob(job.id);
+                TimeStats tiemposSnap = JobRepository.get().calcularTiempos(job.id);
+                CustomerEntity customerSnap = (job.customerId != null && job.customerId > 0)
+                        ? JobRepository.get().getCustomerById(job.customerId) : null;
+                List<Job> prevJobsSnap = (job.customerId != null && job.customerId > 0)
+                        ? JobRepository.get().getJobsByCustomer(job.customerId, job.id)
+                        : new java.util.ArrayList<>();
+                List<JobPartEntity> partesSnap = JobRepository.get().getJobPartsForJob(job.id);
+                java.util.Map<Long, PartEntity> partesMapSnap = new java.util.HashMap<>();
+                for (JobPartEntity jp : partesSnap) {
+                    PartEntity pe = JobRepository.get().getPartById(jp.partId);
+                    if (pe != null) partesMapSnap.put(pe.id, pe);
+                }
+                List<WorkItemEntity> workItemsSnap = JobRepository.get().getWorkItemsForJob(job.id);
+
                 java.io.File pdf = ReportePdfGenerator.generar(
                         this, job, fotosSnap, contactSnap, eventSnap, inspecSnap, medSnap,
                         propSnap, propOptSnap, firmaSnap, tiemposSnap, customerSnap, prevJobsSnap,
@@ -1215,10 +1213,10 @@ public class JobDetailActivity extends AppCompatActivity {
 
     private void compartirConCliente() {
         Toast.makeText(this, "Generando resumen para cliente…", Toast.LENGTH_SHORT).show();
-        List<PhotoEntity> fotosSnap = JobRepository.get().getPhotosForJob(job.id);
-        SignatureEntity firmaSnap   = JobRepository.get().getSignatureForJob(job.id);
         new Thread(() -> {
             try {
+                List<PhotoEntity> fotosSnap = JobRepository.get().getPhotosForJob(job.id);
+                SignatureEntity firmaSnap   = JobRepository.get().getSignatureForJob(job.id);
                 java.io.File pdf = ReportePdfGenerator.generarReporteCliente(
                         this, job, fotosSnap, firmaSnap);
                 android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
