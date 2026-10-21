@@ -1,79 +1,403 @@
 {% extends "control_base.html" %}
 
+{% block nav_tablero %}active{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Actualizado {{ now() | fecha if now is defined else '' }}{% endblock %}
+
+{% block head %}
+<style>
+/* ── KPI CARDS ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media (max-width: 991px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+
+.kpi-card {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(26,29,46,.07);
+    border: 1px solid rgba(0,0,0,.04);
+}
+.kpi-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+.kpi-icon.blue   { background: #eff6ff; color: #2563eb; }
+.kpi-icon.amber  { background: #fffbeb; color: #d97706; }
+.kpi-icon.green  { background: #f0fdf4; color: #16a34a; }
+.kpi-icon.red    { background: #fff1f2; color: #dc2626; }
+
+.kpi-info { min-width: 0; }
+.kpi-num {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #1a1d2e;
+}
+.kpi-label {
+    font-size: .75rem;
+    font-weight: 500;
+    color: #7b8099;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── MAIN GRID ── */
+.board-grid {
+    display: grid;
+    grid-template-columns: 60% 40%;
+    gap: 20px;
+    align-items: start;
+}
+@media (max-width: 1023px) { .board-grid { grid-template-columns: 1fr; } }
+
+/* ── SECTION HEADER ── */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #f0f2f8;
+}
+.section-title {
+    font-size: .9rem;
+    font-weight: 700;
+    color: #1a1d2e;
+    margin: 0;
+}
+.section-count {
+    font-size: .75rem;
+    font-weight: 600;
+    background: #f0f2f8;
+    color: #7b8099;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+/* ── ORDER CARDS ── */
+.order-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.order-card {
+    border: 1px solid #eef0f6;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: white;
+    transition: box-shadow .15s, border-color .15s;
+    position: relative;
+    overflow: hidden;
+}
+.order-card:hover {
+    box-shadow: 0 4px 16px rgba(26,29,46,.09);
+    border-color: #dde0ea;
+}
+.order-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+}
+.order-card.estado-pendiente::before   { background: #f59e0b; }
+.order-card.estado-en-curso::before    { background: #3b82f6; }
+.order-card.estado-completado::before  { background: #22c55e; }
+.order-card.estado-cancelado::before   { background: #94a3b8; }
+.order-card.estado-atrasado::before    { background: #ef4444; }
+
+.order-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.order-service {
+    font-size: .875rem;
+    font-weight: 700;
+    color: #1a1d2e;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.order-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: .78rem;
+    color: #7b8099;
+    margin-bottom: 10px;
+}
+.order-meta span { display: flex; align-items: center; gap: 4px; }
+.order-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.btn-outline-sm {
+    font-size: .75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1.5px solid;
+    background: transparent;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background .12s, color .12s;
+    white-space: nowrap;
+}
+.btn-outline-primary-sm { border-color: #3b82f6; color: #3b82f6; }
+.btn-outline-primary-sm:hover { background: #eff6ff; color: #1d4ed8; }
+.btn-outline-secondary-sm { border-color: #cbd5e1; color: #64748b; }
+.btn-outline-secondary-sm:hover { background: #f8fafc; color: #334155; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+    padding: 48px 20px;
+    text-align: center;
+    color: #7b8099;
+}
+.empty-state i { font-size: 3rem; opacity: .4; }
+.empty-state p { font-size: .875rem; margin-top: 12px; }
+
+/* ── ACTIVITY TABLE ── */
+.activity-panel { overflow: hidden; }
+.activity-table { width: 100%; border-collapse: collapse; }
+.activity-table thead th {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #7b8099;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f2f8;
+    background: #fafbfd;
+    white-space: nowrap;
+}
+.activity-table tbody td {
+    padding: 11px 16px;
+    font-size: .8rem;
+    border-bottom: 1px solid #f5f6fa;
+    vertical-align: middle;
+    color: #1a1d2e;
+}
+.activity-table tbody tr:last-child td { border-bottom: none; }
+.activity-table tbody tr:hover td { background: #fafbfd; }
+.job-id {
+    font-size: .7rem;
+    font-family: monospace;
+    color: #7b8099;
+    background: #f0f2f8;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+.tech-pill {
+    font-size: .7rem;
+    background: #f0f2f8;
+    color: #475569;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+</style>
+{% endblock %}
+
 {% block body %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Page heading -->
+<div class="d-flex justify-content-between align-items-center mb-5">
     <div>
-        <h2 class="fw-bold text-dark mb-0">Agenda y Despacho</h2>
-        <p class="text-muted small mb-0">Gestión de órdenes de servicio en tiempo real</p>
+        <h2 class="fw-bold mb-1" style="font-size:1.35rem;color:#1a1d2e;">Agenda y Despacho</h2>
+        <p class="mb-0" style="font-size:.82rem;color:#7b8099;">Gestión de órdenes de servicio en tiempo real</p>
     </div>
-    <a href="/control/nueva" class="btn btn-primary-custom shadow-sm"><i class="bi bi-plus-circle me-1"></i> Nueva Orden</a>
+    <a href="/control/nueva" class="btn-accent">
+        <i class="bi bi-plus-lg"></i> Nueva Orden
+    </a>
 </div>
 
-<!-- KPI rápidos -->
-<div class="mb-4 d-flex flex-wrap gap-2">
-    <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
-        En curso: {{ grupos.get('EN_CURSO', [])|length }}
-    </span>
-    <span class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill">
-        Sin fecha: {{ grupos.get('SIN_FECHA', [])|length }}
-    </span>
-    <span class="badge bg-danger text-white px-3 py-2 fs-6 rounded-pill">
-        Atrasados: {{ grupos.get('ATRASADOS', [])|length }}
-    </span>
-    <span class="badge bg-success px-3 py-2 fs-6 rounded-pill">
-        Completados: {{ grupos.get('COMPLETADOS', [])|length }}
-    </span>
-    <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill">
-        Total: {{ ordenes|length }}
-    </span>
+<!-- KPI CARDS -->
+{% set n_activas   = grupos.get('EN_CURSO',    [])|length %}
+{% set n_sin_fecha = grupos.get('SIN_FECHA',   [])|length %}
+{% set n_completados = grupos.get('COMPLETADOS',[])|length %}
+{% set n_atrasados = grupos.get('ATRASADOS',   [])|length %}
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon blue"><i class="bi bi-lightning-charge-fill"></i></div>
+        <div class="kpi-info">
+            <div class="kpi-num">{{ n_activas }}</div>
+            <div class="kpi-label">Órdenes Activas</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon amber"><i class="bi bi-calendar-x"></i></div>
+        <div class="kpi-info">
+            <div class="kpi-num">{{ n_sin_fecha }}</div>
+            <div class="kpi-label">Sin Fecha</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="kpi-info">
+            <div class="kpi-num">{{ n_completados }}</div>
+            <div class="kpi-label">Completados</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon red"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div class="kpi-info">
+            <div class="kpi-num">{{ n_atrasados }}</div>
+            <div class="kpi-label">Atrasados</div>
+        </div>
+    </div>
 </div>
 
-<!-- Lista de Tarjetas -->
-<div class="row g-4">
-    {% for orden in ordenes %}
-    {% set en_curso = orden.estado in ('EN RUTA','LLEGUÉ','EN REPARACIÓN','ESPERANDO APROBACIÓN','PART HOLD','PAUSADO') %}
-    <div class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm border-0 position-relative"
-             style="border-left: 4px solid {% if orden.estado == 'COMPLETADO' %}#198754{% elif en_curso %}#0d6efd{% elif orden.estado == 'CANCELADO' %}#6c757d{% else %}#dc3545{% endif %} !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <span class="badge bg-light text-dark border">
-                        <i class="bi bi-calendar-event me-1"></i>
-                        {{ orden.hora if orden.hora else ('Sin fecha' if not orden.programadoPara else '') }}
-                    </span>
-                    <span class="badge {% if orden.estado == 'COMPLETADO' %}bg-success{% elif en_curso %}bg-primary{% elif orden.estado == 'CANCELADO' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+<!-- BOARD GRID -->
+<div class="board-grid">
+
+    <!-- LEFT: Órdenes Pendientes -->
+    <div class="lc-card">
+        <div class="section-header">
+            <h3 class="section-title"><i class="bi bi-list-task me-2 text-muted"></i>Órdenes Pendientes</h3>
+            <span class="section-count">{{ ordenes|length }} total</span>
+        </div>
+
+        {% if ordenes %}
+        <div class="order-list">
+        {% for orden in ordenes %}
+        {% set en_curso = orden.estado in ('EN RUTA','LLEGUÉ','EN REPARACIÓN','ESPERANDO APROBACIÓN','PART HOLD','PAUSADO') %}
+        {% if orden.estado == 'COMPLETADO' %}
+          {% set estado_css = 'completado' %}
+          {% set badge_cls  = 'badge-completado' %}
+        {% elif orden.estado == 'CANCELADO' %}
+          {% set estado_css = 'cancelado' %}
+          {% set badge_cls  = 'badge-cancelado' %}
+        {% elif en_curso %}
+          {% set estado_css = 'en-curso' %}
+          {% set badge_cls  = 'badge-en-curso' %}
+        {% elif orden.estado in ('ATRASADO',) %}
+          {% set estado_css = 'atrasado' %}
+          {% set badge_cls  = 'badge-atrasado' %}
+        {% else %}
+          {% set estado_css = 'pendiente' %}
+          {% set badge_cls  = 'badge-pendiente' %}
+        {% endif %}
+            <div class="order-card estado-{{ estado_css }}">
+                <div class="order-top">
+                    <div class="order-service">
+                        {{ orden.categoria or (orden.descripcion[:42] if orden.descripcion else 'Servicio General') }}
+                    </div>
+                    <span class="badge-estado {{ badge_cls }}">
+                        <i class="bi bi-circle-fill" style="font-size:.45rem;"></i>
                         {{ orden.estado or 'PENDIENTE' }}
                     </span>
                 </div>
-
-                <h5 class="card-title fw-bold mb-1 text-truncate">
-                    {{ orden.categoria or orden.descripcion[:40] if orden.descripcion else 'Servicio General' }}
-                </h5>
-                <h6 class="card-subtitle mb-2 text-muted">
-                    <i class="bi bi-person me-1"></i> {{ orden.cliente or 'Cliente sin nombre' }}
-                </h6>
-
-                <p class="card-text small text-muted mb-3">
-                    <i class="bi bi-geo-alt me-1"></i> {{ orden.direccion or 'Dirección no registrada' }}<br>
-                    <i class="bi bi-tools me-1"></i> Técnico: {{ orden.technicianId or 'No asignado' }}
-                </p>
-            </div>
-            <div class="card-footer bg-white border-top-0 pt-0 pb-3">
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="/control/jobs/{{ orden.id }}" class="btn btn-sm btn-outline-primary">Ver Detalles</a>
+                <div class="order-meta">
+                    <span><i class="bi bi-person"></i> {{ orden.cliente or 'Sin cliente' }}</span>
+                    <span><i class="bi bi-geo-alt"></i> {{ (orden.direccion or 'Sin dirección')[:32] }}</span>
+                    {% if orden.hora %}
+                    <span><i class="bi bi-clock"></i> {{ orden.hora }}</span>
+                    {% endif %}
+                    <span><i class="bi bi-wrench"></i>
+                        {% if orden.technicianId %}{{ orden.technicianId }}{% else %}<em style="color:#f59e0b;">Sin asignar</em>{% endif %}
+                    </span>
+                </div>
+                <div class="order-actions">
+                    <a href="/control/jobs/{{ orden.id }}" class="btn-outline-sm btn-outline-primary-sm">
+                        <i class="bi bi-eye"></i> Ver
+                    </a>
                     {% if not orden.technicianId %}
-                    <a href="/control/jobs/{{ orden.id }}" class="btn btn-sm btn-outline-secondary">Asignar</a>
+                    <a href="/control/jobs/{{ orden.id }}" class="btn-outline-sm btn-outline-secondary-sm">
+                        <i class="bi bi-person-plus"></i> Asignar
+                    </a>
                     {% endif %}
                 </div>
             </div>
+        {% endfor %}
         </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <p>No hay órdenes en el sistema.<br>Crea la primera con el botón <strong>Nueva Orden</strong>.</p>
+        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="col-12 text-center py-5">
-        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
-        <h4 class="mt-3 text-muted">No hay órdenes en el sistema</h4>
-        <p class="text-muted">Crea la primera orden con el botón de arriba.</p>
+
+    <!-- RIGHT: Actividad Reciente -->
+    <div class="lc-card activity-panel">
+        <div class="section-header">
+            <h3 class="section-title"><i class="bi bi-activity me-2 text-muted"></i>Actividad Reciente</h3>
+            <span class="section-count">Últimas {{ [ordenes|length, 10]|min }}</span>
+        </div>
+
+        {% set recientes = ordenes | reverse | list %}
+        {% if recientes %}
+        <table class="activity-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Servicio</th>
+                    <th>Técnico</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for orden in recientes[:10] %}
+            {% if orden.estado == 'COMPLETADO' %}
+              {% set badge_cls = 'badge-completado' %}
+            {% elif orden.estado == 'CANCELADO' %}
+              {% set badge_cls = 'badge-cancelado' %}
+            {% elif orden.estado in ('EN RUTA','LLEGUÉ','EN REPARACIÓN','ESPERANDO APROBACIÓN','PART HOLD','PAUSADO') %}
+              {% set badge_cls = 'badge-en-curso' %}
+            {% else %}
+              {% set badge_cls = 'badge-pendiente' %}
+            {% endif %}
+                <tr>
+                    <td>
+                        <a href="/control/jobs/{{ orden.id }}" style="text-decoration:none;">
+                            <span class="job-id">#{{ '%05d' % (orden.id % 100000) }}</span>
+                        </a>
+                    </td>
+                    <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        {{ orden.categoria or (orden.descripcion[:20] if orden.descripcion else '—') }}
+                    </td>
+                    <td>
+                        {% if orden.technicianId %}
+                        <span class="tech-pill">{{ orden.technicianId }}</span>
+                        {% else %}
+                        <span style="color:#f59e0b;font-size:.72rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge-estado {{ badge_cls }}">{{ orden.estado or 'PENDIENTE' }}</span></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-clock-history"></i>
+            <p>Sin actividad reciente.</p>
+        </div>
+        {% endif %}
     </div>
-    {% endfor %}
+
 </div>
 {% endblock %}

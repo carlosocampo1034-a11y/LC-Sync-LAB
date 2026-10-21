@@ -3,77 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L&C Control - Centro de Mando</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>L&C Control</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        /* Sidebar solo en pantallas grandes */
-        @media (min-width: 768px) {
-            .sidebar { min-height: 100vh; background-color: #1e293b; color: white; padding-top: 20px; position: fixed; width: 16.666%; }
-            .main-content { margin-left: 16.666%; }
+        :root {
+            --sidebar-w: 240px;
+            --bg: #f0f2f8;
+            --sidebar-bg: #ffffff;
+            --sidebar-border: #e8eaf0;
+            --accent: #dc3545;
+            --accent-hover: #b02a37;
+            --text-main: #1a1d2e;
+            --text-muted: #7b8099;
+            --card-radius: 14px;
+            --shadow-sm: 0 2px 8px rgba(26,29,46,.07);
+            --shadow-md: 0 4px 20px rgba(26,29,46,.10);
         }
-        .sidebar a { color: #cbd5e1; text-decoration: none; padding: 12px 20px; display: block; font-weight: 500; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background-color: #334155; color: white; border-left: 4px solid #dc3545; }
-        .top-bar { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 15px 20px; margin-bottom: 25px; border-radius: 8px;}
-        
-        /* Estilos para que tus tablas viejas se vean bonitas sin tocarlas */
-        table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        th, td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
-        th { background-color: #f1f5f9; color: #334155; font-weight: 600; }
-        .card { border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 10px; background: white; padding: 20px; margin-bottom: 20px;}
-        .btn-primary-custom { background-color: #dc3545; border-color: #dc3545; color: white; font-weight: bold; }
-        .btn-primary-custom:hover { background-color: #bb2d3b; border-color: #b02a37; color: white;}
-        .msg { padding: 10px; background: #d1fae5; border-radius: 5px; color: #065f46; margin-bottom: 15px;}
-        .msg.err { background: #fee2e2; color: #991b1b;}
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, "Inter", "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        /* ── SIDEBAR ── */
+        .lc-sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--sidebar-border);
+            display: flex;
+            flex-direction: column;
+            z-index: 1040;
+            transition: transform .25s ease;
+        }
+        .lc-sidebar .brand {
+            padding: 22px 20px 16px;
+            border-bottom: 1px solid var(--sidebar-border);
+        }
+        .lc-sidebar .brand-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -.3px;
+        }
+        .lc-sidebar .brand-badge {
+            font-size: .65rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: #fff3cd;
+            color: #7d5a00;
+            border: 1px solid #fde68a;
+        }
+        .lc-sidebar nav { padding: 12px 0; flex: 1; overflow-y: auto; }
+        .lc-sidebar .nav-section {
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--text-muted);
+            padding: 14px 20px 4px;
+        }
+        .lc-sidebar a.nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 20px;
+            font-size: .875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-radius: 0;
+            text-decoration: none;
+            transition: background .15s, color .15s;
+            position: relative;
+        }
+        .lc-sidebar a.nav-link i { font-size: 1rem; }
+        .lc-sidebar a.nav-link:hover {
+            background: #f5f6fa;
+            color: var(--text-main);
+        }
+        .lc-sidebar a.nav-link.active {
+            background: #fff0f1;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .lc-sidebar a.nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 6px; bottom: 6px;
+            width: 3px;
+            background: var(--accent);
+            border-radius: 0 3px 3px 0;
+        }
+        .lc-sidebar .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--sidebar-border);
+            font-size: .8rem;
+            color: var(--text-muted);
+        }
+
+        /* ── MAIN WRAPPER ── */
+        .lc-main {
+            margin-left: var(--sidebar-w);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── TOP HEADER ── */
+        .lc-header {
+            background: white;
+            border-bottom: 1px solid var(--sidebar-border);
+            padding: 0 28px;
+            height: 62px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            gap: 16px;
+        }
+        .lc-header .header-left h1 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--text-main);
+        }
+        .lc-header .header-left p {
+            font-size: .75rem;
+            margin: 0;
+            color: var(--text-muted);
+        }
+        .lc-header .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lc-header .icon-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--sidebar-border);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .95rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: background .15s;
+            text-decoration: none;
+        }
+        .lc-header .icon-btn:hover { background: var(--bg); color: var(--text-main); }
+        .lc-header .avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #dc3545 0%, #e84b5a 100%);
+            color: white;
+            font-weight: 700;
+            font-size: .85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hamburger { display: none; }
+
+        /* ── PAGE BODY ── */
+        .lc-body { padding: 28px; flex: 1; }
+
+        /* ── ALERTS ── */
+        .lc-alerts { margin-bottom: 0; }
+
+        /* ── CARDS ── */
+        .lc-card {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(0,0,0,.04);
+        }
+
+        /* ── TABLES inside cards ── */
+        .lc-table { width: 100%; border-collapse: collapse; }
+        .lc-table thead th {
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--text-muted);
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--sidebar-border);
+            white-space: nowrap;
+        }
+        .lc-table tbody td {
+            padding: 11px 16px;
+            font-size: .84rem;
+            border-bottom: 1px solid #f3f4f8;
+            vertical-align: middle;
+        }
+        .lc-table tbody tr:last-child td { border-bottom: none; }
+        .lc-table tbody tr:hover td { background: #fafbfd; }
+
+        /* ── BADGES ── */
+        .badge-estado {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-pendiente  { background: #fff8e1; color: #b45309; }
+        .badge-en-curso   { background: #e0f2fe; color: #0369a1; }
+        .badge-completado { background: #dcfce7; color: #166534; }
+        .badge-cancelado  { background: #f1f5f9; color: #475569; }
+        .badge-atrasado   { background: #fee2e2; color: #991b1b; }
+
+        /* ── BUTTONS ── */
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: .875rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background .15s, box-shadow .15s;
+            text-decoration: none;
+        }
+        .btn-accent:hover {
+            background: var(--accent-hover);
+            color: white;
+            box-shadow: 0 4px 12px rgba(220,53,69,.3);
+        }
+
+        /* ── MOBILE ── */
+        @media (max-width: 767.98px) {
+            .lc-sidebar {
+                transform: translateX(-100%);
+            }
+            .lc-sidebar.open {
+                transform: translateX(0);
+                box-shadow: var(--shadow-md);
+            }
+            .lc-main { margin-left: 0; }
+            .lc-body { padding: 16px; }
+            .hamburger { display: flex; }
+            .lc-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,.35);
+                z-index: 1039;
+            }
+            .lc-overlay.open { display: block; }
+        }
     </style>
+    {% block head %}{% endblock %}
 </head>
 <body>
-    <div class="container-fluid p-0">
-        <div class="row g-0">
-            <!-- Sidebar (Escritorio) -->
-            <nav class="col-md-2 d-none d-md-block sidebar">
-                <div class="text-center mb-4 px-3">
-                    <h4 class="fw-bold text-white">L&C Control</h4>
-                    <span class="badge bg-warning text-dark">LABORATORIO</span>
-                </div>
-                <a href="/control/"><i class="bi bi-speedometer2 me-2"></i>Tablero</a>
-                <a href="/control/clientes"><i class="bi bi-people me-2"></i>Clientes</a>
-                <a href="/control/tecnicos"><i class="bi bi-tools me-2"></i>Técnicos</a>
-            </nav>
 
-            <!-- Main Content -->
-            <main class="col-md-10 main-content p-4">
-                <!-- Top Bar -->
-                <div class="top-bar d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold text-secondary">Centro de Mando</h5>
-                    <div class="d-flex align-items-center">
-                        <span class="me-3 fw-semibold d-none d-sm-block"><i class="bi bi-person-circle me-1"></i> Carlos Ocampo</span>
-                        <a href="/control/logout" class="btn btn-sm btn-outline-danger">Salir</a>
-                    </div>
-                </div>
+<!-- Mobile overlay -->
+<div class="lc-overlay" id="lcOverlay" onclick="closeSidebar()"></div>
 
-                <!-- Messages -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                  {% if messages %}
-                    {% for category, message in messages %}
-                      <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                      </div>
-                    {% endfor %}
-                  {% endif %}
-                {% endwith %}
-
-                <!-- Page Content: Usando 'block body' para que coincida con tus hijos -->
-                <div class="content-wrapper">
-                    {% block body %}{% endblock %}
-                </div>
-            </main>
+<!-- SIDEBAR -->
+<aside class="lc-sidebar" id="lcSidebar">
+    <div class="brand d-flex align-items-center gap-2">
+        <div>
+            <div class="brand-title">L&amp;C Control</div>
+            <span class="brand-badge mt-1 d-inline-block">LABORATORIO</span>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <nav>
+        <div class="nav-section">Principal</div>
+        <a class="nav-link {% block nav_tablero %}{% endblock %}" href="/control/">
+            <i class="bi bi-grid-1x2"></i> Tablero
+        </a>
+        <a class="nav-link {% block nav_nueva %}{% endblock %}" href="/control/nueva">
+            <i class="bi bi-plus-circle"></i> Nueva Orden
+        </a>
+
+        <div class="nav-section">Gestión</div>
+        <a class="nav-link {% block nav_clientes %}{% endblock %}" href="/control/clientes">
+            <i class="bi bi-people"></i> Clientes
+        </a>
+        <a class="nav-link {% block nav_tecnicos %}{% endblock %}" href="/control/tecnicos">
+            <i class="bi bi-tools"></i> Técnicos
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="d-flex align-items-center gap-2">
+            <div class="avatar" style="width:28px;height:28px;font-size:.75rem;">
+                {{ u.display_name[0]|upper if u and u.display_name else 'U' }}
+            </div>
+            <div>
+                <div style="font-size:.78rem;font-weight:600;color:#1a1d2e;">
+                    {{ u.display_name if u else 'Usuario' }}
+                </div>
+                <div style="font-size:.7rem;color:var(--text-muted);">{{ u.role if u else '' }}</div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<div class="lc-main">
+    <!-- Header -->
+    <header class="lc-header">
+        <div class="d-flex align-items-center gap-3">
+            <button class="hamburger icon-btn border-0" onclick="openSidebar()">
+                <i class="bi bi-list" style="font-size:1.2rem;"></i>
+            </button>
+            <div class="header-left">
+                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                <p>{% block page_subtitle %}Actualizado {{ now_str if now_str is defined else '' }}{% endblock %}</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <a href="#" class="icon-btn" title="Notificaciones">
+                <i class="bi bi-bell"></i>
+            </a>
+            <a href="/control/logout" class="icon-btn" title="Cerrar sesión">
+                <i class="bi bi-box-arrow-right"></i>
+            </a>
+            <div class="avatar">
+                {{ u.display_name[0]|upper if u and u.display_name else 'U' }}
+            </div>
+        </div>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="lc-alerts px-4 pt-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show mb-2 rounded-3 border-0 shadow-sm">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page content -->
+    <div class="lc-body">
+        {% block body %}{% endblock %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function openSidebar() {
+    document.getElementById('lcSidebar').classList.add('open');
+    document.getElementById('lcOverlay').classList.add('open');
+}
+function closeSidebar() {
+    document.getElementById('lcSidebar').classList.remove('open');
+    document.getElementById('lcOverlay').classList.remove('open');
+}
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>
