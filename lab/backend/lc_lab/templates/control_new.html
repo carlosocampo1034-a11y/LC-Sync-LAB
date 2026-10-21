@@ -1,10 +1,76 @@
-{% extends "control_base.html" %}{% block body %}
-<a href="{{url_for('control.tablero')}}">← Agenda</a><h2>Nueva orden</h2>
-<form method="post" style="display:grid;gap:10px;max-width:520px"><input type="hidden" name="csrf" value="{{csrf}}">
-<input name="cliente" placeholder="Cliente" value="{{f.get('cliente','')}}" required>
-<input name="telefono" placeholder="Teléfono" value="{{f.get('telefono','')}}">
-<input name="direccion" placeholder="Dirección" value="{{f.get('direccion','')}}" required>
-<input name="categoria" placeholder="Categoría (HVAC, plomería, electrodomésticos…)" value="{{f.get('categoria','')}}">
-<input name="equipo" placeholder="Equipo / modelo" value="{{f.get('equipo','')}}">
-<textarea name="descripcion" placeholder="Descripción del problema (mín. 10)" required>{{f.get('descripcion','')}}</textarea>
-<button>Crear orden</button>{% if error %}<div class="err">{{error}}</div>{% endif %}</form>{% endblock %}
+{% extends "control_base.html" %}
+
+{% block body %}
+<!-- Encabezado idéntico al del Tablero -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark mb-0">Nueva Orden</h2>
+        <p class="text-muted small mb-0">Registrar un nuevo servicio en el sistema</p>
+    </div>
+    <a href="/control/" class="btn btn-outline-secondary shadow-sm bg-white"><i class="bi bi-arrow-left me-1"></i> Volver a la Agenda</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10 col-xl-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4 p-md-5">
+                {% if error %}
+                <div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+                {% endif %}
+                <form method="POST" action="/control/nueva">
+                    <input type="hidden" name="csrf" value="{{ csrf }}">
+
+                    <!-- Fila 1: Cliente y Teléfono -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold text-muted">Cliente</label>
+                            <input type="text" name="cliente" class="form-control form-control-lg" placeholder="Nombre completo del cliente" value="{{ f.cliente or '' }}" required>
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <label class="form-label fw-semibold text-muted">Teléfono</label>
+                            <input type="tel" name="telefono" class="form-control form-control-lg" placeholder="Ej. 3055221636" value="{{ f.telefono or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Fila 2: Dirección -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted">Dirección del Servicio</label>
+                        <input type="text" name="direccion" class="form-control form-control-lg" placeholder="Calle, número, ciudad" value="{{ f.direccion or '' }}" required>
+                    </div>
+
+                    <!-- Fila 3: Categoría y Equipo -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-muted">Categoría</label>
+                            <select name="categoria" class="form-select form-select-lg" required>
+                                <option value="" selected disabled>Selecciona una categoría...</option>
+                                <option value="HVAC">HVAC / Aire Acondicionado</option>
+                                <option value="Plomería">Plomería</option>
+                                <option value="Electrodomésticos">Electrodomésticos</option>
+                                <option value="General">Mantenimiento General</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mt-3 mt-md-0">
+                            <label class="form-label fw-semibold text-muted">Equipo / Modelo (Opcional)</label>
+                            <input type="text" name="equipo" class="form-control form-control-lg" placeholder="Marca y modelo del equipo">
+                        </div>
+                    </div>
+
+                    <!-- Fila 4: Descripción -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-muted">Descripción del problema</label>
+                        <textarea name="descripcion" class="form-control form-control-lg" rows="4" placeholder="Describe el problema con el mayor detalle posible (mín. 10 caracteres)" required>{{ f.descripcion or '' }}</textarea>
+                    </div>
+
+                    <!-- Botón de Enviar -->
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary-custom btn-lg shadow-sm py-3 fs-5">
+                            <i class="bi bi-check2-circle me-2"></i> Guardar y Crear Orden
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,23 +1,79 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>L&amp;C Control · Laboratorio</title>
-<style>
-:root{--rojo:#EB1700;--txt:#191919;--sec:#6b6b6b;--borde:#e5e5e5;--fondo:#fff;--suave:#f6f6f6;--ok:#137333}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Roboto,sans-serif;color:var(--txt);background:var(--fondo)}
-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--borde)}
-header b{font-size:18px}.lab{background:#fff3cd;color:#7a5b00;font-size:12px;padding:2px 8px;border-radius:10px;margin-left:8px}
-main{padding:16px;max-width:1100px;margin:auto}a{color:var(--rojo)}
-.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}.tab{padding:8px 14px;border:1px solid var(--borde);border-radius:20px;text-decoration:none;color:var(--txt);white-space:nowrap}
-.tab.on{border:2px solid var(--txt);font-weight:600}.n{background:var(--suave);border-radius:10px;padding:0 6px;margin-left:4px;font-size:12px}
-.card{border:1px solid var(--borde);border-radius:14px;padding:14px;margin:10px 0;display:block;text-decoration:none;color:inherit}
-.row{display:flex;justify-content:space-between;gap:12px;align-items:center}.sec{color:var(--sec);font-size:14px}
-.badge{background:var(--rojo);color:#fff;font-weight:700;font-size:12px;padding:3px 8px;border-radius:4px}
-.badge.ok{background:var(--ok)}form.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-input,select,textarea{font:inherit;padding:10px;border:1px solid var(--borde);border-radius:10px;background:var(--suave)}
-button{font:inherit;font-weight:700;background:var(--rojo);color:#fff;border:0;border-radius:24px;padding:10px 18px}
-table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--borde);padding:6px;text-align:left;vertical-align:top}
-.msg{background:var(--suave);padding:10px;border-radius:10px}.err{color:var(--rojo)}
-</style></head><body>
-<header><div><b>L&amp;C Control</b><span class="lab">LABORATORIO · datos ficticios</span></div>
-{% if u %}<nav class="sec"><a href="{{url_for('control.tablero')}}">Tablero</a> · <a href="{{url_for('control.clientes')}}">Clientes</a> · <a href="{{url_for('control.tecnicos')}}">Técnicos</a> ·
-{{u['display_name']}} · <a href="{{url_for('control.logout')}}">Salir</a></nav>{% endif %}</header>
-<main>{% block body %}{% endblock %}</main></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L&C Control - Centro de Mando</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        /* Sidebar solo en pantallas grandes */
+        @media (min-width: 768px) {
+            .sidebar { min-height: 100vh; background-color: #1e293b; color: white; padding-top: 20px; position: fixed; width: 16.666%; }
+            .main-content { margin-left: 16.666%; }
+        }
+        .sidebar a { color: #cbd5e1; text-decoration: none; padding: 12px 20px; display: block; font-weight: 500; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { background-color: #334155; color: white; border-left: 4px solid #dc3545; }
+        .top-bar { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 15px 20px; margin-bottom: 25px; border-radius: 8px;}
+        
+        /* Estilos para que tus tablas viejas se vean bonitas sin tocarlas */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        th, td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+        th { background-color: #f1f5f9; color: #334155; font-weight: 600; }
+        .card { border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 10px; background: white; padding: 20px; margin-bottom: 20px;}
+        .btn-primary-custom { background-color: #dc3545; border-color: #dc3545; color: white; font-weight: bold; }
+        .btn-primary-custom:hover { background-color: #bb2d3b; border-color: #b02a37; color: white;}
+        .msg { padding: 10px; background: #d1fae5; border-radius: 5px; color: #065f46; margin-bottom: 15px;}
+        .msg.err { background: #fee2e2; color: #991b1b;}
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar (Escritorio) -->
+            <nav class="col-md-2 d-none d-md-block sidebar">
+                <div class="text-center mb-4 px-3">
+                    <h4 class="fw-bold text-white">L&C Control</h4>
+                    <span class="badge bg-warning text-dark">LABORATORIO</span>
+                </div>
+                <a href="/control/"><i class="bi bi-speedometer2 me-2"></i>Tablero</a>
+                <a href="/control/clientes"><i class="bi bi-people me-2"></i>Clientes</a>
+                <a href="/control/tecnicos"><i class="bi bi-tools me-2"></i>Técnicos</a>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-10 main-content p-4">
+                <!-- Top Bar -->
+                <div class="top-bar d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-secondary">Centro de Mando</h5>
+                    <div class="d-flex align-items-center">
+                        <span class="me-3 fw-semibold d-none d-sm-block"><i class="bi bi-person-circle me-1"></i> Carlos Ocampo</span>
+                        <a href="/control/logout" class="btn btn-sm btn-outline-danger">Salir</a>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+
+                <!-- Page Content: Usando 'block body' para que coincida con tus hijos -->
+                <div class="content-wrapper">
+                    {% block body %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

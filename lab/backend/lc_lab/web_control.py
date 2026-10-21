@@ -108,8 +108,9 @@ def tablero(u):
             continue
         grupos[cat].append(J.a_api(row, u, db))
     tecnicos = db.execute("SELECT display_name, technician_code FROM users WHERE role='TECHNICIAN' AND active=1").fetchall()
+    ordenes = [j for k, _ in ETIQUETAS for j in grupos.get(k, [])]
     return render_template("control_board.html", u=u, grupos=grupos, etiquetas=ETIQUETAS, vista=vista,
-                           dias=dias, fuera=fuera, tecnicos=tecnicos, csrf=_csrf())
+                           dias=dias, fuera=fuera, tecnicos=tecnicos, csrf=_csrf(), ordenes=ordenes)
 
 
 @bp.get("/jobs/<int:jid>")

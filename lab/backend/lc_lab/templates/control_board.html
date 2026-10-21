@@ -1,14 +1,79 @@
-{% extends "control_base.html" %}{% block body %}
-<div class="row"><h2 style="margin:0">Agenda y despacho</h2><a href="{{url_for('control.nueva')}}">+ Nueva orden</a></div>
-<div class="tabs" style="margin-top:12px">{% for k,label in etiquetas %}
-<a class="tab {{'on' if k==vista}}" href="?vista={{k}}&dias={{dias}}">{{label}}<span class="n">{{grupos[k]|length}}</span></a>{% endfor %}</div>
-{% if vista=='PROXIMOS' %}<form class="inline"><input type="hidden" name="vista" value="PROXIMOS">
-Próximos <input type="number" name="dias" value="{{dias}}" min="1" max="366" style="width:90px"> días <button>Ver</button>
-{% if fuera %}<span class="sec">· {{fuera}} orden(es) más adelante — amplía el rango</span>{% endif %}</form>{% endif %}
-{% for j in grupos[vista] %}<a class="card" href="{{url_for('control.detalle', jid=j.id)}}">
-<div class="row"><b>{{ j.programadoPara|fecha(j.zonaHoraria) if j.programadoPara else 'Sin fecha' }}</b>
-<span class="badge {{'ok' if j.estado=='COMPLETADO'}}">{{j.estado}}</span></div>
-<div style="font-size:18px;font-weight:700;margin-top:6px">{{j.cliente or '—'}}</div>
-<div class="sec">{{j.direccion or ''}}</div><div>{{j.descripcion or ''}}</div>
-<div class="sec">Técnico: {{j.technicianId or 'sin asignar'}} · Origen: {{j.origin}} · v{{j.version}}</div></a>
-{% else %}<p class="sec">No hay órdenes en esta categoría.</p>{% endfor %}{% endblock %}
+{% extends "control_base.html" %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark mb-0">Agenda y Despacho</h2>
+        <p class="text-muted small mb-0">Gestión de órdenes de servicio en tiempo real</p>
+    </div>
+    <a href="/control/nueva" class="btn btn-primary-custom shadow-sm"><i class="bi bi-plus-circle me-1"></i> Nueva Orden</a>
+</div>
+
+<!-- KPI rápidos -->
+<div class="mb-4 d-flex flex-wrap gap-2">
+    <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
+        En curso: {{ grupos.get('EN_CURSO', [])|length }}
+    </span>
+    <span class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill">
+        Sin fecha: {{ grupos.get('SIN_FECHA', [])|length }}
+    </span>
+    <span class="badge bg-danger text-white px-3 py-2 fs-6 rounded-pill">
+        Atrasados: {{ grupos.get('ATRASADOS', [])|length }}
+    </span>
+    <span class="badge bg-success px-3 py-2 fs-6 rounded-pill">
+        Completados: {{ grupos.get('COMPLETADOS', [])|length }}
+    </span>
+    <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill">
+        Total: {{ ordenes|length }}
+    </span>
+</div>
+
+<!-- Lista de Tarjetas -->
+<div class="row g-4">
+    {% for orden in ordenes %}
+    {% set en_curso = orden.estado in ('EN RUTA','LLEGUÉ','EN REPARACIÓN','ESPERANDO APROBACIÓN','PART HOLD','PAUSADO') %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0 position-relative"
+             style="border-left: 4px solid {% if orden.estado == 'COMPLETADO' %}#198754{% elif en_curso %}#0d6efd{% elif orden.estado == 'CANCELADO' %}#6c757d{% else %}#dc3545{% endif %} !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        {{ orden.hora if orden.hora else ('Sin fecha' if not orden.programadoPara else '') }}
+                    </span>
+                    <span class="badge {% if orden.estado == 'COMPLETADO' %}bg-success{% elif en_curso %}bg-primary{% elif orden.estado == 'CANCELADO' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+                        {{ orden.estado or 'PENDIENTE' }}
+                    </span>
+                </div>
+
+                <h5 class="card-title fw-bold mb-1 text-truncate">
+                    {{ orden.categoria or orden.descripcion[:40] if orden.descripcion else 'Servicio General' }}
+                </h5>
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-person me-1"></i> {{ orden.cliente or 'Cliente sin nombre' }}
+                </h6>
+
+                <p class="card-text small text-muted mb-3">
+                    <i class="bi bi-geo-alt me-1"></i> {{ orden.direccion or 'Dirección no registrada' }}<br>
+                    <i class="bi bi-tools me-1"></i> Técnico: {{ orden.technicianId or 'No asignado' }}
+                </p>
+            </div>
+            <div class="card-footer bg-white border-top-0 pt-0 pb-3">
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="/control/jobs/{{ orden.id }}" class="btn btn-sm btn-outline-primary">Ver Detalles</a>
+                    {% if not orden.technicianId %}
+                    <a href="/control/jobs/{{ orden.id }}" class="btn btn-sm btn-outline-secondary">Asignar</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+        <h4 class="mt-3 text-muted">No hay órdenes en el sistema</h4>
+        <p class="text-muted">Crea la primera orden con el botón de arriba.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
