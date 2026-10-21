@@ -3,8 +3,6 @@ package com.lc.technician.sync;
 import android.content.Context;
 import android.util.Log;
 
-import com.lc.technician.BuildConfig;
-import com.lc.technician.data.JobRepository;
 import com.lc.technician.model.JobEntity;
 
 import java.util.ArrayList;
@@ -59,7 +57,6 @@ public class SupabaseSyncBridge {
      * @param jobs Lista de JobEntity con synced==1 (confirmadas por Flask).
      */
     public void replicateToSupabase(List<JobEntity> jobs) {
-        if (!BuildConfig.SUPABASE_BRIDGE_ENABLED) return;
         if (jobs == null || jobs.isEmpty()) return;
         replicateRows(toRows(jobs));
     }
@@ -97,17 +94,19 @@ public class SupabaseSyncBridge {
      * @param accessToken Token de Supabase Auth del usuario (null → usa anon key).
      */
     public void startRealtime(String accessToken) {
-        if (!BuildConfig.SUPABASE_BRIDGE_ENABLED) return;
         if (realtimeActive) return;
         realtimeActive = true;
 
         realtime.start(accessToken, (jobId, version, eventType) -> {
-            // Recibimos un cambio remoto (de Control o Customer) en Supabase.
-            // No modificamos Room directamente para evitar bucle; pedimos a Flask
-            // que nos dé el estado canónico en el próximo pull.
             Log.i(TAG, "Realtime " + eventType + " job=" + jobId + " v=" + version
-                    + " → solicitando sync Flask");
-            JobRepository.get().solicitarSyncInmediata();
+                    + " → enqueue Supabase pull");
+            // Trigger WorkManager one-time sync to pull latest state from Supabase
+            androidx.work.OneTimeWorkRequest syncReq = new androidx.work.OneTimeWorkRequest
+                    .Builder(com.lc.technician.worker.SyncWorker.class)
+                    .setInputData(new androidx.work.Data.Builder()
+                            .putBoolean("silent", true).build())
+                    .build();
+            androidx.work.WorkManager.getInstance(ctx).enqueue(syncReq);
         });
     }
 
@@ -121,7 +120,6 @@ public class SupabaseSyncBridge {
      * Llamar en background, inmediatamente después de LabSession.setCursor().
      */
     public void replicateDtos(List<com.lc.technician.sync.SyncModels.JobV2Dto> dtos) {
-        if (!BuildConfig.SUPABASE_BRIDGE_ENABLED) return;
         if (dtos == null || dtos.isEmpty()) return;
         List<SupabaseModels.JobRow> rows = new ArrayList<>(dtos.size());
         for (com.lc.technician.sync.SyncModels.JobV2Dto d : dtos) {

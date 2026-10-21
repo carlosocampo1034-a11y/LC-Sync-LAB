@@ -36,7 +36,6 @@ import com.lc.technician.data.ConfigManager;
 import com.lc.technician.data.JobRepository;
 import com.lc.technician.data.LcDatabase;
 import com.lc.technician.model.SyncStateEntity;
-import com.lc.technician.sync.ApiClient;
 import com.lc.technician.worker.SyncWorker;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -85,7 +84,6 @@ public class ConfiguracionActivity extends AppCompatActivity {
     private TextView tvUltimaSync;
     private TextView tvPendientesSync;
     private TextView tvLastSync;
-    private EditText etSyncUrl;
     private SwitchCompat switchSyncAuto;
     private static final String PREFS_SYNC = "lc_sync_prefs";
     private static final String KEY_SYNC_AUTO = "sync_auto_enabled";
@@ -236,12 +234,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
         // ── SINCRONIZACIÓN ────────────────────────────────────────────────────
         tvUltimaSync    = findViewById(R.id.tvUltimaSync);
         tvPendientesSync = findViewById(R.id.tvPendientesSync);
-        etSyncUrl       = findViewById(R.id.etSyncUrl);
         switchSyncAuto  = findViewById(R.id.switchSyncAuto);
-
-        if (etSyncUrl != null) {
-            etSyncUrl.setText(ApiClient.getBaseUrl(this));
-        }
 
         boolean autoEnabled = getSharedPreferences(PREFS_SYNC, MODE_PRIVATE)
                 .getBoolean(KEY_SYNC_AUTO, true);  // default ON
@@ -264,15 +257,8 @@ public class ConfiguracionActivity extends AppCompatActivity {
         // tvLastSync: "Última sync: hace X min"
         tvLastSync = findViewById(R.id.tvLastSync);
 
-        Button btnTest = findViewById(R.id.btnTestConexion);
-        if (btnTest != null) btnTest.setOnClickListener(v -> probarConexion());
-
         Button btnSyncNow = findViewById(R.id.btnSyncAhora);
         if (btnSyncNow != null) btnSyncNow.setOnClickListener(v -> sincronizarAhora());
-
-        Button btnLab = findViewById(R.id.btnLabConectar);
-        if (btnLab != null) btnLab.setOnClickListener(v -> conectarLaboratorio());
-        actualizarEstadoLab();
 
         Button btnCambiarPin = findViewById(R.id.btnCambiarPin);
         if (btnCambiarPin != null) btnCambiarPin.setOnClickListener(v -> mostrarDialogoCambiarPin());
@@ -329,31 +315,8 @@ public class ConfiguracionActivity extends AppCompatActivity {
         }
     }
 
-    private void probarConexion() {
-        String url = etSyncUrl != null ? etSyncUrl.getText().toString().trim() : ApiClient.DEFAULT_BASE_URL;
-        if (!url.isEmpty()) {
-            ApiClient.setBaseUrl(this, url);
-        }
-        Toast.makeText(this, "Probando conexión…", Toast.LENGTH_SHORT).show();
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                retrofit2.Response<com.lc.technician.sync.SyncModels.HealthResponse> resp =
-                    ApiClient.get(this).health().execute();
-                String msg = resp.isSuccessful() && resp.body() != null
-                    ? "✅ Conexión OK — v" + resp.body().version
-                    : "❌ HTTP " + resp.code();
-                runOnUiThread(() -> Toast.makeText(this, msg, Toast.LENGTH_LONG).show());
-            } catch (Exception e) {
-                String msg = "❌ Sin conexión: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
-                runOnUiThread(() -> Toast.makeText(this, msg, Toast.LENGTH_LONG).show());
-            }
-        });
-    }
-
     private void sincronizarAhora() {
-        String url = etSyncUrl != null ? etSyncUrl.getText().toString().trim() : "";
-        if (!url.isEmpty()) ApiClient.setBaseUrl(this, url);
-        Toast.makeText(this, "Sincronizando…", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Sincronizando con Supabase…", Toast.LENGTH_SHORT).show();
         androidx.work.OneTimeWorkRequest req = new androidx.work.OneTimeWorkRequest.Builder(SyncWorker.class).build();
         WorkManager.getInstance(this).enqueue(req);
         WorkManager.getInstance(this).getWorkInfoByIdLiveData(req.getId())
@@ -388,167 +351,14 @@ public class ConfiguracionActivity extends AppCompatActivity {
             "auto_sync_silent", ExistingPeriodicWorkPolicy.KEEP, req);
     }
 
-    /** Estado de la sesión con el backend de laboratorio (sync v2). */
-    private void actualizarEstadoLab() {
-        TextView tv = findViewById(R.id.tvLabEstado);
-        Button btn = findViewById(R.id.btnLabConectar);
-        if (tv == null || btn == null) return;
-        boolean activa = com.lc.technician.sync.LabSession.activa(this);
-        tv.setText(activa ? "Laboratorio: conectado como " + com.lc.technician.sync.LabSession.usuario(this)
-                + " (sync v2)" : "Laboratorio: sin conectar (se usa la sincronización histórica)");
-        btn.setText(activa ? "DESCONECTAR DEL LABORATORIO" : "CONECTAR AL LABORATORIO");
-        findViewById(R.id.etLabUsuario).setVisibility(activa ? View.GONE : View.VISIBLE);
-        findViewById(R.id.etLabClave).setVisibility(activa ? View.GONE : View.VISIBLE);
-        if (BuildConfig.DEBUG) {
-            if (tvServidorLab == null && tv.getParent() instanceof android.view.ViewGroup) {
-                android.view.ViewGroup padre = (android.view.ViewGroup) tv.getParent();
-                tvServidorLab = new TextView(this);
-                tvServidorLab.setTextSize(14);
-                tvServidorLab.setTextColor(0xFF1E88E5);
-                int pad = (int) (8 * getResources().getDisplayMetrics().density);
-                tvServidorLab.setPadding(0, pad, 0, pad);
-                padre.addView(tvServidorLab, padre.indexOfChild(tv) + 1);
-                tvServidorLab.setOnClickListener(v -> {
-                    if (com.lc.technician.sync.LabSession.activa(this)) {
-                        Toast.makeText(this, "Desconecta primero para cambiar de servidor", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    com.lc.technician.sync.LabSession.setServidorWifi(this, !com.lc.technician.sync.LabSession.servidorWifi(this));
-                    actualizarEstadoLab();
-                });
-            }
-            if (tvServidorLab != null) {
-                tvServidorLab.setText("Servidor: " + (com.lc.technician.sync.LabSession.servidorWifi(this)
-                        ? "Wi-Fi laboratorio (HTTPS 10.0.0.121)" : "este teléfono (local)")
-                        + (activa ? "" : " · toca para cambiar"));
-            }
-        }
-    }
-
-    private TextView tvServidorLab;
-
-    /** Primer inicio de sesión: elegir contraseña propia (mín. 8). Solo después se guarda la sesión. */
-    private void pedirNuevaClave(com.lc.technician.sync.SyncModels.LoginResponse lr, String usuario, String actual) {
-        android.widget.LinearLayout caja = new android.widget.LinearLayout(this);
-        caja.setOrientation(android.widget.LinearLayout.VERTICAL);
-        int pad = (int) (20 * getResources().getDisplayMetrics().density);
-        caja.setPadding(pad, pad / 2, pad, 0);
-        EditText n1 = new EditText(this);
-        EditText n2 = new EditText(this);
-        for (EditText e : new EditText[]{n1, n2}) {
-            e.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-            caja.addView(e);
-        }
-        n1.setHint("Contraseña nueva (mínimo 8)");
-        n2.setHint("Repite la contraseña nueva");
-        android.app.AlertDialog d = new android.app.AlertDialog.Builder(this)
-                .setTitle("Cambia tu contraseña")
-                .setMessage("Es tu primer inicio de sesión: elige una contraseña propia para conectar.")
-                .setView(caja)
-                .setCancelable(false)
-                .setPositiveButton("GUARDAR", null)
-                .setNegativeButton("CANCELAR", (x, w) -> Toast.makeText(this,
-                        "Sin conectar: debes cambiar la contraseña", Toast.LENGTH_LONG).show())
-                .create();
-        d.setOnShowListener(x -> d.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String a = n1.getText().toString(), b = n2.getText().toString();
-            if (a.length() < 8) { n1.setError("Mínimo 8 caracteres"); return; }
-            if (!a.equals(b)) { n2.setError("No coinciden"); return; }
-            if (a.equals(actual)) { n1.setError("Debe ser distinta de la inicial"); return; }
-            v.setEnabled(false);
-            Executors.newSingleThreadExecutor().execute(() -> {
-                String m;
-                boolean ok = false;
-                try {
-                    com.lc.technician.sync.SyncModels.CambioClaveRequest req = new com.lc.technician.sync.SyncModels.CambioClaveRequest();
-                    req.actual = actual;
-                    req.nueva = a;
-                    retrofit2.Response<com.google.gson.JsonObject> r = ApiClient.get(this).cambiarClave("Bearer " + lr.token, req).execute();
-                    ok = r.isSuccessful();
-                    m = ok ? "Contraseña cambiada · conectado al laboratorio"
-                            : r.code() == 429 ? "Cuenta bloqueada temporalmente" : "No se pudo cambiar (HTTP " + r.code() + ")";
-                    if (ok) {
-                        lr.mustChangePassword = false;
-                        com.lc.technician.sync.LabSession.guardar(this, lr, usuario);
-                    }
-                } catch (Exception e) {
-                    m = "Sin conexión con el laboratorio: " + e.getClass().getSimpleName();
-                }
-                final String fm = m;
-                final boolean fok = ok;
-                runOnUiThread(() -> {
-                    n1.setText(""); n2.setText("");
-                    if (fok) d.dismiss(); else v.setEnabled(true);
-                    actualizarEstadoLab();
-                    Toast.makeText(this, fm, Toast.LENGTH_LONG).show();
-                });
-            });
-        }));
-        d.show();
-    }
-
-    private void conectarLaboratorio() {
-        if (com.lc.technician.sync.LabSession.activa(this)) {
-            com.lc.technician.sync.LabSession.cerrar(this);
-            actualizarEstadoLab();
-            return;
-        }
-        EditText etU = findViewById(R.id.etLabUsuario);
-        EditText etP = findViewById(R.id.etLabClave);
-        String usuario = etU.getText().toString().trim();
-        String clave = etP.getText().toString();
-        if (usuario.isEmpty() || clave.isEmpty()) {
-            Toast.makeText(this, "Usuario y contraseña requeridos", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        // Laboratorio: este teléfono (local) o la Wi-Fi privada por HTTPS (solo CA de laboratorio)
-        String url = com.lc.technician.sync.LabSession.urlServidor(this);
-        ApiClient.setBaseUrl(this, url);
-        if (etSyncUrl != null) etSyncUrl.setText(url);
-        Executors.newSingleThreadExecutor().execute(() -> {
-            String msg;
-            try {
-                com.lc.technician.sync.SyncModels.LoginRequest req = new com.lc.technician.sync.SyncModels.LoginRequest();
-                req.username = usuario;
-                req.password = clave;
-                req.deviceId = com.lc.technician.util.DeviceIdManager.getDeviceId(this);
-                retrofit2.Response<com.lc.technician.sync.SyncModels.LoginResponse> r =
-                        ApiClient.get(this).loginV2(req).execute();
-                if (r.isSuccessful() && r.body() != null && r.body().token != null
-                        && "TECHNICIAN".equals(r.body().role) && Boolean.TRUE.equals(r.body().mustChangePassword)) {
-                    // cuenta nueva o restablecida: no se conecta hasta que el técnico elija su contraseña
-                    final com.lc.technician.sync.SyncModels.LoginResponse lr = r.body();
-                    runOnUiThread(() -> { etP.setText(""); pedirNuevaClave(lr, usuario, clave); });
-                    return;
-                } else if (r.isSuccessful() && r.body() != null && r.body().token != null
-                        && "TECHNICIAN".equals(r.body().role)) {
-                    com.lc.technician.sync.LabSession.guardar(this, r.body(), usuario);
-                    msg = "Conectado al laboratorio";
-                } else if (r.isSuccessful()) {
-                    msg = "Esa cuenta no es de técnico";
-                } else {
-                    msg = r.code() == 401 ? "Credenciales inválidas" : "Error HTTP " + r.code();
-                }
-            } catch (Exception e) {
-                msg = "Sin conexión con el laboratorio: " + e.getClass().getSimpleName();
-            }
-            final String m = msg;
-            runOnUiThread(() -> {
-                etP.setText("");   // la contraseña no se guarda
-                actualizarEstadoLab();
-                Toast.makeText(this, m, Toast.LENGTH_LONG).show();
-            });
-        });
-    }
 
     private void actualizarInfoSync() {
         Executors.newSingleThreadExecutor().execute(() -> {
             LcDatabase db = LcDatabase.getInstance(this);
-            boolean v2 = com.lc.technician.sync.LabSession.activa(this);
             // Pendientes reales (synced=0): no enviados aún
             int pendJ  = db.jobDao().countPendientesSinEnviar();
             int pendWI = db.workItemDao().countPendientesSinEnviar();
-            int pendT  = v2 ? 0 : db.technicianDao().countUnsynced();
+            int pendT  = 0;
             int total  = pendJ + pendWI + pendT;
             // Rechazados por el servidor (synced=3): requieren edición para reintentar
             int rechazadosJ  = db.jobDao().countRechazados();
@@ -595,9 +405,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
     // ── ADMINISTRAR DATOS LOCALES ────────────────────────────────────────────
 
     private void actualizarDatosLocales() {
-        String cuentaDisplay = com.lc.technician.sync.LabSession.activa(this)
-                ? com.lc.technician.sync.LabSession.usuario(this)
-                : SessionManager.get(this).getTechnicianName();
+        String cuentaDisplay = SessionManager.get(this).getTechnicianName();
         Executors.newSingleThreadExecutor().execute(() -> {
             LcDatabase db = LcDatabase.getInstance(this);
             int totalJobs    = db.jobDao().count();
@@ -1331,22 +1139,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
     // ── Dashboard URL helpers ─────────────────────────────────────────────────
 
     private String getDashboardUrl() {
-        String baseUrl = ApiClient.getBaseUrl(this);
-        // Strip /api/ or /api to get root URL, then point to L&C Control
-        if (baseUrl.endsWith("/api/")) {
-            return baseUrl.substring(0, baseUrl.length() - 5) + "/control/";
-        }
-        if (baseUrl.endsWith("/api")) {
-            return baseUrl.substring(0, baseUrl.length() - 4) + "/control/";
-        }
-        try {
-            java.net.URL u = new java.net.URL(baseUrl);
-            int port = u.getPort();
-            return u.getProtocol() + "://" + u.getHost()
-                    + (port != -1 ? ":" + port : "") + "/control/";
-        } catch (Exception ignored) {}
-        if (!baseUrl.endsWith("/")) baseUrl += "/";
-        return baseUrl + "control/";
+        return getTailscaleUrl() + "/control/";
     }
 
     private String getTailscaleUrl() {
@@ -1473,48 +1266,15 @@ public class ConfiguracionActivity extends AppCompatActivity {
     }
 
     private void activarPinDelServidor() {
-        if (!com.lc.technician.sync.LabSession.activa(this)) {
-            Toast.makeText(this, "Conectate primero al laboratorio para recibir el PIN del servidor",
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-        Toast.makeText(this, "Verificando PIN pendiente…", Toast.LENGTH_SHORT).show();
-        String authHeader = com.lc.technician.sync.LabSession.authHeader(this);
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                retrofit2.Response<com.google.gson.JsonObject> resp =
-                        ApiClient.get(this).pinPendiente(authHeader).execute();
-                if (!resp.isSuccessful() || resp.body() == null) {
-                    runOnUiThread(() -> Toast.makeText(this,
-                            "Error al consultar PIN (HTTP " + resp.code() + ")",
-                            Toast.LENGTH_SHORT).show());
-                    return;
-                }
-                com.google.gson.JsonElement el = resp.body().get("pendingPin");
-                if (el == null || el.isJsonNull()) {
-                    runOnUiThread(() -> Toast.makeText(this,
-                            "No hay PIN pendiente del servidor", Toast.LENGTH_SHORT).show());
-                    return;
-                }
-                String pin = el.getAsString();
-                // Apply to the TECNICO slot (technician-only reset from dashboard)
-                getSharedPreferences(LoginActivity.PREFS, MODE_PRIVATE)
-                        .edit().putString(LoginActivity.KEY_PIN_TECNICO, pin).apply();
-                runOnUiThread(() -> {
-                    actualizarEstadoPin();
-                    new android.app.AlertDialog.Builder(this)
-                            .setTitle("PIN activado")
-                            .setMessage("Tu nuevo PIN de acceso es:\n\n" + pin
-                                    + "\n\nGuárdalo en un lugar seguro. Podrás cambiarlo en cualquier momento desde aquí.")
-                            .setPositiveButton("OK", null)
-                            .show();
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this,
-                        "Sin conexión al laboratorio: " + e.getClass().getSimpleName(),
-                        Toast.LENGTH_SHORT).show());
-            }
-        });
+        // PIN server reset is managed via the web dashboard.
+        // Ask the admin to generate a PIN and share it manually.
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("PIN del servidor")
+                .setMessage("Para recibir un PIN generado desde el panel de administración, "
+                        + "pídele al administrador que lo genere y te lo envíe. "
+                        + "Luego usa 'CAMBIAR MI PIN' para activarlo.")
+                .setPositiveButton("OK", null)
+                .show();
     }
 
     private void actualizarEstadoPin() {

@@ -81,6 +81,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_main);
+
+        // Cloud-first: clear any stale Flask IP override so sync uses Supabase
+        android.content.SharedPreferences cloudPrefs =
+                getSharedPreferences("lc_sync_prefs", MODE_PRIVATE);
+        String savedSyncUrl = cloudPrefs.getString("sync_base_url", "");
+        if (savedSyncUrl.contains("10.0.0.") || savedSyncUrl.contains("127.0.0.1")
+                || savedSyncUrl.contains("192.168.") || savedSyncUrl.contains(":5055")) {
+            cloudPrefs.edit().remove("sync_base_url").apply();
+            android.util.Log.i("MainActivity", "cleared stale Flask URL: " + savedSyncUrl);
+        }
+
         // Edge-to-edge (Android 15+): cabecera bajo la barra de estado, SOLICITAR SERVICIO sobre la navegación
         InsetsHelper.marginTop(findViewById(R.id.header));
         InsetsHelper.padBottom(findViewById(R.id.bottomBar));
