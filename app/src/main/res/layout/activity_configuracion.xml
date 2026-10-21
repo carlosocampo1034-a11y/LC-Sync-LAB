@@ -138,48 +138,16 @@
                     android:textColor="#555555"
                     android:paddingBottom="12dp" />
 
-                <EditText
-                    android:id="@+id/etSyncUrl"
+                <Button
+                    android:id="@+id/btnSyncAhora"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="URL del servidor (ej: http://127.0.0.1:5000/api/)"
-                    android:textSize="13sp"
-                    android:inputType="textUri"
-                    android:paddingBottom="8dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="8dp">
-
-                    <!-- PROBAR CONEXIÓN — botón secundario outline -->
-                    <Button
-                        android:id="@+id/btnTestConexion"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
-                        android:text="PROBAR"
-                        android:textSize="12sp"
-                        android:textColor="@color/lc_text"
-                        android:background="@drawable/bg_btn_secondary"
-                        android:stateListAnimator="@null" />
-
-                    <!-- SINCRONIZAR AHORA — botón primario sólido -->
-                    <Button
-                        android:id="@+id/btnSyncAhora"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_weight="1"
-                        android:text="SINCRONIZAR AHORA"
-                        android:textSize="11sp"
-                        android:textColor="#FFFFFF"
-                        android:background="@drawable/bg_button_primary"
-                        android:maxLines="1"
-                        android:stateListAnimator="@null" />
-
-                </LinearLayout>
+                    android:layout_height="44dp"
+                    android:layout_marginTop="8dp"
+                    android:text="SINCRONIZAR AHORA"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/bg_button_primary"
+                    android:stateListAnimator="@null" />
 
                 <androidx.appcompat.widget.SwitchCompat
                     android:id="@+id/switchSyncAuto"
@@ -198,45 +166,6 @@
                     android:textColor="#9E9E9E"
                     android:paddingTop="4dp"
                     android:paddingBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/tvLabEstado"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="16dp"
-                    android:text="Laboratorio: sin conectar"
-                    android:textColor="@color/lc_text"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/etLabUsuario"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Usuario técnico (laboratorio)"
-                    android:importantForAutofill="no"
-                    android:inputType="text"
-                    android:textSize="14sp" />
-
-                <EditText
-                    android:id="@+id/etLabClave"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Contraseña"
-                    android:importantForAutofill="no"
-                    android:inputType="textPassword"
-                    android:textSize="14sp" />
-
-                <!-- CONECTAR AL LABORATORIO — outline -->
-                <Button
-                    android:id="@+id/btnLabConectar"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="8dp"
-                    android:text="CONECTAR AL LABORATORIO"
-                    android:textColor="@color/lc_primary"
-                    android:background="@drawable/bg_btn_outline_red"
-                    android:stateListAnimator="@null" />
 
                 <!-- ── GESTIÓN DE PIN ─────────────────────────────────── -->
                 <View
