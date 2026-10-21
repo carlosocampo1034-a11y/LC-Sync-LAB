@@ -22,8 +22,13 @@ build/
 .gradle/
 *.apk
 *.aab
+!docs/apk/*.apk
 local.properties
 .cxx/
+
+# Keystore — NEVER commit (backup manually)
+*.jks
+*.keystore
 
 # Claude Code IDE settings (pueden contener permisos/keys locales)
 .claude/
@@ -35,3 +40,4 @@ local.properties
 # Misc
 .DS_Store
 *.log
+KEYSTORE_CREDENTIALS.txt
