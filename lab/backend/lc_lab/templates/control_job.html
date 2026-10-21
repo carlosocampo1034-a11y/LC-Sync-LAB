@@ -1,55 +1,582 @@
-{% extends "control_base.html" %}{% block body %}
-<a href="{{url_for('control.tablero')}}">← Agenda</a>{% if mensaje %}<p class="msg">{{mensaje}}</p>{% endif %}
-<div class="row"><h2>{{j.cliente or 'Orden'}} <span class="sec">#{{j.id}} · v{{j.version}}</span></h2><span class="badge">{{j.estado}}</span></div>
-<p>{{j.descripcion}}</p><table>
-<tr><th>Dirección</th><td>{{j.direccion}} {% if j.latitud is not none %}<span class="sec">(ubicación verificada)</span>{% endif %}</td></tr>
-<tr><th>Teléfono</th><td>{{j.telefono or '—'}}</td></tr><tr><th>Cita</th><td>{{ j.programadoPara|fecha(j.zonaHoraria) }}{% if j.ventanaPreferida %} <span class="sec">· preferencia del cliente: {{j.ventanaPreferida|preferencia}}</span>{% endif %}</td></tr>
-<tr><th>Equipo</th><td>{{j.equipo or '—'}}</td></tr><tr><th>Propiedad</th><td>{{j.tipoPropiedad or '—'}} · cliente presente: {{ 'sí' if j.clientePresente else ('no' if j.clientePresente is not none else '—') }}</td></tr>
-<tr><th>Acceso</th><td>{{j.tipoAcceso or '—'}}{% if j.codigoAcceso %} · código: {{j.codigoAcceso}}{% endif %}{% if j.ubicacionLlave %} · llave: {{j.ubicacionLlave}}{% endif %}</td></tr>
-<tr><th>Instrucciones</th><td>{{j.instrucciones or '—'}}</td></tr><tr><th>Mascotas</th><td>{{j.mascota or '—'}}</td></tr>
-<tr><th>Respaldo</th><td>{{j.contactoRespaldo or '—'}}</td></tr><tr><th>Técnico</th><td>{{j.technicianId or 'sin asignar'}}</td></tr></table>
-{% if conflictos %}<h3 class="err">Conflictos pendientes ({{conflictos|length}})</h3>
-{% for c in conflictos %}<div class="card"><b>{{c.campo}}</b> <span class="sec">· técnico {{c.actor}} · base v{{c.baseVersion}}</span>
-<table><tr><th>Centro de mando</th><td>{{c.valorServidor or '∅'}}</td></tr><tr><th>Técnico</th><td>{{c.valorTecnico or '∅'}}</td></tr></table>
-<form class="inline" method="post" action="{{url_for('control.resolver', cid=c.id)}}"><input type="hidden" name="csrf" value="{{csrf}}">
-<input type="hidden" name="version" value="{{j.version}}">
-<button name="decision" value="SERVIDOR">Mantener centro de mando</button><button name="decision" value="TECNICO">Usar lo del técnico</button></form>
-<form class="inline" method="post" action="{{url_for('control.resolver', cid=c.id)}}"><input type="hidden" name="csrf" value="{{csrf}}">
-<input type="hidden" name="version" value="{{j.version}}"><input type="hidden" name="decision" value="COMBINAR">
-<textarea name="valor" required>{{c.valorServidor or ''}}
-{{c.valorTecnico or ''}}</textarea><button>Guardar combinado</button></form></div>{% endfor %}{% endif %}
-{% if propuestas %}<h3>Propuestas</h3>{% for p in propuestas %}<div class="card"><b>Versión {{p.revision}}</b> · {{p.estado}}
-{% if p.estado == 'APROBADA' %}{% for o in p.opciones %}{% if o.nivel == p.opcionElegida %} · OPCIÓN {{ {'GOOD': 1, 'BETTER': 2, 'BEST': 3}[o.nivel] }}{% endif %}{% endfor %} ${{'%.2f'|format(p.totalAceptado)}} · firmó {{p.firmante}}{% endif %}
-<table>{% for o in p.opciones %}<tr><td><b>OPCIÓN {{ {'GOOD': 1, 'BETTER': 2, 'BEST': 3}[o.nivel] }}</b> — {{o.titulo}}{% if o.equipoPropuesto %}<br><span class="sec">Equipo: {{o.equipoPropuesto}}</span>{% endif %}{% if o.especificaciones %}<br><span class="sec">Especificaciones: {{o.especificaciones}}</span>{% endif %}{% if o.garantia %}<br><span class="sec">Garantía: {{o.garantia}}</span>{% endif %}</td><td>${{'%.2f'|format(o.total)}}</td></tr>{% endfor %}</table></div>{% endfor %}{% endif %}
-{% if firmas %}<h3>Firmas</h3><table>{% for s in firmas %}<tr><td>{{s.tipo}}</td><td>{{s.firmante}}{% if s.opcion %} · {{s.opcion}} ${{'%.2f'|format(s.total)}}{% endif %}</td>
-<td>{{s.firmadaAt|fecha}} · capturó {{s.capturadaPor}}</td><td><a href="{{url_for('control.ver_firma', sid=s.id)}}">ver</a></td></tr>{% endfor %}</table>{% endif %}
-<h3>Factura</h3>{% if factura %}<div class="card"><b>{{factura.numero or 'borrador'}}</b> · {{factura.estado}} · subtotal ${{'%.2f'|format(factura.subtotal)}}
-{% if factura.descuento %} · descuento −${{'%.2f'|format(factura.descuento)}}{% endif %} · impuesto ${{'%.2f'|format(factura.impuesto)}} · <b>total ${{'%.2f'|format(factura.total)}}</b>
-· pagado ${{'%.2f'|format(factura.pagado)}} · saldo ${{'%.2f'|format(factura.saldo)}}{% if factura.tienePdf %} · PDF recibido{% endif %}
-{% if factura.propuestaAprobada %}<br><span class="sec">Propuesta aprobada: {{factura.propuestaAprobada.opcion}} ${{'%.2f'|format(factura.propuestaAprobada.total)}}</span>{% endif %}</div>
-{% else %}<p class="sec">Sin factura.</p>{% endif %}
-{% if comparacion and comparacion.tipo != 'IGUAL' %}<p class="err"><b>{% if comparacion.diferencia > 0 %}⚠ Factura ${{'%.2f'|format(comparacion.diferencia)}} por encima de lo aprobado{% else %}ℹ Factura ${{'%.2f'|format(-comparacion.diferencia)}} por debajo de lo aprobado{% endif %}</b>
-(aprobado ${{'%.2f'|format(comparacion.aprobado)}} · facturado ${{'%.2f'|format(comparacion.facturado)}}){% if factura and factura.variacionId %} · diferencia aprobada por el cliente{% elif factura and factura.confirmacionMenorPor %} · confirmada por {{factura.confirmacionMenorPor}}{% elif factura and factura.estado != 'BORRADOR' %} · emitida sin aprobación adicional{% endif %}</p>{% endif %}
-{% for v in variaciones %}<p class="sec">Aprobación adicional #{{v.id}} · {{v.tipo}} {{'%+.2f'|format(v.diferencia)}} · {{v.estado}}{% if v.firmante %} · firmó {{v.firmante}}{% endif %}</p>{% endfor %}
-{% if not factura or factura.estado == 'BORRADOR' %}<form class="inline" method="post" action="{{url_for('control.descuento', jid=j.id)}}">
-<input type="hidden" name="csrf" value="{{csrf}}"><input type="number" step="0.01" min="0.01" name="monto" placeholder="Descuento $" required>
-<input name="motivo" placeholder="Motivo" required><button>Autorizar descuento</button></form>{% endif %}
-{% for d in descuentos %}<p class="sec">Descuento autorizado ${{'%.2f'|format(d.monto)}} · {{d.motivo}} · {{d.autorizado_por}}</p>{% endfor %}
-{% if pagos %}<h3>Pagos</h3><table>{% for p in pagos %}<tr><td>${{'%.2f'|format(p.monto)}} · {{p.metodo}}</td><td>{{p.estado}}{% if p.revisadoPor %} ({{p.revisadoPor}}){% endif %}</td>
-<td>{% if p.estado == 'REPORTADO' %}<form class="inline" method="post" action="{{url_for('control.revisar_pago', pid=p.id)}}"><input type="hidden" name="csrf" value="{{csrf}}">
-<button name="decision" value="CONFIRMADO">Confirmar (comprobado)</button><input name="motivo" placeholder="Motivo si rechazas"><button name="decision" value="RECHAZADO">Rechazar</button></form>{% endif %}</td></tr>{% endfor %}</table>{% endif %}
-<h3>Programar</h3><form class="inline" method="post" action="{{url_for('control.programar', jid=j.id)}}">
-<input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="version" value="{{j.version}}">
-<input type="date" name="fecha" required><input type="time" name="hora" required><button>Programar</button></form>
-<h3>Asignar técnico</h3><form class="inline" method="post" action="{{url_for('control.asignar', jid=j.id)}}">
-<input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="version" value="{{j.version}}">
-<select name="technicianId"><option value="">— sin asignar —</option>{% for t in tecnicos %}
-<option value="{{t['technician_code']}}" {{'selected' if t['technician_code']==j.technicianId}}>{{t['display_name']}}</option>{% endfor %}</select><button>Asignar</button></form>
-<h3>Estado</h3><form class="inline" method="post" action="{{url_for('control.estado', jid=j.id)}}">
-<input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="version" value="{{j.version}}">
-<select name="estado">{% for e in estados %}<option {{'selected' if e==j.estado}}>{{e}}</option>{% endfor %}</select><button>Cambiar</button></form>
-<h3>Evidencias</h3><p class="sec">{{fotos|length}} foto(s) · {{eventos|length}} nota(s)/medición(es)</p>
-{% for e in eventos %}<div class="card"><b>{{e.tipo}}</b> <span class="sec">{{e.actor}} · {{e.ts|fecha}}</span><div>{{e.payload}}</div></div>{% endfor %}
-<h3>Historial</h3><table><tr><th>v</th><th>Campo</th><th>Nuevo</th><th>Actor</th><th>Origen</th><th>Cuándo</th></tr>
-{% for h in hist %}<tr><td>{{h['version']}}</td><td>{{h['field']}}</td><td>{{h['new_value'] or '—'}}</td><td>{{h['actor']}}</td><td>{{h['source']}}</td><td>{{h['ts']|fecha}}</td></tr>{% endfor %}</table>
+{% extends "control_base.html" %}
+{% block body %}
+
+<style>
+  .job-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .job-grid { grid-template-columns: 1fr; } }
+
+  .info-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f2f6; gap: 12px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { font-size: .78rem; font-weight: 600; text-transform: uppercase;
+                letter-spacing: .05em; color: var(--text-muted); min-width: 110px; padding-top: 1px; }
+  .info-value { font-size: .9rem; color: var(--text-main); flex: 1; }
+
+  .section-title { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+                   letter-spacing: .08em; color: var(--text-muted); margin-bottom: 14px; }
+
+  .conflict-card { border: 1px solid #fee2e2; background: #fff5f5; border-radius: 10px;
+                   padding: 14px 16px; margin-bottom: 12px; }
+  .conflict-values { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+  .conflict-val { background: #fff; border: 1px solid #f3f4f8; border-radius: 8px; padding: 10px 12px; }
+  .conflict-val-label { font-size: .7rem; font-weight: 600; text-transform: uppercase;
+                        letter-spacing: .05em; color: var(--text-muted); margin-bottom: 4px; }
+  .conflict-val-text { font-size: .88rem; color: var(--text-main); }
+
+  .propuesta-card { border: 1px solid #e8eaf0; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .prop-opciones { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 10px; }
+  @media (max-width: 600px) { .prop-opciones { grid-template-columns: 1fr; } }
+  .prop-op { border: 1px solid #e8eaf0; border-radius: 8px; padding: 10px 12px; font-size: .85rem; }
+  .prop-op.elegida { border-color: var(--accent); background: #fff0f1; }
+  .prop-op-label { font-size: .68rem; font-weight: 700; text-transform: uppercase;
+                   letter-spacing: .06em; color: var(--text-muted); }
+  .prop-op-price { font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin: 4px 0 2px; }
+
+  .factura-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+  @media (max-width: 640px) { .factura-grid { grid-template-columns: repeat(2,1fr); } }
+  .factura-cell { text-align: center; }
+  .factura-cell-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em;
+                        color: var(--text-muted); margin-bottom: 2px; }
+  .factura-cell-val { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+  .factura-cell-val.saldo-pendiente { color: #dc2626; }
+  .factura-cell-val.saldo-ok { color: #16a34a; }
+
+  .hist-table td, .hist-table th { font-size: .78rem; padding: 7px 10px; }
+  .hist-table th { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em;
+                   color: var(--text-muted); font-weight: 600; }
+  .hist-table tr:hover td { background: #fafbfd; }
+
+  .evento-card { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f2f6; }
+  .evento-card:last-child { border-bottom: none; }
+  .evento-icon { width: 32px; height: 32px; border-radius: 8px; background: #f0f2f8;
+                 display: flex; align-items: center; justify-content: center;
+                 font-size: .85rem; flex-shrink: 0; }
+  .evento-body { flex: 1; font-size: .85rem; }
+  .evento-meta { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
+
+  .control-panel .lc-card { margin-bottom: 16px; }
+  .control-panel .lc-card:last-child { margin-bottom: 0; }
+</style>
+
+<!-- Page header -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('control.tablero') }}"
+     class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+    <i class="bi bi-arrow-left"></i> Agenda
+  </a>
+  <div class="flex-grow-1">
+    <h4 class="mb-0 fw-bold">{{ j.cliente or 'Orden sin nombre' }}</h4>
+    <span class="text-muted" style="font-size:.82rem">
+      Orden #{{ j.id }} &nbsp;·&nbsp; v{{ j.version }}
+    </span>
+  </div>
+  <span class="badge badge-{{ j.estado|lower|replace(' ','-') }} px-3 py-2"
+        style="font-size:.8rem">{{ j.estado }}</span>
+</div>
+
+{% if mensaje %}
+<div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+  <i class="bi bi-check-circle-fill"></i> {{ mensaje }}
+</div>
+{% endif %}
+
+{% if conflictos %}
+<div class="lc-card mb-4" style="border-left: 4px solid #dc2626;">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+    <span class="fw-bold text-danger">{{ conflictos|length }} conflicto(s) pendiente(s) de resolución</span>
+  </div>
+  {% for c in conflictos %}
+  <div class="conflict-card">
+    <div class="fw-semibold mb-1">{{ c.campo }}
+      <span class="text-muted fw-normal" style="font-size:.82rem">
+        &nbsp;· técnico {{ c.actor }} · base v{{ c.baseVersion }}
+      </span>
+    </div>
+    <div class="conflict-values">
+      <div class="conflict-val">
+        <div class="conflict-val-label">Centro de mando</div>
+        <div class="conflict-val-text">{{ c.valorServidor or '∅' }}</div>
+      </div>
+      <div class="conflict-val">
+        <div class="conflict-val-label">Técnico</div>
+        <div class="conflict-val-text">{{ c.valorTecnico or '∅' }}</div>
+      </div>
+    </div>
+    <form class="d-flex gap-2 mb-2" method="post"
+          action="{{ url_for('control.resolver', cid=c.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="version" value="{{ j.version }}">
+      <button class="btn btn-sm btn-outline-danger" name="decision" value="SERVIDOR">
+        Mantener centro de mando
+      </button>
+      <button class="btn btn-sm btn-outline-primary" name="decision" value="TECNICO">
+        Usar lo del técnico
+      </button>
+    </form>
+    <form method="post" action="{{ url_for('control.resolver', cid=c.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="version" value="{{ j.version }}">
+      <input type="hidden" name="decision" value="COMBINAR">
+      <textarea class="form-control form-control-sm mb-2" name="valor"
+                rows="3" required>{{ c.valorServidor or '' }}
+{{ c.valorTecnico or '' }}</textarea>
+      <button class="btn btn-sm btn-accent">Guardar combinado</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Main 2-column grid -->
+<div class="job-grid">
+
+  <!-- ── LEFT COLUMN: Info + Sections ─────────────────────────────── -->
+  <div>
+
+    <!-- Info del cliente -->
+    <div class="lc-card mb-4">
+      <div class="section-title">
+        <i class="bi bi-person-lines-fill me-1"></i> Información de la orden
+      </div>
+
+      {% if j.descripcion %}
+      <p class="mb-3" style="font-size:.92rem; color:var(--text-main)">{{ j.descripcion }}</p>
+      <hr class="my-3" style="border-color:#f0f2f6">
+      {% endif %}
+
+      <div class="info-row">
+        <span class="info-label">Dirección</span>
+        <span class="info-value">
+          {{ j.direccion or '—' }}
+          {% if j.latitud is not none %}
+          <span class="badge bg-success-subtle text-success ms-2" style="font-size:.7rem">
+            <i class="bi bi-geo-alt-fill"></i> verificada
+          </span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Teléfono</span>
+        <span class="info-value">{{ j.telefono or '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Cita</span>
+        <span class="info-value">
+          {{ j.programadoPara|fecha(j.zonaHoraria) }}
+          {% if j.ventanaPreferida %}
+          <span class="text-muted ms-2" style="font-size:.82rem">
+            · preferencia: {{ j.ventanaPreferida|preferencia }}
+          </span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Equipo</span>
+        <span class="info-value">{{ j.equipo or '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Propiedad</span>
+        <span class="info-value">
+          {{ j.tipoPropiedad or '—' }}
+          <span class="text-muted ms-2" style="font-size:.82rem">
+            · cliente presente:
+            {{ 'sí' if j.clientePresente else ('no' if j.clientePresente is not none else '—') }}
+          </span>
+        </span>
+      </div>
+      {% if j.tipoAcceso or j.codigoAcceso or j.ubicacionLlave %}
+      <div class="info-row">
+        <span class="info-label">Acceso</span>
+        <span class="info-value">
+          {{ j.tipoAcceso or '—' }}
+          {% if j.codigoAcceso %}<span class="text-muted ms-2">· código: <code>{{ j.codigoAcceso }}</code></span>{% endif %}
+          {% if j.ubicacionLlave %}<span class="text-muted ms-2">· llave: {{ j.ubicacionLlave }}</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if j.instrucciones %}
+      <div class="info-row">
+        <span class="info-label">Instrucciones</span>
+        <span class="info-value">{{ j.instrucciones }}</span>
+      </div>
+      {% endif %}
+      {% if j.mascota %}
+      <div class="info-row">
+        <span class="info-label">Mascotas</span>
+        <span class="info-value">{{ j.mascota }}</span>
+      </div>
+      {% endif %}
+      {% if j.contactoRespaldo %}
+      <div class="info-row">
+        <span class="info-label">Respaldo</span>
+        <span class="info-value">{{ j.contactoRespaldo }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Técnico</span>
+        <span class="info-value">
+          {% if j.technicianId %}
+          <span class="badge" style="background:#f0f2f8;color:var(--text-main);font-size:.82rem;font-weight:600">
+            <i class="bi bi-person-badge me-1"></i>{{ j.technicianId }}
+          </span>
+          {% else %}
+          <span class="text-muted">sin asignar</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <!-- Propuestas -->
+    {% if propuestas %}
+    <div class="lc-card mb-4">
+      <div class="section-title"><i class="bi bi-file-earmark-text me-1"></i> Propuestas</div>
+      {% for p in propuestas %}
+      <div class="propuesta-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Versión {{ p.revision }}</span>
+          <span class="badge badge-{{ p.estado|lower }}">{{ p.estado }}</span>
+        </div>
+        {% if p.estado == 'APROBADA' %}
+        <div class="text-muted mt-1" style="font-size:.82rem">
+          {% for o in p.opciones %}{% if o.nivel == p.opcionElegida %}
+          Opción {{ {'GOOD':1,'BETTER':2,'BEST':3}[o.nivel] }} aprobada ·
+          {% endif %}{% endfor %}
+          <strong>${{ '%.2f'|format(p.totalAceptado) }}</strong> · firmó {{ p.firmante }}
+        </div>
+        {% endif %}
+        <div class="prop-opciones">
+          {% for o in p.opciones %}
+          <div class="prop-op {% if o.nivel == p.opcionElegida %}elegida{% endif %}">
+            <div class="prop-op-label">
+              Opción {{ {'GOOD':1,'BETTER':2,'BEST':3}[o.nivel] }} — {{ o.titulo }}
+            </div>
+            <div class="prop-op-price">${{ '%.2f'|format(o.total) }}</div>
+            {% if o.equipoPropuesto %}<div class="text-muted" style="font-size:.78rem">{{ o.equipoPropuesto }}</div>{% endif %}
+            {% if o.garantia %}<div class="text-muted" style="font-size:.78rem">Garantía: {{ o.garantia }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Firmas -->
+    {% if firmas %}
+    <div class="lc-card mb-4">
+      <div class="section-title"><i class="bi bi-pen me-1"></i> Firmas</div>
+      <table class="lc-table hist-table w-100">
+        <thead><tr><th>Tipo</th><th>Firmante</th><th>Importe</th><th>Fecha</th><th></th></tr></thead>
+        <tbody>
+          {% for s in firmas %}
+          <tr>
+            <td>{{ s.tipo }}</td>
+            <td>{{ s.firmante }}</td>
+            <td>{% if s.opcion %}<strong>${{ '%.2f'|format(s.total) }}</strong>{% else %}—{% endif %}</td>
+            <td class="text-muted">{{ s.firmadaAt|fecha }} · {{ s.capturadaPor }}</td>
+            <td><a href="{{ url_for('control.ver_firma', sid=s.id) }}"
+                   class="btn btn-sm btn-outline-secondary py-0">ver</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <!-- Factura -->
+    <div class="lc-card mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title mb-0"><i class="bi bi-receipt me-1"></i> Factura</div>
+        {% if factura %}
+        <span class="badge badge-{{ factura.estado|lower }}">{{ factura.estado }}</span>
+        {% endif %}
+      </div>
+      {% if factura %}
+      <div class="factura-grid mb-3">
+        <div class="factura-cell">
+          <div class="factura-cell-label">Subtotal</div>
+          <div class="factura-cell-val">${{ '%.2f'|format(factura.subtotal) }}</div>
+        </div>
+        {% if factura.descuento %}
+        <div class="factura-cell">
+          <div class="factura-cell-label">Descuento</div>
+          <div class="factura-cell-val text-danger">−${{ '%.2f'|format(factura.descuento) }}</div>
+        </div>
+        {% endif %}
+        <div class="factura-cell">
+          <div class="factura-cell-label">Impuesto</div>
+          <div class="factura-cell-val">${{ '%.2f'|format(factura.impuesto) }}</div>
+        </div>
+        <div class="factura-cell">
+          <div class="factura-cell-label">Total</div>
+          <div class="factura-cell-val fw-bold" style="font-size:1.15rem">${{ '%.2f'|format(factura.total) }}</div>
+        </div>
+        <div class="factura-cell">
+          <div class="factura-cell-label">Pagado</div>
+          <div class="factura-cell-val text-success">${{ '%.2f'|format(factura.pagado) }}</div>
+        </div>
+        <div class="factura-cell">
+          <div class="factura-cell-label">Saldo</div>
+          <div class="factura-cell-val {% if factura.saldo > 0 %}saldo-pendiente{% else %}saldo-ok{% endif %}">
+            ${{ '%.2f'|format(factura.saldo) }}
+          </div>
+        </div>
+      </div>
+      {% if factura.numero %}
+      <div class="text-muted" style="font-size:.82rem">
+        Nº {{ factura.numero }}{% if factura.tienePdf %} · <i class="bi bi-file-pdf text-danger"></i> PDF recibido{% endif %}
+      </div>
+      {% endif %}
+      {% if factura.propuestaAprobada %}
+      <div class="text-muted mt-1" style="font-size:.82rem">
+        Propuesta aprobada: {{ factura.propuestaAprobada.opcion }}
+        ${{ '%.2f'|format(factura.propuestaAprobada.total) }}
+      </div>
+      {% endif %}
+
+      {% if comparacion and comparacion.tipo != 'IGUAL' %}
+      <div class="alert {% if comparacion.diferencia > 0 %}alert-warning{% else %}alert-info{% endif %} mt-3 py-2 mb-0"
+           style="font-size:.85rem">
+        <i class="bi bi-{% if comparacion.diferencia > 0 %}exclamation-triangle{% else %}info-circle{% endif %} me-1"></i>
+        {% if comparacion.diferencia > 0 %}
+          Factura ${{ '%.2f'|format(comparacion.diferencia) }} por encima de lo aprobado
+        {% else %}
+          Factura ${{ '%.2f'|format(-comparacion.diferencia) }} por debajo de lo aprobado
+        {% endif %}
+        (aprobado ${{ '%.2f'|format(comparacion.aprobado) }} · facturado ${{ '%.2f'|format(comparacion.facturado) }})
+      </div>
+      {% endif %}
+
+      {% for v in variaciones %}
+      <div class="text-muted mt-2" style="font-size:.82rem">
+        Aprobación adicional #{{ v.id }} · {{ v.tipo }}
+        {{ '%+.2f'|format(v.diferencia) }} · {{ v.estado }}
+        {% if v.firmante %} · firmó {{ v.firmante }}{% endif %}
+      </div>
+      {% endfor %}
+
+      {% else %}
+      <div class="text-center py-3 text-muted">
+        <i class="bi bi-receipt" style="font-size:2rem;opacity:.3"></i>
+        <p class="mt-2 mb-0" style="font-size:.88rem">Sin factura registrada</p>
+      </div>
+      {% endif %}
+
+      <!-- Descuento form -->
+      {% if not factura or factura.estado == 'BORRADOR' %}
+      <hr class="mt-3" style="border-color:#f0f2f6">
+      <div class="text-muted mb-2" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600">
+        Autorizar descuento
+      </div>
+      <form method="post" action="{{ url_for('control.descuento', jid=j.id) }}"
+            class="d-flex gap-2 flex-wrap">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="number" step="0.01" min="0.01" name="monto"
+               class="form-control form-control-sm" style="max-width:130px"
+               placeholder="Monto $" required>
+        <input name="motivo" class="form-control form-control-sm flex-grow-1"
+               placeholder="Motivo" required>
+        <button class="btn btn-sm btn-accent">Autorizar</button>
+      </form>
+      {% endif %}
+
+      {% for d in descuentos %}
+      <div class="text-muted mt-2" style="font-size:.82rem">
+        <i class="bi bi-check-circle text-success me-1"></i>
+        Descuento ${{ '%.2f'|format(d.monto) }} · {{ d.motivo }} · {{ d.autorizado_por }}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagos -->
+    {% if pagos %}
+    <div class="lc-card mb-4">
+      <div class="section-title"><i class="bi bi-cash-stack me-1"></i> Pagos</div>
+      {% for p in pagos %}
+      <div class="d-flex align-items-center gap-3 py-2 border-bottom" style="border-color:#f0f2f6!important">
+        <div class="flex-grow-1">
+          <div class="fw-semibold" style="font-size:.9rem">${{ '%.2f'|format(p.monto) }}</div>
+          <div class="text-muted" style="font-size:.78rem">{{ p.metodo }}</div>
+        </div>
+        <span class="badge badge-{{ p.estado|lower }}">{{ p.estado }}</span>
+        {% if p.estado == 'REPORTADO' %}
+        <form class="d-flex gap-2" method="post"
+              action="{{ url_for('control.revisar_pago', pid=p.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn btn-sm btn-outline-success py-0" name="decision" value="CONFIRMADO">
+            <i class="bi bi-check-lg"></i> Confirmar
+          </button>
+          <input name="motivo" class="form-control form-control-sm" style="width:140px"
+                 placeholder="Motivo (si rechazas)">
+          <button class="btn btn-sm btn-outline-danger py-0" name="decision" value="RECHAZADO">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </form>
+        {% endif %}
+        {% if p.revisadoPor %}<span class="text-muted" style="font-size:.78rem">{{ p.revisadoPor }}</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Evidencias -->
+    <div class="lc-card mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title mb-0"><i class="bi bi-camera me-1"></i> Evidencias</div>
+        <div class="text-muted" style="font-size:.82rem">
+          <i class="bi bi-image me-1"></i>{{ fotos|length }} foto(s)
+          &nbsp;·&nbsp;
+          <i class="bi bi-journal-text me-1"></i>{{ eventos|length }} nota(s)
+        </div>
+      </div>
+      {% if eventos %}
+        {% for e in eventos %}
+        <div class="evento-card">
+          <div class="evento-icon">
+            {% if e.tipo == 'foto' %}<i class="bi bi-image text-muted"></i>
+            {% elif e.tipo == 'medicion' %}<i class="bi bi-rulers text-muted"></i>
+            {% else %}<i class="bi bi-journal-text text-muted"></i>{% endif %}
+          </div>
+          <div class="evento-body">
+            <div class="fw-semibold" style="font-size:.85rem">{{ e.tipo|title }}</div>
+            <div class="evento-meta">{{ e.actor }} · {{ e.ts|fecha }}</div>
+            {% if e.payload %}<div class="text-muted mt-1" style="font-size:.82rem">{{ e.payload }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-2 text-muted" style="font-size:.85rem">Sin evidencias registradas.</div>
+      {% endif %}
+    </div>
+
+    <!-- Historial -->
+    <div class="lc-card">
+      <div class="section-title"><i class="bi bi-clock-history me-1"></i> Historial de cambios</div>
+      {% if hist %}
+      <div class="table-responsive">
+        <table class="lc-table hist-table w-100">
+          <thead>
+            <tr><th>v</th><th>Campo</th><th>Nuevo valor</th><th>Actor</th><th>Origen</th><th>Cuándo</th></tr>
+          </thead>
+          <tbody>
+            {% for h in hist %}
+            <tr>
+              <td><span class="badge" style="background:#f0f2f8;color:var(--text-muted);font-size:.72rem">v{{ h['version'] }}</span></td>
+              <td class="fw-semibold">{{ h['field'] }}</td>
+              <td class="text-muted">{{ h['new_value'] or '—' }}</td>
+              <td>{{ h['actor'] }}</td>
+              <td><span class="text-muted" style="font-size:.78rem">{{ h['source'] }}</span></td>
+              <td class="text-muted">{{ h['ts']|fecha }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-3">Sin historial.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-2 text-muted" style="font-size:.85rem">Sin historial registrado.</div>
+      {% endif %}
+    </div>
+
+  </div><!-- /left column -->
+
+  <!-- ── RIGHT COLUMN: Control Panel ──────────────────────────────── -->
+  <div class="control-panel">
+
+    <!-- Programar -->
+    <div class="lc-card">
+      <div class="section-title"><i class="bi bi-calendar-event me-1"></i> Programar cita</div>
+      <form method="post" action="{{ url_for('control.programar', jid=j.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="version" value="{{ j.version }}">
+        <div class="mb-2">
+          <label class="form-label fw-semibold" style="font-size:.82rem">Fecha</label>
+          <input type="date" name="fecha" class="form-control form-control-sm" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem">Hora</label>
+          <input type="time" name="hora" class="form-control form-control-sm" required>
+        </div>
+        <button class="btn btn-accent w-100">
+          <i class="bi bi-calendar-check me-1"></i> Programar
+        </button>
+      </form>
+    </div>
+
+    <!-- Asignar técnico -->
+    <div class="lc-card">
+      <div class="section-title"><i class="bi bi-person-badge me-1"></i> Asignar técnico</div>
+      <form method="post" action="{{ url_for('control.asignar', jid=j.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="version" value="{{ j.version }}">
+        <div class="mb-3">
+          <select name="technicianId" class="form-select form-select-sm">
+            <option value="">— sin asignar —</option>
+            {% for t in tecnicos %}
+            <option value="{{ t['technician_code'] }}"
+              {{ 'selected' if t['technician_code']==j.technicianId }}>
+              {{ t['display_name'] }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-accent w-100">
+          <i class="bi bi-person-check me-1"></i> Asignar
+        </button>
+      </form>
+    </div>
+
+    <!-- Cambiar estado -->
+    <div class="lc-card">
+      <div class="section-title"><i class="bi bi-arrow-repeat me-1"></i> Cambiar estado</div>
+      <form method="post" action="{{ url_for('control.estado', jid=j.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="version" value="{{ j.version }}">
+        <div class="mb-3">
+          <select name="estado" class="form-select form-select-sm">
+            {% for e in estados %}
+            <option {{ 'selected' if e==j.estado }}>{{ e }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-accent w-100">
+          <i class="bi bi-check2-circle me-1"></i> Cambiar estado
+        </button>
+      </form>
+    </div>
+
+    <!-- Resumen rápido -->
+    <div class="lc-card" style="background:#fafbfd">
+      <div class="section-title"><i class="bi bi-info-circle me-1"></i> Resumen</div>
+      <div class="d-flex flex-column gap-2">
+        <div class="d-flex justify-content-between" style="font-size:.85rem">
+          <span class="text-muted">Estado actual</span>
+          <span class="badge badge-{{ j.estado|lower|replace(' ','-') }}">{{ j.estado }}</span>
+        </div>
+        <div class="d-flex justify-content-between" style="font-size:.85rem">
+          <span class="text-muted">Versión</span>
+          <span class="fw-semibold">v{{ j.version }}</span>
+        </div>
+        {% if factura %}
+        <div class="d-flex justify-content-between" style="font-size:.85rem">
+          <span class="text-muted">Saldo</span>
+          <span class="fw-bold {% if factura.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+            ${{ '%.2f'|format(factura.saldo) }}
+          </span>
+        </div>
+        {% endif %}
+        {% if fotos %}
+        <div class="d-flex justify-content-between" style="font-size:.85rem">
+          <span class="text-muted">Fotos</span>
+          <span class="fw-semibold">{{ fotos|length }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /right column -->
+
+</div><!-- /job-grid -->
+
 {% endblock %}
