@@ -283,13 +283,13 @@ def ver_firma(u, sid):
 
 # ── técnicos (alta y gestión) ───────────────────────────────────────────────
 
-def _pagina_tecnicos(u, mensaje=None, error=None, clave=None, f=None, codigo=200):
+def _pagina_tecnicos(u, mensaje=None, error=None, clave=None, pin=None, f=None, codigo=200):
     from flask import make_response
     from . import tecnicos as T
     r = make_response(render_template("control_tecnicos.html", u=u, tecnicos=T.listar(get_db()), csrf=_csrf(),
-                                      mensaje=mensaje or request.args.get("m"), error=error, clave=clave, f=f or {},
-                                      es_admin=u["role"] == "ADMIN"), codigo)
-    r.headers["Cache-Control"] = "no-store"      # la contraseña inicial se muestra una sola vez y no se guarda en caché
+                                      mensaje=mensaje or request.args.get("m"), error=error, clave=clave, pin=pin,
+                                      f=f or {}, es_admin=u["role"] == "ADMIN"), codigo)
+    r.headers["Cache-Control"] = "no-store"
     return r
 
 
@@ -349,6 +349,26 @@ def clave_tecnico(u, uid):
     db.commit()
     return _pagina_tecnicos(u, mensaje=f"Contraseña de {tec['username']} restablecida; sus sesiones abiertas se cerraron.",
                             clave={"usuario": tec["username"], "valor": clave})
+
+
+@bp.post("/tecnicos/<int:uid>/reset_pin")
+@requiere_despacho
+def reset_pin_tecnico(u, uid):
+    _check_csrf()
+    if u["role"] != "ADMIN":
+        return _pagina_tecnicos(u, error="Solo un administrador puede restablecer el PIN.", codigo=403)
+    db = get_db()
+    tec = db.execute("SELECT * FROM users WHERE id = ? AND role = 'TECHNICIAN'", (uid,)).fetchone()
+    if tec is None:
+        return _pagina_tecnicos(u, error="Técnico no encontrado.", codigo=404)
+    import random
+    nuevo_pin = str(random.randint(100000, 999999))
+    db.execute("UPDATE users SET pin_override = ?, updated_at = ? WHERE id = ?",
+               (nuevo_pin, now_ms(), uid))
+    audit(db, u["username"], "TECH_PIN_RESET", "user", uid, f"username={tec['username']}")
+    db.commit()
+    return _pagina_tecnicos(u, mensaje=f"Nuevo PIN de {tec['username']}: {nuevo_pin}  (el técnico debe activarlo desde la app)",
+                            pin={"usuario": tec["username"], "valor": nuevo_pin})
 
 
 # ── clientes (alta y gestión desde el centro de control) ────────────────────

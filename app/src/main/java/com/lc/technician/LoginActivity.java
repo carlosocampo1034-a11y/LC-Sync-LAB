@@ -15,10 +15,13 @@ import java.util.concurrent.Executors;
 
 public class LoginActivity extends AppCompatActivity {
 
-    static final String PREFS       = "lc_prefs";
-    static final String KEY_SESSION = "session_active";
-    static final String KEY_ROLE    = "user_role";
-    static final String KEY_NAME    = "user_name";
+    static final String PREFS            = "lc_prefs";
+    static final String KEY_SESSION      = "session_active";
+    static final String KEY_ROLE         = "user_role";
+    static final String KEY_NAME         = "user_name";
+    static final String KEY_PIN_TECNICO  = "pin_override_tecnico";
+    static final String KEY_PIN_DISPATCH = "pin_override_dispatcher";
+    static final String KEY_PIN_ADMIN    = "pin_override_admin";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +43,7 @@ public class LoginActivity extends AppCompatActivity {
 
         findViewById(R.id.btnIngresar).setOnClickListener(v -> {
             String pin = etPin.getText().toString().trim();
-            String role = resolveRole(pin);
+            String role = resolveRole(this, pin);
             if (role == null) {
                 Toast.makeText(this, "PIN incorrecto", Toast.LENGTH_SHORT).show();
                 etPin.setText("");
@@ -80,14 +83,31 @@ public class LoginActivity extends AppCompatActivity {
         exec.shutdown();
     }
 
+    static String resolveRole(android.content.Context ctx, String pin) {
+        if (pin == null || pin.isEmpty()) return null;
+        android.content.SharedPreferences p = ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE);
+        // Dynamic overrides take priority over compile-time PINs
+        if (matchesDynamic(pin, p.getString(KEY_PIN_TECNICO, null)))  return "TECNICO";
+        if (matchesDynamic(pin, p.getString(KEY_PIN_DISPATCH, null))) return "DISPATCHER";
+        if (matchesDynamic(pin, p.getString(KEY_PIN_ADMIN, null)))    return "ADMIN";
+        // Fall back to PINs compiled from local.properties
+        if (matches(pin, BuildConfig.PIN_TECNICO))    return "TECNICO";
+        if (matches(pin, BuildConfig.PIN_DISPATCHER)) return "DISPATCHER";
+        if (matches(pin, BuildConfig.PIN_ADMIN))      return "ADMIN";
+        return null;
+    }
+
+    // Keep backward-compatible no-context version for tests that still use it
     static String resolveRole(String pin) {
-        // PINs loaded from local.properties (not tracked by git) via BuildConfig.
-        // Empty input never matches, and a role whose PIN is not configured is disabled.
         if (pin == null || pin.isEmpty()) return null;
         if (matches(pin, BuildConfig.PIN_TECNICO))    return "TECNICO";
         if (matches(pin, BuildConfig.PIN_DISPATCHER)) return "DISPATCHER";
         if (matches(pin, BuildConfig.PIN_ADMIN))      return "ADMIN";
         return null;
+    }
+
+    private static boolean matchesDynamic(String pin, String stored) {
+        return stored != null && !stored.isEmpty() && pin.equals(stored);
     }
 
     private static boolean matches(String pin, String configured) {

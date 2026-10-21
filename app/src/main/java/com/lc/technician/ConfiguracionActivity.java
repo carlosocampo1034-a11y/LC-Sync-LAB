@@ -274,6 +274,12 @@ public class ConfiguracionActivity extends AppCompatActivity {
         if (btnLab != null) btnLab.setOnClickListener(v -> conectarLaboratorio());
         actualizarEstadoLab();
 
+        Button btnCambiarPin = findViewById(R.id.btnCambiarPin);
+        if (btnCambiarPin != null) btnCambiarPin.setOnClickListener(v -> mostrarDialogoCambiarPin());
+
+        Button btnActivarPin = findViewById(R.id.btnActivarPinServidor);
+        if (btnActivarPin != null) btnActivarPin.setOnClickListener(v -> activarPinDelServidor());
+
         actualizarInfoSync();
 
         // ── ADMINISTRAR DATOS LOCALES ─────────────────────────────────────────
@@ -1008,6 +1014,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
         actualizarRendimiento();
         syncTimeHandler.post(updateSyncTime);
         actualizarDatosLocales();
+        actualizarEstadoPin();
     }
 
     @Override
@@ -1396,5 +1403,137 @@ public class ConfiguracionActivity extends AppCompatActivity {
                 cargarMemberships();
             });
         }).start();
+    }
+
+    // ── GESTIÓN DE PIN DE ACCESO RÁPIDO ─────────────────────────────────────
+
+    private void mostrarDialogoCambiarPin() {
+        android.widget.LinearLayout caja = new android.widget.LinearLayout(this);
+        caja.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        caja.setPadding(pad, pad / 2, pad, 0);
+
+        EditText etActual = new EditText(this);
+        etActual.setHint("PIN actual (o PIN de compilación)");
+        etActual.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        etActual.setMaxLines(1);
+        caja.addView(etActual);
+
+        EditText etNuevo = new EditText(this);
+        etNuevo.setHint("PIN nuevo (4 a 8 dígitos)");
+        etNuevo.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        etNuevo.setMaxLines(1);
+        caja.addView(etNuevo);
+
+        EditText etConfirm = new EditText(this);
+        etConfirm.setHint("Confirmar PIN nuevo");
+        etConfirm.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        etConfirm.setMaxLines(1);
+        caja.addView(etConfirm);
+
+        android.app.AlertDialog d = new android.app.AlertDialog.Builder(this)
+                .setTitle("Cambiar PIN de acceso")
+                .setMessage("El PIN permite entrar a la app sin contraseña.")
+                .setView(caja)
+                .setCancelable(true)
+                .setPositiveButton("GUARDAR", null)
+                .setNegativeButton("Cancelar", null)
+                .create();
+
+        d.setOnShowListener(x -> d.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String actual  = etActual.getText().toString().trim();
+            String nuevo   = etNuevo.getText().toString().trim();
+            String confirm = etConfirm.getText().toString().trim();
+
+            // Verify current PIN
+            String role = LoginActivity.resolveRole(this, actual);
+            if (role == null) {
+                etActual.setError("PIN incorrecto");
+                return;
+            }
+            if (nuevo.length() < 4 || nuevo.length() > 8) {
+                etNuevo.setError("El PIN debe tener entre 4 y 8 dígitos");
+                return;
+            }
+            if (!nuevo.equals(confirm)) {
+                etConfirm.setError("Los PINs no coinciden");
+                return;
+            }
+
+            // Save dynamic override for the resolved role
+            android.content.SharedPreferences prefs = getSharedPreferences(LoginActivity.PREFS, MODE_PRIVATE);
+            String key = roleToKey(role);
+            prefs.edit().putString(key, nuevo).apply();
+
+            d.dismiss();
+            actualizarEstadoPin();
+            Toast.makeText(this, "PIN actualizado correctamente", Toast.LENGTH_SHORT).show();
+        }));
+        d.show();
+    }
+
+    private void activarPinDelServidor() {
+        if (!com.lc.technician.sync.LabSession.activa(this)) {
+            Toast.makeText(this, "Conectate primero al laboratorio para recibir el PIN del servidor",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Toast.makeText(this, "Verificando PIN pendiente…", Toast.LENGTH_SHORT).show();
+        String authHeader = com.lc.technician.sync.LabSession.authHeader(this);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                retrofit2.Response<com.google.gson.JsonObject> resp =
+                        ApiClient.get(this).pinPendiente(authHeader).execute();
+                if (!resp.isSuccessful() || resp.body() == null) {
+                    runOnUiThread(() -> Toast.makeText(this,
+                            "Error al consultar PIN (HTTP " + resp.code() + ")",
+                            Toast.LENGTH_SHORT).show());
+                    return;
+                }
+                com.google.gson.JsonElement el = resp.body().get("pendingPin");
+                if (el == null || el.isJsonNull()) {
+                    runOnUiThread(() -> Toast.makeText(this,
+                            "No hay PIN pendiente del servidor", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+                String pin = el.getAsString();
+                // Apply to the TECNICO slot (technician-only reset from dashboard)
+                getSharedPreferences(LoginActivity.PREFS, MODE_PRIVATE)
+                        .edit().putString(LoginActivity.KEY_PIN_TECNICO, pin).apply();
+                runOnUiThread(() -> {
+                    actualizarEstadoPin();
+                    new android.app.AlertDialog.Builder(this)
+                            .setTitle("PIN activado")
+                            .setMessage("Tu nuevo PIN de acceso es:\n\n" + pin
+                                    + "\n\nGuárdalo en un lugar seguro. Podrás cambiarlo en cualquier momento desde aquí.")
+                            .setPositiveButton("OK", null)
+                            .show();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        "Sin conexión al laboratorio: " + e.getClass().getSimpleName(),
+                        Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void actualizarEstadoPin() {
+        TextView tv = findViewById(R.id.tvPinEstado);
+        if (tv == null) return;
+        android.content.SharedPreferences p = getSharedPreferences(LoginActivity.PREFS, MODE_PRIVATE);
+        boolean tieneOverride = p.contains(LoginActivity.KEY_PIN_TECNICO)
+                || p.contains(LoginActivity.KEY_PIN_DISPATCH)
+                || p.contains(LoginActivity.KEY_PIN_ADMIN);
+        tv.setText(tieneOverride
+                ? "PIN personalizado activo (guardado en este dispositivo)"
+                : "Usando PIN de compilación. Puedes cambiarlo aquí.");
+    }
+
+    private static String roleToKey(String role) {
+        switch (role) {
+            case "DISPATCHER": return LoginActivity.KEY_PIN_DISPATCH;
+            case "ADMIN":      return LoginActivity.KEY_PIN_ADMIN;
+            default:           return LoginActivity.KEY_PIN_TECNICO;
+        }
     }
 }

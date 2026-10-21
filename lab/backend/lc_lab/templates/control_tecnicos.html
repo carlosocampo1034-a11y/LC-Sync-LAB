@@ -1,34 +1,201 @@
-{% extends "control_base.html" %}{% block body %}
-<h2>Técnicos</h2>
-{% if mensaje %}<p class="msg">{{mensaje}}</p>{% endif %}
-{% if error %}<p class="msg err">{{error}}</p>{% endif %}
-{% if clave %}<div class="card" style="border:2px solid var(--rojo)">
-<div class="row"><div><b>Contraseña inicial de {{clave.usuario}}</b>
-<p style="font:600 20px ui-monospace,monospace;letter-spacing:1px;margin:8px 0">{{clave.valor}}</p>
-<p class="sec">Se muestra <b>solo esta vez</b> y no se guarda en claro. Entrégala al técnico en persona; deberá cambiarla al entrar.</p></div>
-{% if clave.uid %}<div style="text-align:center"><img alt="QR invitación" width="160" height="160"
-  src="{{url_for('control.invitar_qr', uid=clave.uid)}}">
-<div class="sec" style="font-size:12px">Enlace del centro de control</div></div>{% endif %}</div></div>{% endif %}
-<table><tr><th>Nombre</th><th>Usuario</th><th>Código</th><th>Especialidades</th><th>Estado</th><th>Abiertas</th>{% if es_admin %}<th>Acciones</th>{% endif %}</tr>
-{% for t in tecnicos %}<tr>
-<td>{{t.displayName}}</td><td>{{t.username}}</td><td><b>{{t.technicianId}}</b></td><td class="sec">{{t.specialties or '—'}}</td>
-<td>{% if t.active %}<span class="badge ok">ACTIVO</span>{% else %}<span class="badge">INACTIVO</span>{% endif %}
-{% if t.mustChangePassword %}<br><span class="sec">debe cambiar contraseña</span>{% endif %}{% if t.bloqueadoHasta %}<br><span class="sec">bloqueado por intentos</span>{% endif %}</td>
-<td>{{t.abiertas}}</td>
-{% if es_admin %}<td><form class="inline" method="post" action="{{url_for('control.estado_tecnico', uid=t.id)}}">
-<input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="activo" value="{{'0' if t.active else '1'}}">
-<button>{{'Desactivar' if t.active else 'Activar'}}</button></form>
-<form class="inline" method="post" action="{{url_for('control.clave_tecnico', uid=t.id)}}"><input type="hidden" name="csrf" value="{{csrf}}">
-<button style="background:var(--suave);color:var(--txt);border:1px solid var(--borde)">Restablecer contraseña</button></form></td>{% endif %}
-</tr>{% endfor %}</table>
-{% if es_admin %}<h3 id="agregar">Agregar técnico</h3>
-<form method="post" action="{{url_for('control.crear_tecnico')}}" class="card" autocomplete="off">
-<input type="hidden" name="csrf" value="{{csrf}}">
-<p><label>Nombre de usuario<br><input name="username" required minlength="3" maxlength="40" pattern="[A-Za-z0-9._-]{3,40}" value="{{f.username or ''}}" autocapitalize="none"></label></p>
-<p><label>Nombre para mostrar<br><input name="display_name" required minlength="3" maxlength="80" value="{{f.display_name or ''}}"></label></p>
-<p><label>Código de técnico (ej. tec-lab-03)<br><input name="technician_code" required pattern="[a-z0-9][a-z0-9-]{2,29}" value="{{f.technician_code or ''}}" autocapitalize="none"></label></p>
-<p><label>Contraseña inicial (mín. 8; vacía = se genera una segura)<br><input name="password" type="password" minlength="8" autocomplete="new-password"></label></p>
-<p><label>Especialidades (opcional, separadas por comas)<br><input name="specialties" maxlength="200" value="{{f.specialties or ''}}" placeholder="HVAC, Lavadoras, Refrigeración"></label></p>
-<button>Guardar técnico</button></form>
-{% else %}<p class="sec">Solo un administrador puede dar de alta o desactivar técnicos.</p>{% endif %}
+{% extends "control_base.html" %}
+{% block nav_tecnicos %}active{% endblock %}
+{% block page_title %}Técnicos{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="font-size:1.35rem;color:#1a1d2e;">Técnicos</h2>
+        <p class="mb-0" style="font-size:.82rem;color:#7b8099;">Gestión de técnicos y acceso a la app</p>
+    </div>
+</div>
+
+{% if mensaje %}
+<div class="alert alert-success alert-dismissible fade show rounded-3 border-0 shadow-sm mb-3">
+    {{ mensaje }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm mb-3">
+    {{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if pin %}
+<div class="lc-card mb-4 p-4" style="border:2px solid #f59e0b;background:#fffbeb;">
+    <div class="d-flex align-items-center gap-3">
+        <div style="width:44px;height:44px;border-radius:12px;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#d97706;flex-shrink:0;">
+            <i class="bi bi-shield-lock"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="fw-bold mb-1" style="color:#92400e;">PIN de acceso rápido — {{ pin.usuario }}</div>
+            <div style="font-size:2rem;font-weight:800;font-family:monospace;letter-spacing:.15em;color:#1a1d2e;">{{ pin.valor }}</div>
+            <div class="mt-1" style="font-size:.78rem;color:#b45309;">Se muestra <strong>solo esta vez</strong>. El técnico debe activarlo desde Ajustes → "Activar PIN del servidor".</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if clave %}
+<div class="lc-card mb-4 p-4" style="border:2px solid #dc3545;background:#fff1f2;">
+    <div class="d-flex align-items-start gap-3">
+        <div style="width:44px;height:44px;border-radius:12px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#dc3545;flex-shrink:0;">
+            <i class="bi bi-key"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="fw-bold mb-1" style="color:#7f1d1d;">Contraseña inicial — {{ clave.usuario }}</div>
+            <div style="font-size:1.5rem;font-weight:700;font-family:monospace;letter-spacing:.08em;color:#1a1d2e;">{{ clave.valor }}</div>
+            <div class="mt-1" style="font-size:.78rem;color:#991b1b;">Se muestra <strong>solo esta vez</strong>. Entrégala al técnico en persona; deberá cambiarla al entrar.</div>
+            {% if clave.uid %}
+            <div class="mt-2 d-flex align-items-center gap-2">
+                <img alt="QR invitación" width="100" height="100" src="{{ url_for('control.invitar_qr', uid=clave.uid) }}" style="border-radius:8px;border:1px solid #fecaca;">
+                <span style="font-size:.75rem;color:#991b1b;">Enlace del centro de control</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tabla de técnicos -->
+<div class="lc-card mb-4">
+    <div style="padding:18px 20px 14px;border-bottom:1px solid #f0f2f8;">
+        <h3 class="section-title" style="font-size:.9rem;font-weight:700;color:#1a1d2e;margin:0;">
+            <i class="bi bi-people me-2 text-muted"></i>Lista de técnicos
+        </h3>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="lc-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Código</th>
+                    <th>Especialidades</th>
+                    <th>Estado</th>
+                    <th>Abiertas</th>
+                    {% if es_admin %}<th>Acciones</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for t in tecnicos %}
+            <tr>
+                <td class="fw-semibold">{{ t.displayName }}</td>
+                <td>{{ t.username }}</td>
+                <td><code style="background:#f0f2f8;padding:2px 6px;border-radius:4px;font-size:.8rem;">{{ t.technicianId }}</code></td>
+                <td style="color:#7b8099;font-size:.82rem;">{{ t.specialties or '—' }}</td>
+                <td>
+                    {% if t.active %}
+                        <span class="badge-estado badge-completado"><i class="bi bi-circle-fill" style="font-size:.45rem;"></i> ACTIVO</span>
+                    {% else %}
+                        <span class="badge-estado badge-cancelado"><i class="bi bi-circle-fill" style="font-size:.45rem;"></i> INACTIVO</span>
+                    {% endif %}
+                    {% if t.mustChangePassword %}
+                        <br><span style="font-size:.7rem;color:#f59e0b;">debe cambiar contraseña</span>
+                    {% endif %}
+                    {% if t.bloqueadoHasta %}
+                        <br><span style="font-size:.7rem;color:#dc3545;">bloqueado por intentos</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span style="font-size:.85rem;">{{ t.abiertas }}</span>
+                </td>
+                {% if es_admin %}
+                <td>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <!-- Activar/Desactivar -->
+                        <form method="post" action="{{ url_for('control.estado_tecnico', uid=t.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                            <input type="hidden" name="activo" value="{{ '0' if t.active else '1' }}">
+                            <button type="submit" class="btn-outline-sm {% if t.active %}btn-outline-secondary-sm{% else %}btn-outline-primary-sm{% endif %}">
+                                <i class="bi bi-{{ 'toggle-off' if t.active else 'toggle-on' }}"></i>
+                                {{ 'Desactivar' if t.active else 'Activar' }}
+                            </button>
+                        </form>
+                        <!-- Restablecer contraseña -->
+                        <form method="post" action="{{ url_for('control.clave_tecnico', uid=t.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                            <button type="submit" class="btn-outline-sm btn-outline-secondary-sm"
+                                    onclick="return confirm('¿Restablecer contraseña de {{ t.username }}?')">
+                                <i class="bi bi-key"></i> Resetear contraseña
+                            </button>
+                        </form>
+                        <!-- Restablecer PIN -->
+                        <form method="post" action="{{ url_for('control.reset_pin_tecnico', uid=t.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                            <button type="submit" class="btn-outline-sm"
+                                    style="border-color:#f59e0b;color:#b45309;"
+                                    onclick="return confirm('¿Generar nuevo PIN de acceso rápido para {{ t.username }}?')">
+                                <i class="bi bi-shield-lock"></i> Restablecer PIN
+                            </button>
+                        </form>
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" style="text-align:center;padding:32px;color:#7b8099;">
+                    <i class="bi bi-person-x" style="font-size:2rem;opacity:.4;"></i>
+                    <p class="mt-2 mb-0">No hay técnicos registrados</p>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if es_admin %}
+<!-- Agregar técnico -->
+<div class="lc-card p-4">
+    <h3 style="font-size:.9rem;font-weight:700;color:#1a1d2e;margin:0 0 16px;">
+        <i class="bi bi-person-plus me-2 text-muted"></i>Agregar técnico
+    </h3>
+    <form method="post" action="{{ url_for('control.crear_tecnico') }}" autocomplete="off">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label style="font-size:.8rem;font-weight:600;color:#7b8099;text-transform:uppercase;letter-spacing:.04em;">Usuario</label>
+                <input class="form-control form-control-sm mt-1" name="username" required minlength="3" maxlength="40"
+                       pattern="[A-Za-z0-9._-]{3,40}" value="{{ f.username or '' }}" autocapitalize="none"
+                       placeholder="tecnico_lab_04">
+            </div>
+            <div class="col-md-6">
+                <label style="font-size:.8rem;font-weight:600;color:#7b8099;text-transform:uppercase;letter-spacing:.04em;">Nombre visible</label>
+                <input class="form-control form-control-sm mt-1" name="display_name" required minlength="3" maxlength="80"
+                       value="{{ f.display_name or '' }}" placeholder="Juan Pérez">
+            </div>
+            <div class="col-md-6">
+                <label style="font-size:.8rem;font-weight:600;color:#7b8099;text-transform:uppercase;letter-spacing:.04em;">Código técnico</label>
+                <input class="form-control form-control-sm mt-1" name="technician_code" required
+                       pattern="[a-z0-9][a-z0-9-]{2,29}" value="{{ f.technician_code or '' }}"
+                       autocapitalize="none" placeholder="tec-lab-04">
+            </div>
+            <div class="col-md-6">
+                <label style="font-size:.8rem;font-weight:600;color:#7b8099;text-transform:uppercase;letter-spacing:.04em;">Contraseña inicial</label>
+                <input class="form-control form-control-sm mt-1" name="password" type="password" minlength="8"
+                       autocomplete="new-password" placeholder="Vacío = se genera segura">
+            </div>
+            <div class="col-12">
+                <label style="font-size:.8rem;font-weight:600;color:#7b8099;text-transform:uppercase;letter-spacing:.04em;">Especialidades (opcional)</label>
+                <input class="form-control form-control-sm mt-1" name="specialties" maxlength="200"
+                       value="{{ f.specialties or '' }}" placeholder="HVAC, Lavadoras, Refrigeración">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn-accent">
+                    <i class="bi bi-person-plus-fill"></i> Guardar técnico
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% else %}
+<div class="lc-card p-4 text-center" style="color:#7b8099;font-size:.85rem;">
+    <i class="bi bi-lock" style="font-size:1.5rem;opacity:.4;"></i>
+    <p class="mt-2 mb-0">Solo un administrador puede dar de alta o desactivar técnicos.</p>
+</div>
+{% endif %}
 {% endblock %}

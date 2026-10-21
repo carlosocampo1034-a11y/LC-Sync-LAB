@@ -337,3 +337,19 @@ def decidir_variacion(vid):
         return jsonify(error=msg), code
     db.commit()
     return jsonify(variacion=out)
+
+
+@bp.get("/auth/pin-pending")
+@requiere("TECHNICIAN")
+def pin_pendiente():
+    """Devuelve y borra el PIN temporal generado desde el web dashboard (reset por admin).
+    La app debe llamar este endpoint tras conectar al laboratorio y mostrar el PIN al técnico."""
+    db = get_db()
+    row = db.execute("SELECT pin_override FROM users WHERE id = ?", (g.user["id"],)).fetchone()
+    if row is None or row["pin_override"] is None:
+        return jsonify(pendingPin=None)
+    pin = row["pin_override"]
+    db.execute("UPDATE users SET pin_override = NULL, updated_at = ? WHERE id = ?",
+               (now_ms(), g.user["id"]))
+    db.commit()
+    return jsonify(pendingPin=pin)
