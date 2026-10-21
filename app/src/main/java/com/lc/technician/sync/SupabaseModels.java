@@ -69,7 +69,7 @@ public class SupabaseModels {
         public String  descripcion;
         public String  equipo;
         @SerializedName("tipo_propiedad")   public String  tipoPropiedad;
-        @SerializedName("cliente_presente") public Boolean clientePresente;
+        @SerializedName("cliente_presente") public Integer clientePresente; // 0/1 — SQLite stores booleans as INTEGER
         public String  instrucciones;
         public String  mascota;
         @SerializedName("contacto_respaldo") public String contactoRespaldo;

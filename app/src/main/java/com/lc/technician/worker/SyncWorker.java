@@ -196,7 +196,7 @@ public class SyncWorker extends Worker {
                 e.descripcion     = row.descripcion;
                 e.equipo          = row.equipo;
                 e.tipoPropiedad   = row.tipoPropiedad;
-                e.clientePresente = row.clientePresente != null && row.clientePresente;
+                e.clientePresente = row.clientePresente != null && row.clientePresente != 0;
                 e.instrucciones   = row.instrucciones;
                 e.mascota         = row.mascota;
                 e.contactoRespaldo = row.contactoRespaldo;
@@ -233,7 +233,7 @@ public class SyncWorker extends Worker {
             r.descripcion     = j.descripcion;
             r.equipo          = j.equipo;
             r.tipoPropiedad   = j.tipoPropiedad;
-            r.clientePresente = j.clientePresente;
+            r.clientePresente = j.clientePresente ? 1 : 0;
             r.instrucciones   = j.instrucciones;
             r.mascota         = j.mascota;
             r.contactoRespaldo = j.contactoRespaldo;

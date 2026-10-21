@@ -141,7 +141,7 @@ public class SupabaseSyncBridge {
             r.descripcion     = d.descripcion;
             r.equipo          = d.equipo;
             r.tipoPropiedad   = d.tipoPropiedad;
-            r.clientePresente = d.clientePresente;
+            r.clientePresente = (d.clientePresente != null && d.clientePresente) ? 1 : 0;
             r.instrucciones   = d.instrucciones;
             r.mascota         = d.mascota;
             r.contactoRespaldo = d.contactoRespaldo;
@@ -176,7 +176,7 @@ public class SupabaseSyncBridge {
             r.descripcion     = e.descripcion;
             r.equipo          = e.equipo;
             r.tipoPropiedad   = e.tipoPropiedad;
-            r.clientePresente = e.clientePresente;
+            r.clientePresente = e.clientePresente ? 1 : 0;
             r.instrucciones   = e.instrucciones;
             r.mascota         = e.mascota;
             r.contactoRespaldo = e.contactoRespaldo;
