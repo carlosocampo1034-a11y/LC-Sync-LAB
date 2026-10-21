@@ -177,11 +177,8 @@ class Espejo:
         return self._tecnicos[code]
 
     def fila(self, row):
-        d = {k: row[k] for k in row.keys() if k not in COLUMNAS_PROPIAS and k not in NO_SALEN}
-        d["customer_lab_id"] = d.pop("customer_id", None)   # cliente de Flask, no es un usuario de Supabase
-        return {"id": row["id"], "version": row["version"], "seq": row["seq"], "estado": row["estado"],
-                "technician_id": self._uuid_tecnico(row["technician_code"]), "datos": d,
-                "created_at": _iso(row["created_at"]), "updated_at": _iso(row["updated_at"])}
+        # Supabase usa BIGINT (epoch ms) para todos los timestamps — no convertir a ISO
+        return {k: row[k] for k in row.keys() if k not in NO_SALEN}
 
     def _ids_permitidos(self, c, t="jobs"):
         """Órdenes que pueden salir: todas si se autorizaron las históricas; si no, solo las creadas tras activar."""
@@ -232,8 +229,11 @@ class Espejo:
             return 0
         lote = [{"id": h["id"], "job_id": h["job_id"], "version": h["version"], "field": h["field"],
                  "old_value": h["old_value"], "new_value": h["new_value"],
-                 "source": f"{h['source']}:{h['actor']}", "ts": _iso(h["ts"])} for h in filas]
+                 "source": f"{h['source']}:{h['actor']}", "ts": h["ts"]} for h in filas]
         st, r = self.sb.insertar("job_history", lote, "id")
+        if st == 404:   # tabla aún no creada en Supabase — avanzar cursor y continuar
+            self._avanzar(c, "history_id", filas[-1]["id"])
+            return 0
         if st not in (200, 201, 204):
             self._log(c, "job_history", len(lote), False, f"HTTP {st}: {r}")
             raise RuntimeError(f"job_history HTTP {st}")
@@ -251,7 +251,7 @@ class Espejo:
         if not filas:
             return 0
         lote = [{"device_id": r["device_id"], "job_id": r["job_id"], "client_updated_at": r["client_updated_at"],
-                 "status": r["status"], "version": r["version"], "ts": _iso(r["ts"])} for r in filas]
+                 "status": r["status"], "version": r["version"], "ts": r["ts"]} for r in filas]
         st, r = self.sb.insertar("sync_receipts", lote, "device_id,job_id,client_updated_at")
         if st not in (200, 201, 204):
             self._log(c, "sync_receipts", len(lote), False, f"HTTP {st}: {r}")
@@ -259,6 +259,68 @@ class Espejo:
         self._avanzar(c, "receipts_rowid", filas[-1]["rid"])
         self._log(c, "sync_receipts", len(lote), True)
         return len(lote)
+
+    def jalar_cambios(self, actor="supabase-pull"):
+        """Pull Supabase→SQLite: trae jobs cuyo updated_at remoto > updated_at local.
+        Aplica solo cambios de estado/campos usando J.aplicar() con OCC.
+        Retorna (aplicados, conflictos)."""
+        import sys
+        sys.path.insert(0, __file__.rsplit("/lc_lab/", 1)[0])
+        import lc_lab.jobs as J
+
+        c = self._db()
+        try:
+            # Obtener todos los jobs de Supabase más recientes que hace 24h para no traer todo
+            desde_ms = int(time.time() * 1000) - 86400 * 1000
+            st, filas_sb = self.sb.get(
+                f"/rest/v1/jobs?select=id,version,seq,estado,updated_at"
+                f"&updated_at=gt.{desde_ms}&order=updated_at.asc&limit=200"
+            )
+            if st != 200:
+                raise RuntimeError(f"pull HTTP {st}: {filas_sb}")
+
+            aplicados = 0
+            conflictos = 0
+            for sb in filas_sb:
+                job_id = sb["id"]
+                row = c.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+                if row is None:
+                    continue  # job no existe localmente — ignorar (el push lo creará)
+                ts_local = row["updated_at"] or 0
+                ts_sb    = sb["updated_at"] or 0
+                if ts_sb <= ts_local:
+                    continue  # local es igual o más nuevo — no hay nada que jalar
+                # Hay una versión más nueva en Supabase — obtener fila completa
+                st2, rows_full = self.sb.get(
+                    f"/rest/v1/jobs?select=*&id=eq.{job_id}"
+                )
+                if st2 != 200 or not rows_full:
+                    continue
+                sb_full = rows_full[0]
+                cambios = {}
+                for campo_api, campo_col in (
+                    ("estado","estado"), ("estadoDispatch","estado_dispatch"),
+                    ("technicianId","technician_code"), ("prioridad","prioridad"),
+                    ("notas","notas"), ("hora","hora"), ("programadoPara","programado_para"),
+                ):
+                    val_sb = sb_full.get(campo_col)
+                    if val_sb is not None and val_sb != row[campo_col]:
+                        cambios[campo_api] = val_sb
+                if not cambios:
+                    continue
+                estado_result, _, conf = J.aplicar(
+                    c, row, cambios, actor, "supabase",
+                    version_base=row["version"]
+                )
+                if estado_result == "ACCEPTED":
+                    aplicados += 1
+                    self._log(c, "pull", 1, True, f"job {job_id}: {list(cambios.keys())}")
+                else:
+                    conflictos += 1
+                    self._log(c, "pull", 1, False, f"job {job_id} conflicto: {conf}")
+            return aplicados, conflictos
+        finally:
+            c.close()
 
     def bucle(self, parar, pausa=3.0):
         espera = pausa
