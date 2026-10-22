@@ -14,8 +14,8 @@ android {
         applicationId "com.lc.technician"
         minSdk 24
         targetSdk 36
-        versionCode 7
-        versionName "0.3.3"
+        versionCode 8
+        versionName "0.4.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -30,11 +30,9 @@ android {
         buildConfigField "String", "PIN_DISPATCHER", "\"${localProps['PIN_DISPATCHER'] ?: ''}\""
         buildConfigField "String", "PIN_ADMIN",      "\"${localProps['PIN_ADMIN']      ?: ''}\""
 
-        // Supabase LC-Sync-LAB (anon key only — service_role never goes here)
-        buildConfigField "String",  "SUPABASE_URL",            "\"${localProps['SUPABASE_URL']            ?: ''}\""
-        buildConfigField "String",  "SUPABASE_ANON_KEY",       "\"${localProps['SUPABASE_ANON_KEY']       ?: ''}\""
-        buildConfigField "String",  "SUPABASE_AUTH_EMAIL",     "\"${localProps['SUPABASE_AUTH_EMAIL']     ?: ''}\""
-        buildConfigField "String",  "SUPABASE_AUTH_PASSWORD",  "\"${localProps['SUPABASE_AUTH_PASSWORD']  ?: ''}\""
+        // Supabase — anon key only; service_role never compiled into APK
+        buildConfigField "String",  "SUPABASE_URL",            "\"${localProps['SUPABASE_URL']      ?: ''}\""
+        buildConfigField "String",  "SUPABASE_ANON_KEY",       "\"${localProps['SUPABASE_ANON_KEY'] ?: ''}\""
         // Cloud-first: bridge always active
         buildConfigField "boolean", "SUPABASE_BRIDGE_ENABLED", "true"
     }
