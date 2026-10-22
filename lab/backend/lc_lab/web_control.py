@@ -150,19 +150,25 @@ def programar(u, jid):
     row = db.execute("SELECT * FROM jobs WHERE id = ?", (jid,)).fetchone()
     if row is None:
         abort(404)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if not _version_vigente(row):
-        return redirect(url_for("control.detalle", jid=jid, m="Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]))
+        msg = "Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     zona = current_app.config["ZONA_HORARIA"]
     try:
         dt = datetime.strptime(request.form["fecha"] + " " + request.form["hora"], "%Y-%m-%d %H:%M").replace(
             tzinfo=ZoneInfo(zona))
     except (KeyError, ValueError):
-        return redirect(url_for("control.detalle", jid=jid, m="Fecha u hora inválida"))
+        msg = "Fecha u hora inválida"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     st, v, conf = J.aplicar(db, row, {"programadoPara": int(dt.timestamp() * 1000), "zonaHoraria": zona,
                                       "hora": dt.strftime("%-I:%M %p")}, u["username"], "control",
                             version_base=request.form.get("version", type=int))
     db.commit()
-    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if st == "ACCEPTED":
         msg = "Programada"
         if is_ajax:
@@ -182,15 +188,21 @@ def asignar(u, jid):
     row = db.execute("SELECT * FROM jobs WHERE id = ?", (jid,)).fetchone()
     if row is None:
         abort(404)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if not _version_vigente(row):
-        return redirect(url_for("control.detalle", jid=jid, m="Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]))
+        msg = "Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     code = request.form.get("technicianId") or None
     if code and not db.execute("SELECT 1 FROM users WHERE technician_code=? AND role='TECHNICIAN'", (code,)).fetchone():
-        return redirect(url_for("control.detalle", jid=jid, m="Técnico no válido"))
+        msg = "Técnico no válido"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     st, v, conf = J.aplicar(db, row, {"technicianId": code, "estadoDispatch": "ASSIGNED" if code else "QUEUE"},
                             u["username"], "control", version_base=request.form.get("version", type=int))
     db.commit()
-    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if st == "ACCEPTED":
         msg = "Asignada"
         if is_ajax:
@@ -213,12 +225,15 @@ def estado(u, jid):
     if not _version_vigente(row):
         return redirect(url_for("control.detalle", jid=jid, m="Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]))
     nuevo = request.form.get("estado")
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if nuevo not in J.ESTADOS or not transicion_valida(row["estado"], nuevo, u["role"]):
-        return redirect(url_for("control.detalle", jid=jid, m=f"Transición no permitida: {row['estado']} → {nuevo}"))
+        msg = f"Transición no permitida: {row['estado']} → {nuevo}"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     st, v, conf = J.aplicar(db, row, {"estado": nuevo}, u["username"], "control",
                             version_base=request.form.get("version", type=int))
     db.commit()
-    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if st == "ACCEPTED":
         msg = "Estado actualizado"
         if is_ajax:
