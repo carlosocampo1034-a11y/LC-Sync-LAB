@@ -84,7 +84,7 @@ def login():
             session["uid"] = u["id"]
             return redirect(url_for("control.tablero"))
         error = err or "este usuario no es de despacho"
-    return render_template("control_login.html", error=error)
+    return render_template("control_login.html", error=error, csrf=_csrf())
 
 
 @bp.get("/logout")
