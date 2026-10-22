@@ -14,8 +14,8 @@ android {
         applicationId "com.lc.technician"
         minSdk 24
         targetSdk 36
-        versionCode 8
-        versionName "0.4.0"
+        versionCode 9
+        versionName "0.4.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -25,10 +25,9 @@ android {
             }
         }
 
-        // PINs loaded from local.properties (not tracked by git)
-        buildConfigField "String", "PIN_TECNICO",    "\"${localProps['PIN_TECNICO']    ?: ''}\""
-        buildConfigField "String", "PIN_DISPATCHER", "\"${localProps['PIN_DISPATCHER'] ?: ''}\""
-        buildConfigField "String", "PIN_ADMIN",      "\"${localProps['PIN_ADMIN']      ?: ''}\""
+        // Only the technician PIN is compiled in; admin/dispatcher PINs are
+        // provisioned at runtime via ConfiguracionActivity → SharedPreferences.
+        buildConfigField "String", "PIN_TECNICO", "\"${localProps['PIN_TECNICO'] ?: ''}\""
 
         // Supabase — anon key only; service_role never compiled into APK
         buildConfigField "String",  "SUPABASE_URL",            "\"${localProps['SUPABASE_URL']      ?: ''}\""

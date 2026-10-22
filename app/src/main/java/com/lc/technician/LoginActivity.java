@@ -90,19 +90,16 @@ public class LoginActivity extends AppCompatActivity {
         if (matchesDynamic(pin, p.getString(KEY_PIN_TECNICO, null)))  return "TECNICO";
         if (matchesDynamic(pin, p.getString(KEY_PIN_DISPATCH, null))) return "DISPATCHER";
         if (matchesDynamic(pin, p.getString(KEY_PIN_ADMIN, null)))    return "ADMIN";
-        // Fall back to PINs compiled from local.properties
-        if (matches(pin, BuildConfig.PIN_TECNICO))    return "TECNICO";
-        if (matches(pin, BuildConfig.PIN_DISPATCHER)) return "DISPATCHER";
-        if (matches(pin, BuildConfig.PIN_ADMIN))      return "ADMIN";
+        // Compiled-in fallback: only technician PIN; admin/dispatcher PINs
+        // are provisioned at runtime and never compiled into the release APK.
+        if (matches(pin, BuildConfig.PIN_TECNICO)) return "TECNICO";
         return null;
     }
 
-    // Keep backward-compatible no-context version for tests that still use it
+    // Backward-compatible no-context version (used by unit tests)
     static String resolveRole(String pin) {
         if (pin == null || pin.isEmpty()) return null;
-        if (matches(pin, BuildConfig.PIN_TECNICO))    return "TECNICO";
-        if (matches(pin, BuildConfig.PIN_DISPATCHER)) return "DISPATCHER";
-        if (matches(pin, BuildConfig.PIN_ADMIN))      return "ADMIN";
+        if (matches(pin, BuildConfig.PIN_TECNICO)) return "TECNICO";
         return null;
     }
 
