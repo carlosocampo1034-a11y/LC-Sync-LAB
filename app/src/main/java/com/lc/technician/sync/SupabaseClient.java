@@ -110,15 +110,13 @@ public class SupabaseClient {
     /**
      * Ensures a valid auth session synchronously (for use on background threads).
      * Returns null on success, or an error string on failure.
-     * Requires the technician to be logged in; no service-account fallback.
+     * Falls back to the compiled-in service-sync account when no user session exists.
      */
     public String ensureAuthSync() {
         long exp = prefs.getLong(KEY_EXP, 0);
         String at = prefs.getString(KEY_AT, null);
-        // Token still valid
         if (at != null && System.currentTimeMillis() < exp - 5 * 60_000L) return null;
 
-        // Try refresh if we have a refresh token
         String rt = prefs.getString(KEY_RT, null);
         if (rt != null) {
             try {
@@ -128,7 +126,26 @@ public class SupabaseClient {
             } catch (Exception ignored) {}
         }
 
-        return "no active session — technician must log in";
+        // Auto sign-in with service sync account (background sync only)
+        String email    = BuildConfig.SUPABASE_AUTH_EMAIL;
+        String password = BuildConfig.SUPABASE_AUTH_PASSWORD;
+        if (!email.isEmpty() && !password.isEmpty()) {
+            try {
+                retrofit2.Response<SupabaseModels.SignInResponse> r =
+                        api.signIn("password",
+                                   new SupabaseModels.SignInRequest(email, password)).execute();
+                if (r.isSuccessful() && r.body() != null) {
+                    saveSession(r.body());
+                    Log.i(TAG, "service sync session obtained");
+                    return null;
+                }
+                Log.w(TAG, "service sign-in HTTP " + r.code());
+            } catch (Exception e) {
+                Log.w(TAG, "service sign-in error: " + e.getMessage());
+            }
+        }
+
+        return "no active session";
     }
 
     /** Renueva el token si queda menos de 5 minutos para que expire. */
