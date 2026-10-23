@@ -13,6 +13,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import android.util.Log;
+import com.lc.technician.sync.ApiClient;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -84,20 +86,22 @@ public class OnboardingActivity extends AppCompatActivity {
     }
 
     private void navigate(int direction) {
-        // Save PIN before leaving pin page
-        if (currentPage == 1 && direction == 1 && etPin != null) {
+        // Page 1 = URL: save before advancing so PIN page can validate against it
+        if (currentPage == 1 && direction == 1 && etServerUrl != null) {
+            serverUrlValue = etServerUrl.getText().toString().trim();
+            if (!serverUrlValue.endsWith("/")) serverUrlValue += "/";
+            prefs.edit().putString("server_url", serverUrlValue).apply();
+            ApiClient.setBaseUrl(this, serverUrlValue);
+        }
+        // Page 2 = PIN: validate against backend before advancing
+        if (currentPage == 2 && direction == 1 && etPin != null) {
             String pin = etPin.getText().toString().trim();
             if (pin.isEmpty()) {
                 Toast.makeText(this, "Ingresa el PIN asignado por tu administrador", Toast.LENGTH_SHORT).show();
                 return;
             }
-            prefs.edit().putString(LoginActivity.KEY_PIN_TECNICO, pin).apply();
-        }
-        // Save server URL before leaving url page
-        if (currentPage == 2 && direction == 1 && etServerUrl != null) {
-            serverUrlValue = etServerUrl.getText().toString().trim();
-            if (!serverUrlValue.endsWith("/")) serverUrlValue += "/";
-            prefs.edit().putString("server_url", serverUrlValue).apply();
+            validatePinThenAdvance(pin);
+            return;  // validatePinThenAdvance will call showPage(3) on success
         }
 
         int newPage = currentPage + direction;
@@ -105,6 +109,77 @@ public class OnboardingActivity extends AppCompatActivity {
             currentPage = newPage;
             showPage(currentPage);
         }
+    }
+
+    private void validatePinThenAdvance(String pin) {
+        String serverUrl = prefs.getString("server_url", serverUrlValue);
+        if (!serverUrl.endsWith("/")) serverUrl += "/";
+        String validateUrl = serverUrl + "validate_pin";
+
+        btnNext.setEnabled(false);
+        btnNext.setText("Verificando…");
+
+        // Use HttpURLConnection (not OkHttp) so the Android network security config
+        // correctly allows cleartext to 127.0.0.1 / local IPs as configured in
+        // res/xml/network_security_config.xml. OkHttp's cleartext check doesn't
+        // honour <domain> entries that are raw IP addresses on some Android releases.
+        new Thread(() -> {
+            String resultRole = null;
+            int httpCode = -1;
+            String errorKey = null;
+            try {
+                URL url = new URL(validateUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(7000);
+                conn.setReadTimeout(7000);
+                conn.setRequestProperty("Content-Type", "application/json");
+                String body = "{\"pin\":\"" + pin + "\"}";
+                conn.getOutputStream().write(body.getBytes("UTF-8"));
+                httpCode = conn.getResponseCode();
+                if (httpCode == 200) {
+                    java.io.InputStream is = conn.getInputStream();
+                    String resp = new String(is.readAllBytes(), "UTF-8");
+                    // Simple JSON parse without Gson to avoid dependency
+                    if (resp.contains("\"valid\":true")) {
+                        if      (resp.contains("\"DISPATCHER\"")) resultRole = "DISPATCHER";
+                        else if (resp.contains("\"ADMIN\""))      resultRole = "ADMIN";
+                        else                                       resultRole = "TECNICO";
+                    }
+                } else if (httpCode == 429) {
+                    errorKey = "rate_limit";
+                }
+                conn.disconnect();
+            } catch (Exception e) {
+                Log.e("LC-PIN-VALIDATE", "validate_pin failed url=" + validateUrl, e);
+                errorKey = "network";
+            }
+
+            final String role = resultRole;
+            final String err  = errorKey;
+            runOnUiThread(() -> {
+                btnNext.setEnabled(true);
+                btnNext.setText("SIGUIENTE");
+                if (role != null) {
+                    String key = "DISPATCHER".equals(role) ? LoginActivity.KEY_PIN_DISPATCH
+                                : "ADMIN".equals(role)      ? LoginActivity.KEY_PIN_ADMIN
+                                :                              LoginActivity.KEY_PIN_TECNICO;
+                    prefs.edit().putString(key, pin).apply();
+                    currentPage = 3;
+                    showPage(currentPage);
+                } else if ("rate_limit".equals(err)) {
+                    Toast.makeText(this, "Demasiados intentos. Espera 60 segundos.", Toast.LENGTH_LONG).show();
+                } else if ("network".equals(err)) {
+                    Toast.makeText(this,
+                        "No se pudo conectar al servidor.\nVerifica la URL en la pantalla anterior.",
+                        Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this,
+                        "PIN no autorizado. Contacta a tu administrador.", Toast.LENGTH_LONG).show();
+                }
+            });
+        }, "pin-validate").start();
     }
 
     private void showPage(int page) {
@@ -118,8 +193,8 @@ public class OnboardingActivity extends AppCompatActivity {
 
         switch (page) {
             case 0: showWelcomePage(); break;
-            case 1: showPinPage(); break;
-            case 2: showUrlPage(); break;
+            case 1: showUrlPage(); break;       // URL first — needed to validate PIN
+            case 2: showPinPage(); break;       // PIN second — validated against backend
             case 3: showPermissionsPage(); break;
             case 4: showConnectionPage(); break;
         }
@@ -157,7 +232,7 @@ public class OnboardingActivity extends AppCompatActivity {
         LinearLayout ll = createPageLayout();
 
         TextView title = new TextView(this);
-        title.setText("2. Confirmar acceso");
+        title.setText("3. Confirmar acceso");
         title.setTextColor(Color.WHITE);
         title.setTextSize(22);
 
@@ -197,7 +272,7 @@ public class OnboardingActivity extends AppCompatActivity {
         LinearLayout ll = createPageLayout();
 
         TextView title = new TextView(this);
-        title.setText("3. URL del servidor");
+        title.setText("2. URL del servidor");
         title.setTextColor(Color.WHITE);
         title.setTextSize(22);
 
