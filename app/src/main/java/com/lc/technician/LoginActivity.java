@@ -32,6 +32,12 @@ public class LoginActivity extends AppCompatActivity {
             goMain();
             return;
         }
+        // Fresh install: no PIN provisioned yet — send to onboarding
+        if (!prefs.getBoolean("onboarding_done", false)) {
+            startActivity(new Intent(this, OnboardingActivity.class));
+            finish();
+            return;
+        }
 
         setContentView(R.layout.activity_login);
 
@@ -90,16 +96,13 @@ public class LoginActivity extends AppCompatActivity {
         if (matchesDynamic(pin, p.getString(KEY_PIN_TECNICO, null)))  return "TECNICO";
         if (matchesDynamic(pin, p.getString(KEY_PIN_DISPATCH, null))) return "DISPATCHER";
         if (matchesDynamic(pin, p.getString(KEY_PIN_ADMIN, null)))    return "ADMIN";
-        // Compiled-in fallback: only technician PIN; admin/dispatcher PINs
-        // are provisioned at runtime and never compiled into the release APK.
-        if (matches(pin, BuildConfig.PIN_TECNICO)) return "TECNICO";
+        // No compiled-in PIN fallback. Auth requires runtime-provisioned PIN
+        // stored in SharedPreferences via OnboardingActivity.
         return null;
     }
 
-    // Backward-compatible no-context version (used by unit tests)
+    // No-context version for unit tests (no BuildConfig PIN fallback)
     static String resolveRole(String pin) {
-        if (pin == null || pin.isEmpty()) return null;
-        if (matches(pin, BuildConfig.PIN_TECNICO)) return "TECNICO";
         return null;
     }
 

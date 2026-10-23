@@ -28,6 +28,7 @@ public class OnboardingActivity extends AppCompatActivity {
 
     // Input fields
     private EditText etServerUrl;
+    private EditText etPin;
     private String serverUrlValue = "http://127.0.0.1:5000/api/";
 
     @Override
@@ -83,7 +84,16 @@ public class OnboardingActivity extends AppCompatActivity {
     }
 
     private void navigate(int direction) {
-        // Save current page data before navigating
+        // Save PIN before leaving pin page
+        if (currentPage == 1 && direction == 1 && etPin != null) {
+            String pin = etPin.getText().toString().trim();
+            if (pin.isEmpty()) {
+                Toast.makeText(this, "Ingresa el PIN asignado por tu administrador", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            prefs.edit().putString(LoginActivity.KEY_PIN_TECNICO, pin).apply();
+        }
+        // Save server URL before leaving url page
         if (currentPage == 2 && direction == 1 && etServerUrl != null) {
             serverUrlValue = etServerUrl.getText().toString().trim();
             if (!serverUrlValue.endsWith("/")) serverUrlValue += "/";
@@ -147,24 +157,38 @@ public class OnboardingActivity extends AppCompatActivity {
         LinearLayout ll = createPageLayout();
 
         TextView title = new TextView(this);
-        title.setText("2. Confirmaci\u00f3n de acceso");
+        title.setText("2. Confirmar acceso");
         title.setTextColor(Color.WHITE);
         title.setTextSize(22);
 
         TextView sub = new TextView(this);
-        sub.setText("Tu administrador te ha asignado un PIN de acceso. Ingr\u00e9salo a continuaci\u00f3n para verificar tu rol.");
+        sub.setText("Tu administrador te asign\u00f3 un PIN de acceso.\nIngr\u00e9salo para verificar tu rol.");
         sub.setTextColor(Color.parseColor("#9ca3af"));
         sub.setTextSize(14);
         sub.setPadding(0, dpToPx(12), 0, dpToPx(20));
 
+        etPin = new EditText(this);
+        String savedPin = prefs.getString(LoginActivity.KEY_PIN_TECNICO, "");
+        etPin.setText(savedPin);
+        etPin.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        etPin.setHint("PIN de acceso");
+        etPin.setTextColor(Color.WHITE);
+        etPin.setHintTextColor(Color.parseColor("#6b7280"));
+        etPin.setBackgroundColor(Color.parseColor("#1f2937"));
+        etPin.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
+        etPin.setGravity(android.view.Gravity.CENTER);
+        etPin.setTextSize(20);
+
         TextView note = new TextView(this);
-        note.setText("\u2139\ufe0f  El PIN fue configurado por tu empresa. Si no lo tienes, contacta a tu supervisor.");
+        note.setText("\u2139\ufe0f  Este PIN se guarda en tu dispositivo. Nunca se env\u00eda como texto plano.");
         note.setTextColor(Color.parseColor("#6b7280"));
         note.setTextSize(12);
-        note.setPadding(0, dpToPx(16), 0, 0);
+        note.setPadding(0, dpToPx(12), 0, 0);
 
         ll.addView(title);
         ll.addView(sub);
+        ll.addView(etPin);
         ll.addView(note);
         pageContent.addView(ll);
     }

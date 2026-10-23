@@ -14,8 +14,8 @@ android {
         applicationId "com.lc.technician"
         minSdk 24
         targetSdk 36
-        versionCode 9
-        versionName "0.4.1"
+        versionCode 10
+        versionName "0.5.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -25,9 +25,8 @@ android {
             }
         }
 
-        // Only the technician PIN is compiled in; admin/dispatcher PINs are
-        // provisioned at runtime via ConfiguracionActivity → SharedPreferences.
-        buildConfigField "String", "PIN_TECNICO", "\"${localProps['PIN_TECNICO'] ?: ''}\""
+        // No PINs compiled into the APK. All PINs are provisioned at runtime
+        // by the admin via OnboardingActivity and stored in SharedPreferences.
 
         // Supabase — anon key only; service_role never compiled into APK
         buildConfigField "String",  "SUPABASE_URL",            "\"${localProps['SUPABASE_URL']      ?: ''}\""
