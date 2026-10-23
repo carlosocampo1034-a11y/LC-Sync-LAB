@@ -2,6 +2,7 @@ package com.lc.customer;
 
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -12,6 +13,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -24,44 +26,49 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-/**
- * Pantalla principal L&C Home Services — Diseño v2.
- * Distribución: cabecera + saludo + categorías + banner promo + tarjetas ayuda + nav flotante.
- * Modo invitado: no requiere login. Toda la lógica de navegación existente se conserva.
- */
 public class WelcomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        buildUI();
+    }
 
-        // Raíz FrameLayout permite overlay del nav flotante
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Api.conSesion(this)) {
+            startActivity(new Intent(this, HomeActivity.class));
+        }
+    }
+
+    private void buildUI() {
+        boolean en = Prefs.en(this);
+
         FrameLayout raiz = new FrameLayout(this);
-        raiz.setBackgroundColor(Color.WHITE);
+        raiz.setBackgroundColor(Prefs.fondo(this));
 
-        // ScrollView con todo el contenido
         ScrollView sv = new ScrollView(this);
         sv.setClipToPadding(false);
         LinearLayout cont = new LinearLayout(this);
         cont.setOrientation(LinearLayout.VERTICAL);
-        cont.setBackgroundColor(Color.WHITE);
+        cont.setBackgroundColor(Prefs.fondo(this));
         sv.addView(cont);
         raiz.addView(sv, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        cont.addView(buildCabecera());
-        cont.addView(buildSaludo());
-        cont.addView(buildEtiqueta("Categorías de Servicio"));
-        cont.addView(buildCategorias());
-        cont.addView(buildEtiqueta("Promociones"));
-        cont.addView(buildBannerPromo());
-        cont.addView(buildEtiqueta("¿Cómo podemos ayudarte?"));
-        cont.addView(buildTarjetasAyuda());
-        cont.addView(buildEspaciador(88)); // espacio para nav flotante
+        cont.addView(buildCabecera(en));
+        cont.addView(buildSaludo(en));
+        cont.addView(buildEtiqueta(en ? "Service Categories" : "Categorías de Servicio"));
+        cont.addView(buildCategorias(en));
+        cont.addView(buildEtiqueta(en ? "Promotions" : "Promociones"));
+        cont.addView(buildBannerPromo(en));
+        cont.addView(buildEtiqueta(en ? "How can we help you?" : "¿Cómo podemos ayudarte?"));
+        cont.addView(buildTarjetasAyuda(en));
+        cont.addView(buildEspaciador(108));
 
-        // Nav flotante superpuesto al fondo
-        raiz.addView(buildBottomNav());
+        raiz.addView(buildBottomNav(en));
 
         setContentView(raiz);
 
@@ -73,38 +80,40 @@ public class WelcomeActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (Api.conSesion(this)) {
-            startActivity(new Intent(this, HomeActivity.class));
-        }
-    }
-
     // ── CABECERA ─────────────────────────────────────────────────────────────
 
-    private View buildCabecera() {
+    private View buildCabecera(boolean en) {
         LinearLayout h = new LinearLayout(this);
         h.setOrientation(LinearLayout.HORIZONTAL);
-        h.setBackgroundColor(Color.WHITE);
+        h.setBackgroundColor(Prefs.fondo(this));
         h.setPadding(dp(24), dp(18), dp(24), dp(14));
         h.setGravity(Gravity.CENTER_VERTICAL);
 
-        // Logo L&C (izquierda)
         TextView logo = new TextView(this);
         logo.setText("L&C");
         logo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
         logo.setTypeface(Typeface.DEFAULT_BOLD);
-        logo.setTextColor(ContextCompat.getColor(this, R.color.lc_rojo));
+        logo.setTextColor(Prefs.ROJO);
         h.addView(logo, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        // Mi Cuenta (derecha)
+        // Icono ajustes
+        ImageView icSettings = new ImageView(this);
+        icSettings.setImageResource(R.drawable.ic_settings);
+        icSettings.setColorFilter(Prefs.sec(this), PorterDuff.Mode.SRC_IN);
+        int icSz = dp(22);
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(icSz, icSz);
+        icLp.rightMargin = dp(14);
+        icLp.gravity = Gravity.CENTER_VERTICAL;
+        icSettings.setLayoutParams(icLp);
+        icSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        h.addView(icSettings);
+
         TextView miCuenta = new TextView(this);
-        miCuenta.setText("👤  Mi Cuenta");
+        miCuenta.setText(en ? "My Account" : "Mi Cuenta");
         miCuenta.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         miCuenta.setTypeface(Typeface.DEFAULT_BOLD);
-        miCuenta.setTextColor(ContextCompat.getColor(this, R.color.lc_rojo));
+        miCuenta.setTextColor(Prefs.ROJO);
         miCuenta.setPadding(dp(12), dp(8), dp(12), dp(8));
         miCuenta.setOnClickListener(v -> irACuenta());
         h.addView(miCuenta);
@@ -114,29 +123,30 @@ public class WelcomeActivity extends AppCompatActivity {
 
     // ── SALUDO ────────────────────────────────────────────────────────────────
 
-    private View buildSaludo() {
+    private View buildSaludo(boolean en) {
         LinearLayout s = new LinearLayout(this);
         s.setOrientation(LinearLayout.VERTICAL);
         s.setPadding(dp(24), dp(4), dp(24), dp(20));
 
         TextView t1 = new TextView(this);
-        t1.setText("¡Hola! ¿En qué podemos");
+        t1.setText(en ? "Hi! How can we" : "¡Hola! ¿En qué podemos");
         t1.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         t1.setTypeface(Typeface.DEFAULT_BOLD);
-        t1.setTextColor(ContextCompat.getColor(this, R.color.lc_texto));
+        t1.setTextColor(Prefs.texto(this));
         s.addView(t1);
 
         TextView t2 = new TextView(this);
-        t2.setText("ayudarte hoy?");
+        t2.setText(en ? "help you today?" : "ayudarte hoy?");
         t2.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         t2.setTypeface(Typeface.DEFAULT_BOLD);
-        t2.setTextColor(ContextCompat.getColor(this, R.color.lc_texto));
+        t2.setTextColor(Prefs.texto(this));
         s.addView(t2);
 
         TextView sub = new TextView(this);
-        sub.setText("Encuentra el servicio que necesitas para tu hogar.");
+        sub.setText(en ? "Find the service you need for your home."
+                : "Encuentra el servicio que necesitas para tu hogar.");
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        sub.setTextColor(ContextCompat.getColor(this, R.color.lc_sec));
+        sub.setTextColor(Prefs.sec(this));
         LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         subLp.topMargin = dp(6);
@@ -153,7 +163,7 @@ public class WelcomeActivity extends AppCompatActivity {
         tv.setText(texto);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         tv.setTypeface(Typeface.DEFAULT_BOLD);
-        tv.setTextColor(ContextCompat.getColor(this, R.color.lc_texto));
+        tv.setTextColor(Prefs.texto(this));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.leftMargin = dp(24);
@@ -165,7 +175,7 @@ public class WelcomeActivity extends AppCompatActivity {
 
     // ── CATEGORÍAS ────────────────────────────────────────────────────────────
 
-    private View buildCategorias() {
+    private View buildCategorias(boolean en) {
         HorizontalScrollView hsv = new HorizontalScrollView(this);
         hsv.setHorizontalScrollBarEnabled(false);
         hsv.setClipToPadding(false);
@@ -180,22 +190,31 @@ public class WelcomeActivity extends AppCompatActivity {
         fila.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        String[][] cats = {
-                {"🔧", "Plomería"},
-                {"⚡", "Electricidad"},
-                {"❄️", "HVAC"},
-                {"🏠", "Hogar"},
-                {"🔌", "Electrodomésticos"},
-                {"➕", "Ver Todo"}
+        Object[][] cats = en ? new Object[][]{
+                {R.drawable.ic_plumbing,   "Plumbing"},
+                {R.drawable.ic_electric,   "Electric"},
+                {R.drawable.ic_hvac,       "HVAC"},
+                {R.drawable.ic_home,       "Home"},
+                {R.drawable.ic_appliances, "Appliances"},
+                {R.drawable.ic_services,   "See All"}
+        } : new Object[][]{
+                {R.drawable.ic_plumbing,   "Plomería"},
+                {R.drawable.ic_electric,   "Electricidad"},
+                {R.drawable.ic_hvac,       "HVAC"},
+                {R.drawable.ic_home,       "Hogar"},
+                {R.drawable.ic_appliances, "Electrodomésticos"},
+                {R.drawable.ic_services,   "Ver Todo"}
         };
+
         for (int i = 0; i < cats.length; i++) {
-            fila.addView(buildIconoCategoria(cats[i][0], cats[i][1], i < cats.length - 1));
+            fila.addView(buildIconoCategoria(
+                    (int) cats[i][0], (String) cats[i][1], i < cats.length - 1));
         }
         hsv.addView(fila);
         return hsv;
     }
 
-    private View buildIconoCategoria(String emoji, String label, boolean marginRight) {
+    private View buildIconoCategoria(int iconRes, String label, boolean marginRight) {
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -211,23 +230,27 @@ public class WelcomeActivity extends AppCompatActivity {
         col.setClickable(true);
         col.setFocusable(true);
 
-        // Círculo rojo pálido
-        TextView ic = new TextView(this);
-        ic.setText(emoji);
-        ic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-        ic.setGravity(Gravity.CENTER);
+        int sz = dp(56);
+        FrameLayout circle = new FrameLayout(this);
         GradientDrawable circ = new GradientDrawable();
         circ.setShape(GradientDrawable.OVAL);
-        circ.setColor(ContextCompat.getColor(this, R.color.lc_cat_bg));
-        ic.setBackground(circ);
-        int sz = dp(56);
-        col.addView(ic, new LinearLayout.LayoutParams(sz, sz));
+        circ.setColor(Prefs.catBg(this));
+        circle.setBackground(circ);
+        circle.setLayoutParams(new LinearLayout.LayoutParams(sz, sz));
 
-        // Etiqueta
+        ImageView ic = new ImageView(this);
+        ic.setImageResource(iconRes);
+        ic.setColorFilter(Prefs.ROJO, PorterDuff.Mode.SRC_IN);
+        int pad = dp(14);
+        ic.setPadding(pad, pad, pad, pad);
+        circle.addView(ic, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        col.addView(circle);
+
         TextView tv = new TextView(this);
         tv.setText(label);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        tv.setTextColor(ContextCompat.getColor(this, R.color.lc_texto));
+        tv.setTextColor(Prefs.texto(this));
         tv.setGravity(Gravity.CENTER);
         tv.setMaxLines(2);
         LinearLayout.LayoutParams tvLp = new LinearLayout.LayoutParams(
@@ -241,7 +264,7 @@ public class WelcomeActivity extends AppCompatActivity {
 
     // ── BANNER PROMOCIONAL ────────────────────────────────────────────────────
 
-    private View buildBannerPromo() {
+    private View buildBannerPromo(boolean en) {
         LinearLayout wrap = new LinearLayout(this);
         wrap.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams wLp = new LinearLayout.LayoutParams(
@@ -251,11 +274,10 @@ public class WelcomeActivity extends AppCompatActivity {
         wLp.bottomMargin = dp(4);
         wrap.setLayoutParams(wLp);
 
-        // Tarjeta roja con CardView (corner 16dp, elevation)
         CardView card = new CardView(this);
         card.setRadius(dp(16));
         card.setCardElevation(dp(3));
-        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.lc_rojo));
+        card.setCardBackgroundColor(Prefs.ROJO);
         card.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(148)));
 
@@ -265,14 +287,16 @@ public class WelcomeActivity extends AppCompatActivity {
         inner.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView tit = new TextView(this);
-        tit.setText("🎉 Mantenimiento desde $50");
-        tit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        tit.setText(en ? "Professional home services"
+                : "Servicios profesionales para tu hogar");
+        tit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         tit.setTypeface(Typeface.DEFAULT_BOLD);
         tit.setTextColor(Color.WHITE);
         inner.addView(tit);
 
         TextView sub = new TextView(this);
-        sub.setText("Diagnóstico incluido · Agenda tu visita hoy");
+        sub.setText(en ? "Plumbing · Electric · HVAC · More"
+                : "Plomería · Electricidad · HVAC · Más");
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         sub.setTextColor(0xCCFFFFFF);
         LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
@@ -281,9 +305,8 @@ public class WelcomeActivity extends AppCompatActivity {
         sub.setLayoutParams(subLp);
         inner.addView(sub);
 
-        // Botón CTA
         TextView cta = new TextView(this);
-        cta.setText("SOLICITAR AHORA  →");
+        cta.setText(en ? "REQUEST NOW  →" : "SOLICITAR AHORA  →");
         cta.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         cta.setTypeface(Typeface.DEFAULT_BOLD);
         cta.setTextColor(Color.WHITE);
@@ -301,41 +324,12 @@ public class WelcomeActivity extends AppCompatActivity {
 
         card.addView(inner);
         wrap.addView(card);
-
-        // Indicadores de carrusel (3 puntos — visual)
-        LinearLayout dots = new LinearLayout(this);
-        dots.setOrientation(LinearLayout.HORIZONTAL);
-        dots.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams dotsLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dotsLp.topMargin = dp(10);
-        dotsLp.bottomMargin = dp(4);
-        dots.setLayoutParams(dotsLp);
-        int[] dotColors = {
-                ContextCompat.getColor(this, R.color.lc_rojo),
-                ContextCompat.getColor(this, R.color.lc_borde),
-                ContextCompat.getColor(this, R.color.lc_borde)
-        };
-        for (int i = 0; i < 3; i++) {
-            View dot = new View(this);
-            GradientDrawable dotBg = new GradientDrawable();
-            dotBg.setShape(GradientDrawable.OVAL);
-            dotBg.setColor(dotColors[i]);
-            dot.setBackground(dotBg);
-            LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(
-                    dp(i == 0 ? 18 : 8), dp(8));
-            dotLp.rightMargin = dp(4);
-            dot.setLayoutParams(dotLp);
-            dots.addView(dot);
-        }
-        wrap.addView(dots);
-
         return wrap;
     }
 
     // ── TARJETAS DE AYUDA ─────────────────────────────────────────────────────
 
-    private View buildTarjetasAyuda() {
+    private View buildTarjetasAyuda(boolean en) {
         LinearLayout fila = new LinearLayout(this);
         fila.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams filaLp = new LinearLayout.LayoutParams(
@@ -347,7 +341,9 @@ public class WelcomeActivity extends AppCompatActivity {
         fila.setLayoutParams(filaLp);
 
         fila.addView(buildTarjetaAyuda(
-                "💬", "Hablar con IA", "Tu asistente virtual",
+                R.drawable.ic_chat,
+                en ? "AI Chat" : "Hablar con IA",
+                en ? "Your virtual assistant" : "Tu asistente virtual",
                 v -> startActivity(new Intent(this, ChatActivity.class))));
 
         View sep = new View(this);
@@ -355,24 +351,25 @@ public class WelcomeActivity extends AppCompatActivity {
         fila.addView(sep);
 
         fila.addView(buildTarjetaAyuda(
-                "🔧", "Ver Servicios", "Solicita una visita",
+                R.drawable.ic_plumbing,
+                en ? "Our Services" : "Ver Servicios",
+                en ? "Request a visit" : "Solicita una visita",
                 v -> startActivity(new Intent(this, GuestRequestActivity.class))));
 
         return fila;
     }
 
-    private View buildTarjetaAyuda(String emoji, String titulo, String sub,
+    private View buildTarjetaAyuda(int iconRes, String titulo, String sub,
                                     View.OnClickListener click) {
-        // Usa GradientDrawable para el borde sutil (CardView no soporta stroke nativo)
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(16), dp(18), dp(16), dp(18));
         card.setLayoutParams(new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.WHITE);
+        bg.setColor(Prefs.fondoCard(this));
         bg.setCornerRadius(dp(16));
-        bg.setStroke(dp(1), ContextCompat.getColor(this, R.color.lc_borde));
+        bg.setStroke(dp(1), Prefs.borde(this));
         card.setBackground(bg);
         card.setClickable(true);
         card.setFocusable(true);
@@ -381,23 +378,28 @@ public class WelcomeActivity extends AppCompatActivity {
         getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true);
         card.setForeground(ContextCompat.getDrawable(this, ripple.resourceId));
 
-        // Icono circular rojo pálido
-        TextView ic = new TextView(this);
-        ic.setText(emoji);
-        ic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
-        ic.setGravity(Gravity.CENTER);
+        int sz = dp(48);
+        FrameLayout circle = new FrameLayout(this);
         GradientDrawable icBg = new GradientDrawable();
         icBg.setShape(GradientDrawable.OVAL);
-        icBg.setColor(ContextCompat.getColor(this, R.color.lc_cat_bg));
-        ic.setBackground(icBg);
-        int sz = dp(48);
-        card.addView(ic, new LinearLayout.LayoutParams(sz, sz));
+        icBg.setColor(Prefs.catBg(this));
+        circle.setBackground(icBg);
+        circle.setLayoutParams(new LinearLayout.LayoutParams(sz, sz));
+
+        ImageView ic = new ImageView(this);
+        ic.setImageResource(iconRes);
+        ic.setColorFilter(Prefs.ROJO, PorterDuff.Mode.SRC_IN);
+        int pad = dp(11);
+        ic.setPadding(pad, pad, pad, pad);
+        circle.addView(ic, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        card.addView(circle);
 
         TextView tit = new TextView(this);
         tit.setText(titulo);
         tit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         tit.setTypeface(Typeface.DEFAULT_BOLD);
-        tit.setTextColor(ContextCompat.getColor(this, R.color.lc_texto));
+        tit.setTextColor(Prefs.texto(this));
         LinearLayout.LayoutParams titLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         titLp.topMargin = dp(10);
@@ -407,7 +409,7 @@ public class WelcomeActivity extends AppCompatActivity {
         TextView subTv = new TextView(this);
         subTv.setText(sub);
         subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        subTv.setTextColor(ContextCompat.getColor(this, R.color.lc_sec));
+        subTv.setTextColor(Prefs.sec(this));
         LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         subLp.topMargin = dp(2);
@@ -419,11 +421,11 @@ public class WelcomeActivity extends AppCompatActivity {
 
     // ── BOTTOM NAV FLOTANTE ───────────────────────────────────────────────────
 
-    private View buildBottomNav() {
+    private View buildBottomNav(boolean en) {
         CardView nav = new CardView(this);
         nav.setRadius(dp(24));
         nav.setCardElevation(dp(8));
-        nav.setCardBackgroundColor(Color.WHITE);
+        nav.setCardBackgroundColor(Prefs.navBg(this));
 
         FrameLayout.LayoutParams navLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(64));
@@ -438,51 +440,63 @@ public class WelcomeActivity extends AppCompatActivity {
         fila.setGravity(Gravity.CENTER_VERTICAL);
         fila.setPadding(dp(8), 0, dp(8), 0);
 
-        String[][] tabs = {{"🏠", "Inicio"}, {"🎁", "Promos"}, {"📋", "Órdenes"}, {"💬", "Chat"}};
+        int[] tabIcons = {
+                R.drawable.ic_home,
+                R.drawable.ic_orders,
+                R.drawable.ic_chat,
+                R.drawable.ic_settings
+        };
+        String[] labels = en
+                ? new String[]{"Home", "Orders", "Chat", "Settings"}
+                : new String[]{"Inicio", "Órdenes", "Chat", "Ajustes"};
 
-        for (int i = 0; i < tabs.length; i++) {
-            fila.addView(buildTabItem(tabs[i][0], tabs[i][1], i == 0, i));
+        for (int i = 0; i < tabIcons.length; i++) {
+            fila.addView(buildTabItem(tabIcons[i], labels[i], i == 0, i, en));
         }
 
         nav.addView(fila);
         return nav;
     }
 
-    private View buildTabItem(String emoji, String label, boolean activo, int idx) {
+    private View buildTabItem(int iconRes, String label, boolean activo, int idx, boolean en) {
         LinearLayout tab = new LinearLayout(this);
         tab.setOrientation(LinearLayout.VERTICAL);
         tab.setGravity(Gravity.CENTER);
         tab.setLayoutParams(new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
 
-        TextView ic = new TextView(this);
-        ic.setText(emoji);
-        ic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        ic.setGravity(Gravity.CENTER);
-        tab.addView(ic);
+        int iconColor = activo ? Prefs.ROJO : Prefs.sec(this);
+
+        ImageView ic = new ImageView(this);
+        ic.setImageResource(iconRes);
+        ic.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN);
+        int iconSz = dp(22);
+        tab.addView(ic, new LinearLayout.LayoutParams(iconSz, iconSz));
 
         TextView lbl = new TextView(this);
         lbl.setText(label);
         lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         lbl.setGravity(Gravity.CENTER);
-        lbl.setTextColor(activo
-                ? ContextCompat.getColor(this, R.color.lc_rojo)
-                : ContextCompat.getColor(this, R.color.lc_sec));
+        lbl.setTextColor(iconColor);
         if (activo) lbl.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams lblLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lblLp.topMargin = dp(2);
+        lbl.setLayoutParams(lblLp);
         tab.addView(lbl);
 
-        tab.setOnClickListener(v -> onNavTab(idx));
+        tab.setOnClickListener(v -> onNavTab(idx, en));
         tab.setClickable(true);
         tab.setFocusable(true);
         return tab;
     }
 
-    private void onNavTab(int idx) {
+    private void onNavTab(int idx, boolean en) {
         switch (idx) {
-            case 0: break; // Inicio — ya estamos aquí
-            case 1: Toast.makeText(this, "Promociones · Próximamente", Toast.LENGTH_SHORT).show(); break;
-            case 2: irACuenta(); break; // Órdenes requiere cuenta
-            case 3: startActivity(new Intent(this, ChatActivity.class)); break;
+            case 0: break;
+            case 1: irACuenta(); break;
+            case 2: startActivity(new Intent(this, ChatActivity.class)); break;
+            case 3: startActivity(new Intent(this, SettingsActivity.class)); break;
         }
     }
 
