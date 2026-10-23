@@ -11,4 +11,6 @@
     <color name="lc_ai_borde">#FFCDD0</color>
     <color name="lc_card_icon_bg">#FFF0EE</color>
     <color name="lc_header_bg">#FFFFFF</color>
+    <color name="lc_cat_bg">#FFF0EE</color>
+    <color name="lc_nav_shadow">#1A000000</color>
 </resources>
