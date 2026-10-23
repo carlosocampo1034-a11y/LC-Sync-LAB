@@ -3,6 +3,8 @@ instance/
 .env
 *.env
 local.properties
+server/.secret_key
+server/users.json
 
 # Evidencias de QA y Backups
 QA_ANDROID/
