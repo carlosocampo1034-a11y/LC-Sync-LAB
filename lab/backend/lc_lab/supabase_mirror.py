@@ -251,7 +251,7 @@ class Espejo:
         if not filas:
             return 0
         lote = [{"device_id": r["device_id"], "job_id": r["job_id"], "client_updated_at": r["client_updated_at"],
-                 "status": r["status"], "version": r["version"], "ts": r["ts"]} for r in filas]
+                 "status": r["status"], "version": r["version"], "ts": _iso(r["ts"])} for r in filas]
         st, r = self.sb.insertar("sync_receipts", lote, "device_id,job_id,client_updated_at")
         if st not in (200, 201, 204):
             self._log(c, "sync_receipts", len(lote), False, f"HTTP {st}: {r}")

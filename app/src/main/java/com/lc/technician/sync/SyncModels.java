@@ -454,4 +454,16 @@ public class SyncModels {
         public String actual;
         public String nueva;
     }
+
+    /** Validación de PIN contra el backend (POST api/validate_pin). */
+    public static class ValidatePinRequest {
+        public String pin;
+        public ValidatePinRequest(String pin) { this.pin = pin; }
+    }
+
+    public static class ValidatePinResponse {
+        public boolean valid;
+        public String role;
+        public String error;
+    }
 }

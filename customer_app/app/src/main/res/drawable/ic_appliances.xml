@@ -1,0 +1,8 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Refrigerator body + separator + handles (evenOdd cutouts) -->
+    <path android:fillColor="#EB1700"
+        android:fillType="evenOdd"
+        android:pathData="M6,2C4.9,2 4,2.9 4,4V20C4,21.1 4.9,22 6,22H18C19.1,22 20,21.1 20,20V4C20,2.9 19.1,2 18,2H6Z M5,9.5H19V10.5H5Z M15.5,4.5H17V7.5H15.5Z M15.5,12H17V15.5H15.5Z"/>
+</vector>

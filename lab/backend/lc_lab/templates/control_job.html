@@ -66,10 +66,10 @@
   <div class="flex-grow-1">
     <h4 class="mb-0 fw-bold">{{ j.cliente or 'Orden sin nombre' }}</h4>
     <span class="text-muted" style="font-size:.82rem">
-      Orden #{{ j.id }} &nbsp;·&nbsp; v{{ j.version }}
+      Orden #{{ j.id }} &nbsp;·&nbsp; <span class="js-version-badge">v{{ j.version }}</span>
     </span>
   </div>
-  <span class="badge badge-{{ j.estado|lower|replace(' ','-') }} px-3 py-2"
+  <span id="js-estado-badge" class="badge badge-{{ j.estado|lower|replace(' ','-') }} px-3 py-2"
         style="font-size:.8rem">{{ j.estado }}</span>
 </div>
 
@@ -487,7 +487,7 @@
     <!-- Programar -->
     <div class="lc-card">
       <div class="section-title"><i class="bi bi-calendar-event me-1"></i> Programar cita</div>
-      <form method="post" action="{{ url_for('control.programar', jid=j.id) }}">
+      <form id="form-programar" method="post" action="{{ url_for('control.programar', jid=j.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="version" value="{{ j.version }}">
         <div class="mb-2">
@@ -507,7 +507,7 @@
     <!-- Asignar técnico -->
     <div class="lc-card">
       <div class="section-title"><i class="bi bi-person-badge me-1"></i> Asignar técnico</div>
-      <form method="post" action="{{ url_for('control.asignar', jid=j.id) }}">
+      <form id="form-asignar" method="post" action="{{ url_for('control.asignar', jid=j.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="version" value="{{ j.version }}">
         <div class="mb-3">
@@ -530,7 +530,7 @@
     <!-- Cambiar estado -->
     <div class="lc-card">
       <div class="section-title"><i class="bi bi-arrow-repeat me-1"></i> Cambiar estado</div>
-      <form method="post" action="{{ url_for('control.estado', jid=j.id) }}">
+      <form id="form-estado" method="post" action="{{ url_for('control.estado', jid=j.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="version" value="{{ j.version }}">
         <div class="mb-3">
@@ -552,11 +552,11 @@
       <div class="d-flex flex-column gap-2">
         <div class="d-flex justify-content-between" style="font-size:.85rem">
           <span class="text-muted">Estado actual</span>
-          <span class="badge badge-{{ j.estado|lower|replace(' ','-') }}">{{ j.estado }}</span>
+          <span id="js-resumen-estado" class="badge badge-{{ j.estado|lower|replace(' ','-') }}">{{ j.estado }}</span>
         </div>
         <div class="d-flex justify-content-between" style="font-size:.85rem">
           <span class="text-muted">Versión</span>
-          <span class="fw-semibold">v{{ j.version }}</span>
+          <span class="fw-semibold js-version-badge">v{{ j.version }}</span>
         </div>
         {% if factura %}
         <div class="d-flex justify-content-between" style="font-size:.85rem">
@@ -578,5 +578,89 @@
   </div><!-- /right column -->
 
 </div><!-- /job-grid -->
+
+<!-- Toast container -->
+<div id="lc-toasts" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none"></div>
+
+<script>
+(function () {
+  /* ── Toast helper ── */
+  function toast(msg, ok) {
+    const el = document.createElement("div");
+    el.style.cssText = [
+      "background:" + (ok ? "#16a34a" : "#dc2626"),
+      "color:#fff", "padding:12px 18px", "border-radius:10px",
+      "font-size:.88rem", "font-weight:600", "box-shadow:0 4px 18px rgba(0,0,0,.18)",
+      "pointer-events:auto", "opacity:0", "transition:opacity .2s",
+      "max-width:320px", "line-height:1.4"
+    ].join(";");
+    el.textContent = (ok ? "✓ " : "⚠ ") + msg;
+    document.getElementById("lc-toasts").appendChild(el);
+    requestAnimationFrame(() => { el.style.opacity = "1"; });
+    setTimeout(() => {
+      el.style.opacity = "0";
+      el.addEventListener("transitionend", () => el.remove());
+    }, 3500);
+  }
+
+  /* ── Sync version in all hidden version inputs ── */
+  function syncVersions(v) {
+    document.querySelectorAll("input[name='version']").forEach(i => { i.value = v; });
+    document.querySelectorAll(".js-version-badge").forEach(el => { el.textContent = "v" + v; });
+  }
+
+  /* ── State badge update ── */
+  function updateEstadoBadge(nuevo) {
+    const badge = document.getElementById("js-estado-badge");
+    if (!badge) return;
+    const cls = nuevo.toLowerCase().replace(/ /g, "-");
+    badge.className = "badge badge-" + cls + " px-3 py-2";
+    badge.style.fontSize = ".8rem";
+    badge.textContent = nuevo;
+    // also update the resumen panel badge
+    const resumenBadge = document.getElementById("js-resumen-estado");
+    if (resumenBadge) {
+      resumenBadge.className = "badge badge-" + cls;
+      resumenBadge.textContent = nuevo;
+    }
+  }
+
+  /* ── Generic AJAX form interceptor ── */
+  function ajaxForm(formEl, onSuccess) {
+    formEl.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const btn = formEl.querySelector("button[type=submit], button:not([type])");
+      if (btn) { btn.disabled = true; btn.style.opacity = ".65"; }
+      const body = new FormData(formEl);
+      fetch(formEl.action, {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        body: body
+      })
+      .then(r => r.json())
+      .then(data => {
+        toast(data.msg, data.ok);
+        if (data.ok) {
+          syncVersions(data.version);
+          if (onSuccess) onSuccess(data);
+        }
+      })
+      .catch(() => toast("Error de red — recarga la página", false))
+      .finally(() => {
+        if (btn) { btn.disabled = false; btn.style.opacity = ""; }
+      });
+    });
+  }
+
+  /* ── Wire up the three forms ── */
+  const fProgramar = document.getElementById("form-programar");
+  const fAsignar   = document.getElementById("form-asignar");
+  const fEstado    = document.getElementById("form-estado");
+
+  if (fProgramar) ajaxForm(fProgramar, null);
+  if (fAsignar)   ajaxForm(fAsignar, null);
+  if (fEstado)    ajaxForm(fEstado, function (data) { updateEstadoBadge(data.estado); });
+})();
+</script>
 
 {% endblock %}

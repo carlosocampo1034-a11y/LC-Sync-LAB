@@ -1,0 +1,7 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Valve handle + valve body + horizontal pipe + vertical pipe + water drop -->
+    <path android:fillColor="#EB1700"
+        android:pathData="M11,3H13V6H11Z M9,6H15V9H9Z M2,9H22V12H2Z M10,12H14V16H10Z M12,16C10.34,16 9,17.34 9,19C9,20.66 10.34,22 12,22C13.66,22 15,20.66 15,19C15,17.34 13.66,16 12,16Z"/>
+</vector>

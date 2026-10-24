@@ -82,12 +82,14 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        // Cloud-first: clear any stale Flask IP override so sync uses Supabase
+        // Preserve LAB HTTP override if set; only clear stale Flask IPs when no explicit lab_http_url
         android.content.SharedPreferences cloudPrefs =
                 getSharedPreferences("lc_sync_prefs", MODE_PRIVATE);
         String savedSyncUrl = cloudPrefs.getString("sync_base_url", "");
-        if (savedSyncUrl.contains("10.0.0.") || savedSyncUrl.contains("127.0.0.1")
-                || savedSyncUrl.contains("192.168.") || savedSyncUrl.contains(":5055")) {
+        boolean hasLabOverride = com.lc.technician.sync.LabSession.urlServidor(this)
+                .startsWith("http://");
+        if (!hasLabOverride && (savedSyncUrl.contains("10.0.0.") || savedSyncUrl.contains("127.0.0.1")
+                || savedSyncUrl.contains("192.168."))) {
             cloudPrefs.edit().remove("sync_base_url").apply();
             android.util.Log.i("MainActivity", "cleared stale Flask URL: " + savedSyncUrl);
         }
