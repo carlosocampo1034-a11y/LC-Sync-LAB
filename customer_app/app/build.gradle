@@ -1,6 +1,10 @@
 plugins { id 'com.android.application' }
 
 // L&C Customer — LABORATORIO. Identificador propio: nunca com.lc.technician ni com.lc.technician.dev.
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) localProps.load(localPropsFile.newDataInputStream())
+
 android {
     namespace 'com.lc.customer'
     compileSdk 36
@@ -10,7 +14,8 @@ android {
         targetSdk 36
         versionCode 1
         versionName "0.1.0-lab"
-        buildConfigField "String", "API_BASE", "\"http://127.0.0.1:5055/api/v2\""
+        def apiBase = localProps.getProperty('CUSTOMER_API_BASE', 'http://10.0.0.121:5055/api/v2')
+        buildConfigField "String", "API_BASE", "\"${apiBase}\""
     }
     buildFeatures { buildConfig true }
     compileOptions {

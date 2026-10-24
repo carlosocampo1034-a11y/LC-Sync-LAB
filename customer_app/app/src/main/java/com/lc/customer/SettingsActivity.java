@@ -11,6 +11,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -24,6 +25,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private String temaSeleccionado;
     private String idiomaSeleccionado;
+    private EditText etUrlServidor;
 
     // Referencias a chips para resaltar selección activa
     private TextView[] chipsTema = new TextView[3];
@@ -138,6 +140,34 @@ public class SettingsActivity extends AppCompatActivity {
         prevIdioma.setLayoutParams(prevLp);
         cont.addView(prevIdioma);
 
+        // ── Sección Servidor ─────────────────────────────────────────────────
+        cont.addView(seccion(en ? "Advanced" : "Avanzado"));
+
+        TextView lblUrl = tv(en ? "Server URL (leave empty for default)" : "URL del servidor (vacío = predeterminado)",
+                13, Prefs.sec(this), false);
+        LinearLayout.LayoutParams lblLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lblLp.bottomMargin = dp(8);
+        lblUrl.setLayoutParams(lblLp);
+        cont.addView(lblUrl);
+
+        etUrlServidor = new EditText(this);
+        etUrlServidor.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        etUrlServidor.setTextColor(Prefs.texto(this));
+        etUrlServidor.setHintTextColor(Prefs.sec(this));
+        etUrlServidor.setHint(BuildConfig.API_BASE);
+        String currentUrl = Api.urlCustom(this);
+        if (currentUrl != null) etUrlServidor.setText(currentUrl);
+        GradientDrawable etBg = new GradientDrawable();
+        etBg.setCornerRadius(dp(10));
+        etBg.setColor(Prefs.fondoCard(this));
+        etBg.setStroke(dp(1), Prefs.borde(this));
+        etUrlServidor.setBackground(etBg);
+        etUrlServidor.setPadding(dp(12), dp(12), dp(12), dp(12));
+        etUrlServidor.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        cont.addView(etUrlServidor);
+
         // ── Nota informativa ─────────────────────────────────────────────────
         cont.addView(spacerView(24));
         TextView nota = tv(en
@@ -181,7 +211,8 @@ public class SettingsActivity extends AppCompatActivity {
     private void guardar() {
         Prefs.setTema(this, temaSeleccionado);
         Prefs.setIdioma(this, idiomaSeleccionado);
-        // Reiniciar el flujo completo para aplicar los cambios
+        String urlIngresada = etUrlServidor.getText().toString().trim();
+        Api.setUrlCustom(this, urlIngresada.isEmpty() ? null : urlIngresada);
         Intent it = new Intent(this, WelcomeActivity.class);
         it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(it);

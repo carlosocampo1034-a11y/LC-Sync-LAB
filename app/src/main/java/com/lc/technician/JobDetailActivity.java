@@ -3,6 +3,7 @@ package com.lc.technician;
 import android.Manifest;
 import android.util.Log;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -329,9 +330,22 @@ public class JobDetailActivity extends AppCompatActivity {
         versionVista = job.serverVersion;
         tvTecnicoAsignado = findViewById(R.id.tvTecnicoAsignado);
         // Prefer technicianId field; fall back to legacy TECNICO: in notas
-        String tecnicoActual = (job.technicianId != null && !job.technicianId.isEmpty())
+        String tecnicoRaw = (job.technicianId != null && !job.technicianId.isEmpty())
                 ? job.technicianId : extraerTecnico(job.notas);
-        actualizarTecnicoUI(tecnicoActual);
+        // Show raw code immediately, then resolve to display name in background
+        actualizarTecnicoUI(tecnicoRaw);
+        if (job.technicianId != null && !job.technicianId.isEmpty()) {
+            final Context appCtx = getApplicationContext();
+            final String codeToResolve = job.technicianId;
+            new android.os.AsyncTask<Void, Void, String>() {
+                @Override protected String doInBackground(Void... v) {
+                    return com.lc.technician.sync.LabSession.resolverNombre(appCtx, codeToResolve);
+                }
+                @Override protected void onPostExecute(String nombre) {
+                    actualizarTecnicoUI(nombre);
+                }
+            }.execute();
+        }
         tvTecnicoAsignado.setOnClickListener(v -> mostrarDialogoTecnico());
         // 27D: chip de prioridad
         TextView tvPrioridad = findViewById(R.id.tvPrioridad);

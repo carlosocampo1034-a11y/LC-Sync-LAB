@@ -36,14 +36,11 @@ final class Api {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Prueba con dos teléfonos: HTTP por la Wi-Fi privada (el servidor Flask de laboratorio es HTTP). */
-    static final String API_WIFI = "http://10.0.0.121:5055/api/v2";
-
-    /** URL activa: custom > WIFI hardcoded. Se conserva al cerrar sesión. */
+    /** URL activa: custom > BuildConfig.API_BASE. Se conserva al cerrar sesión. */
     static String base(Context c) {
         String cu = urlCustom(c);
         if (cu != null) return cu;
-        return API_WIFI;
+        return BuildConfig.API_BASE;
     }
 
     static boolean servidorWifi(Context c) { return "WIFI".equals(prefs(c).getString("servidor", "LOCAL")); }
