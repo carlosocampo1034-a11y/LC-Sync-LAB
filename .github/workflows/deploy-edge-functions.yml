@@ -1,0 +1,60 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches: [main, feature/customer-visual-v2]
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/deploy-edge-functions.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_PROJECT_REF: rmkduyrrjtqqvjpqhyra
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref $SUPABASE_PROJECT_REF
+
+      - name: Run migrations
+        run: supabase db push --linked
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Deploy lc-auth (public)
+        run: supabase functions deploy lc-auth --no-verify-jwt
+
+      - name: Deploy lc-customer
+        run: supabase functions deploy lc-customer
+
+      - name: Deploy lc-dispatch
+        run: supabase functions deploy lc-dispatch
+
+      - name: Deploy lc-sync
+        run: supabase functions deploy lc-sync
+
+      - name: Smoke test
+        run: |
+          BASE="https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1"
+          echo "Testing lc-auth health..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/lc-auth" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"__healthcheck__@invalid","password":"x"}')
+          # 401 = function is up, rejects bad creds correctly
+          if [ "$STATUS" = "401" ] || [ "$STATUS" = "400" ]; then
+            echo "lc-auth OK (status $STATUS)"
+          else
+            echo "lc-auth unexpected status: $STATUS"
+            exit 1
+          fi
