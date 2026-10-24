@@ -1,8 +1,27 @@
 """Autenticación y portal del cliente (L&C Customer)."""
 import re
-
+import time
+import threading
 import json
 from flask import Blueprint, g, jsonify, request
+
+# Simple in-process rate limiter for /guest/quote (IP-based, max 5 req/min)
+_RATE_LOCK = threading.Lock()
+_RATE_BUCKETS: dict = {}   # ip → [timestamp, ...]
+_RATE_WINDOW = 60          # seconds
+_RATE_MAX = 5              # requests per window per IP
+
+def _rate_ok(ip: str) -> bool:
+    now = time.time()
+    with _RATE_LOCK:
+        hits = _RATE_BUCKETS.get(ip, [])
+        hits = [t for t in hits if now - t < _RATE_WINDOW]
+        if len(hits) >= _RATE_MAX:
+            _RATE_BUCKETS[ip] = hits
+            return False
+        hits.append(now)
+        _RATE_BUCKETS[ip] = hits
+        return True
 
 from . import jobs as J
 from .db import audit, get_db, now_ms
@@ -339,17 +358,26 @@ def decidir_variacion(vid):
     return jsonify(variacion=out)
 
 
+_GUEST_DEDUP_WINDOW_MS = 5 * 60 * 1000  # 5 minutes
+
+
 @bp.post("/guest/quote")
 def guest_quote():
     """Solicitud de presupuesto sin cuenta (modo invitado de la app Customer).
-    No requiere autenticación. Crea un cliente lead y una orden PENDIENTE en la cola de despacho."""
+    No requiere autenticación. Crea un cliente lead y una orden PENDIENTE en la cola de despacho.
+    Protegido: rate limit por IP (5/min), deduplicación por teléfono (5 min), max lengths."""
+    # Rate limiting (in-process, no persistence — sufficient for LAB; use Redis in prod)
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    if not _rate_ok(ip):
+        return _err("demasiadas solicitudes, intenta en un momento", 429)
+
     d = _json()
-    nombre = (d.get("nombre") or "").strip()
-    telefono = (d.get("telefono") or "").strip()
-    email = (d.get("email") or "").strip() or None
-    direccion = (d.get("direccion") or "").strip()
-    descripcion = (d.get("descripcion") or "").strip()
-    categoria = (d.get("categoria") or "").strip() or None
+    nombre = (d.get("nombre") or "").strip()[:120]
+    telefono = (d.get("telefono") or "").strip()[:20]
+    email = (d.get("email") or "").strip()[:120] or None
+    direccion = (d.get("direccion") or "").strip()[:300]
+    descripcion = (d.get("descripcion") or "").strip()[:1000]
+    categoria = (d.get("categoria") or "").strip()[:50] or None
 
     if len(nombre) < 3:
         return _err("nombre requerido (mínimo 3 caracteres)")
@@ -365,7 +393,19 @@ def guest_quote():
     db = get_db()
     t = now_ms()
 
-    # Crear cliente lead (sin cuenta, marcado como GUEST en notas)
+    # Duplicate guard: same telefono within 5 minutes → return existing referencia
+    recent = db.execute(
+        "SELECT id FROM jobs WHERE telefono=? AND origin='CUSTOMER' AND created_at > ? "
+        "AND estado NOT IN ('CANCELADO') ORDER BY created_at DESC LIMIT 1",
+        (telefono, t - _GUEST_DEDUP_WINDOW_MS)
+    ).fetchone()
+    if recent:
+        referencia = f"LC-{recent['id']:04d}"
+        return jsonify(ok=True, id=recent["id"], referencia=referencia,
+                       mensaje=f"Ya tienes una solicitud reciente ({referencia}). "
+                                "Te contactaremos pronto."), 200
+
+    # Crear cliente lead (sin cuenta)
     cid = db.execute(
         "INSERT INTO customers(nombre, telefono, email, created_at, updated_at) VALUES (?,?,?,?,?)",
         (nombre, telefono, email, t, t)
@@ -385,7 +425,7 @@ def guest_quote():
 
     jid = J.crear(db, datos, "CUSTOMER", "guest_app", "customer_app",
                   extra={"customer_id": cid, "estado_dispatch": "QUEUE", "prioridad": "NORMAL"})
-    audit(db, "guest_app", "GUEST_QUOTE", "job", jid, f"tel={telefono}")
+    audit(db, "guest_app", "GUEST_QUOTE", "job", jid, f"tel={telefono} ip={ip}")
     db.commit()
 
     referencia = f"LC-{jid:04d}"
