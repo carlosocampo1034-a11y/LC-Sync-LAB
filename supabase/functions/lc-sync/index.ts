@@ -147,9 +147,8 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const updatedAt = item.updatedAt
-          ? new Date(item.updatedAt).toISOString()
-          : new Date().toISOString();
+        // jobs.updated_at is stored as bigint (epoch ms), not ISO timestamp
+        const updatedAt = item.updatedAt ?? Date.now();
 
         const { data: updated, error: upErr } = await admin
           .from("jobs")

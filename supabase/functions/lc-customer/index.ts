@@ -84,7 +84,8 @@ Deno.serve(async (req: Request) => {
         return json({ error: "descripcion y direccion requeridos" }, 400);
       }
 
-      const now = new Date().toISOString();
+      // jobs.created_at / updated_at stored as bigint (epoch ms)
+      const nowMs = Date.now();
       const { data, error } = await admin
         .from("jobs")
         .insert({
@@ -96,8 +97,8 @@ Deno.serve(async (req: Request) => {
           categoria: categoria ?? "GENERAL",
           version: 1,
           origin: "CUSTOMER_APP_SUPA",
-          created_at: now,
-          updated_at: now,
+          created_at: nowMs,
+          updated_at: nowMs,
         })
         .select("id, estado, descripcion, direccion, version, created_at")
         .single();
