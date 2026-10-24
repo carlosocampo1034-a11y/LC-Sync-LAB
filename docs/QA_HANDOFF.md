@@ -12,7 +12,7 @@
 | Categoría | Estado |
 |---|---|
 | `test_no_exporta_historicas_ni_secretos` corregido — 6/6 PASS | ✓ PASS |
-| Customer UI login real (`qauser7` / `QAFase77`, sin inyección) | ✓ PASS |
+| Customer UI login real (usuario/contraseña QA, sin inyección) | ✓ PASS |
 | Pantalla "Hola, QA" visible tras login — 0 crashes | ✓ PASS |
 | Technician v2 sync nativo ("SINCRONIZAR AHORA" funciona) | ✓ PASS |
 | Auto-sync cada 15 min activo ("Última bajada" actualizada) | ✓ PASS |
@@ -86,7 +86,7 @@
 | # | Pendiente |
 |---|---|
 | P-HTTPS | Conectividad HTTPS estable — tunnel público pendiente |
-| ~~P-LOGIN-UI~~ | ~~Login Customer desde UI~~ — **RESUELTO sesión 7** (`qauser7`/`QAFase77`) |
+| ~~P-LOGIN-UI~~ | ~~Login Customer desde UI~~ — **RESUELTO sesión 7** (credenciales QA rotadas) |
 | ~~P-SUPABASE~~ | ~~Fix datestyle en sync_receipts → Supabase~~ — **RESUELTO sesión 6** |
 | P-MOVIL | Pruebas con datos móviles / redes distintas al WiFi local |
 | P-CORS | CORS allowlist producción en /guest/quote |
