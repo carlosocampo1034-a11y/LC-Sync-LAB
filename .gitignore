@@ -9,6 +9,15 @@ server/users.json
 # Evidencias de QA y Backups
 QA_ANDROID/
 LC_backups/
+backups/
+lc-public-repo/
+
+# Screenshots de QA (generadas por ADB — no van al repo)
+qa_*.png
+clean_*.png
+qa_*.html
+*.html
+flask_out.txt
 
 # Python
 __pycache__/

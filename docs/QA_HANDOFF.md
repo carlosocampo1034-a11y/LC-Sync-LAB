@@ -1,8 +1,34 @@
-# L&C — QA Handoff Report (Sesión 3: Cloud Sync)
-**Fecha:** 2026-10-24 (sesión 3)  
+# L&C — QA Handoff Report (Sesión 4: Instalación en dispositivo)
+**Fecha:** 2026-10-24 (sesión 4)  
 **Branch:** feature/customer-visual-v2  
 **Ejecutado por:** Claude Code (autónomo)  
-**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA
+**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:36639
+
+---
+
+## Resumen ejecutivo — Sesión 4 (Instalación ADB)
+
+| Categoría | Estado |
+|---|---|
+| Verificación paquetes APK antes de instalar | ✓ PASS |
+| Detección incompatibilidad de firmas | ✓ INFO (ver §9) |
+| Instalación Technician DEV (`com.lc.technician.dev`) | ✓ PASS |
+| Instalación Customer LAB (`com.lc.customer.lab`) | ✓ PASS |
+| QA visual — Technician: setup wizard correcto | ✓ PASS |
+| QA visual — Customer: home screen dark mode | ✓ PASS |
+| Logcat — 0 errores en ambas apps | ✓ PASS |
+| Regreso a Termux verificado (screenshot) | ✓ PASS |
+
+**Total sesión 4: 8/8 PASS · 0 FAIL**
+
+### Pendiente (sesión 5+)
+| # | Prueba pendiente | Prioridad |
+|---|---|---|
+| PEnd-1 | Login completo en Technician DEV desde UI | Alta |
+| PEnd-2 | Login + solicitud de servicio en Customer LAB desde UI | Alta |
+| PEnd-3 | Sincronización Technician ↔ backend desde dispositivo real | Alta |
+| PEnd-4 | Funcionamiento entre redes (WiFi distintas / datos móviles) | Media |
+| PEnd-5 | Limpieza segura de datos locales post-QA | Media |
 
 ---
 
@@ -170,7 +196,62 @@ Tokens anteriores: invalidados (DELETE FROM tokens).
 
 ---
 
-## 6. Pendientes conocidos (actualizado sesión 3)
+## 9. Sesión 4 — Instalación ADB (2026-10-24)
+
+### Identificadores de paquete verificados
+
+| APK (build local) | Paquete | Variante |
+|---|---|---|
+| `app/build/outputs/apk/debug/app-debug.apk` | `com.lc.technician.dev` | LAB debug — NO es producción |
+| `customer_app/app/build/outputs/apk/debug/app-debug.apk` | `com.lc.customer.lab` | LAB debug — NO es producción |
+
+> **Distinción producción vs LAB:** Los sufijos `.dev` y `.lab` garantizan coexistencia con versiones de producción. No comparten datos ni se sobreescriben entre sí.
+
+### Incompatibilidad de firmas (INFO)
+
+`adb install -r` falló con `INSTALL_FAILED_UPDATE_INCOMPATIBLE` en ambas apps.  
+**Causa:** Los APKs anteriores fueron firmados con el debug keystore de otro entorno (Android Studio externo). El keystore activo es `~/.android/debug.keystore` generado en Termux.  
+**Acción:** Desinstalación limpia + instalación fresca. Solo se perdió caché local (tokens de sesión y preferencias); los datos de negocio viven en el backend (lab.db, lc_sync.db).  
+**Para el futuro:** Mientras se use el mismo Termux como entorno de build, el keystore es estable y no volverá a ocurrir.
+
+### Resultados de instalación
+
+| Paso | Comando | Resultado |
+|---|---|---|
+| Verificar instaladas | `pm list packages \| grep com.lc` | `com.lc.technician.dev`, `com.lc.customer.lab` presentes |
+| Technician — install -r | `adb install -r app-debug.apk` | FAIL — firma incompatible |
+| Technician — uninstall | `adb uninstall com.lc.technician.dev` | Success |
+| Technician — install | `adb install app-debug.apk` | **Success** |
+| Customer — install -r | `adb install -r app-debug.apk` | FAIL — firma incompatible |
+| Customer — uninstall | `adb uninstall com.lc.customer.lab` | Success |
+| Customer — install | `adb install app-debug.apk` | **Success** |
+
+### QA Visual
+
+| App | Pantalla observada | Estado |
+|---|---|---|
+| LC Technician DEV | Setup wizard — "COMENZAR CONFIGURACIÓN" (instalación limpia, correcto) | ✓ PASS |
+| LC Customer LAB | Home dark — categorías Plomería/Electricidad/HVAC/Hogar, Órdenes, Chat, Ajustes | ✓ PASS |
+| Termux | Sesión Claude Code en primer plano tras `am start com.termux/.HomeActivity` | ✓ PASS |
+
+### Logcat post-instalación
+
+| App | Errores | Excepciones | Crashes | Ruido normal |
+|---|---|---|---|---|
+| `com.lc.technician.dev` | 0 | 0 | 0 | Samsung GameManager (ok) |
+| `com.lc.customer.lab` | 0 | 0 | 0 | Samsung GameManager (ok) |
+
+### Evidencias (screenshots ADB)
+
+| Archivo | Contenido |
+|---|---|
+| `qa_tech_ready_sm.png` | Technician DEV — setup wizard correcto |
+| `qa_cust_install_sm.png` | Customer LAB — home screen dark mode |
+| `qa_back_termux_sm.png` | Termux en primer plano verificado |
+
+---
+
+## 6. Pendientes conocidos (actualizado sesión 4)
 
 | # | Issue | Severidad | Estado |
 |---|---|---|---|
@@ -182,6 +263,10 @@ Tokens anteriores: invalidados (DELETE FROM tokens).
 | P6 | `adb input text` falla con caracteres especiales en login UI | Info | Info |
 | P7 | inject_lab_session.sh: no escribe `session_active` en `lc_prefs` — tech app muestra setup | Baja | Pendiente |
 | P8 | Túnel HTTPS público: cloudflared DNS failure / localhost.run safebrowse.io | Media | Bloqueado |
+| P9 | Technician DEV: login UI completo + sync desde dispositivo real | Alta | Pendiente (sesión 5) |
+| P10 | Customer LAB: login + solicitud de servicio desde UI real | Alta | Pendiente (sesión 5) |
+| P11 | Pruebas entre redes distintas (datos móviles o WiFi diferente) | Media | Pendiente |
+| P12 | Limpieza segura de datos locales post-QA en dispositivo | Media | Pendiente |
 
 ---
 
@@ -206,10 +291,9 @@ Tokens anteriores: invalidados (DELETE FROM tokens).
 | T4 | Customer auth: register → login → property → request → visible en board |
 | T5 | Bundle offline: 3 state changes en un solo sync/push (recovery) |
 
-### APKs construidos
-- `app/build/outputs/apk/debug/app-debug.apk` — Technician (BUILD SUCCESSFUL)
-- `customer_app/app/build/outputs/apk/debug/app-debug.apk` — Customer LAB (BUILD SUCCESSFUL)
-- Nota: instalación pendiente (ADB no disponible en esta sesión)
+### APKs construidos e instalados
+- `app/build/outputs/apk/debug/app-debug.apk` — Technician DEV `com.lc.technician.dev` (BUILD SUCCESSFUL · INSTALADO sesión 4)
+- `customer_app/app/build/outputs/apk/debug/app-debug.apk` — Customer LAB `com.lc.customer.lab` (BUILD SUCCESSFUL · INSTALADO sesión 4)
 
 ### Formato correcto del API sync v2
 ```
