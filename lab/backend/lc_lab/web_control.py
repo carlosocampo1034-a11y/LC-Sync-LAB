@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 import qrcode
 import qrcode.image.svg
-from flask import Blueprint, abort, current_app, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, session, url_for
 
 from . import jobs as J
 from .api_ops import transicion_valida
@@ -150,20 +150,34 @@ def programar(u, jid):
     row = db.execute("SELECT * FROM jobs WHERE id = ?", (jid,)).fetchone()
     if row is None:
         abort(404)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if not _version_vigente(row):
-        return redirect(url_for("control.detalle", jid=jid, m="Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]))
+        msg = "Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     zona = current_app.config["ZONA_HORARIA"]
     try:
         dt = datetime.strptime(request.form["fecha"] + " " + request.form["hora"], "%Y-%m-%d %H:%M").replace(
             tzinfo=ZoneInfo(zona))
     except (KeyError, ValueError):
-        return redirect(url_for("control.detalle", jid=jid, m="Fecha u hora inválida"))
+        msg = "Fecha u hora inválida"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     st, v, conf = J.aplicar(db, row, {"programadoPara": int(dt.timestamp() * 1000), "zonaHoraria": zona,
                                       "hora": dt.strftime("%-I:%M %p")}, u["username"], "control",
                             version_base=request.form.get("version", type=int))
     db.commit()
-    return redirect(url_for("control.detalle", jid=jid, m="Programada" if st == "ACCEPTED" else
-                            f"Conflicto: {', '.join(conf)} cambió; recarga"))
+    if st == "ACCEPTED":
+        msg = "Programada"
+        if is_ajax:
+            return jsonify({"ok": True, "msg": msg, "version": v})
+    else:
+        msg = f"Conflicto: {', '.join(conf)} cambió; recarga"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg, "version": v})
+    return redirect(url_for("control.detalle", jid=jid, m=msg))
 
 
 @bp.post("/jobs/<int:jid>/asignar")
@@ -174,16 +188,30 @@ def asignar(u, jid):
     row = db.execute("SELECT * FROM jobs WHERE id = ?", (jid,)).fetchone()
     if row is None:
         abort(404)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if not _version_vigente(row):
-        return redirect(url_for("control.detalle", jid=jid, m="Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]))
+        msg = "Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     code = request.form.get("technicianId") or None
     if code and not db.execute("SELECT 1 FROM users WHERE technician_code=? AND role='TECHNICIAN'", (code,)).fetchone():
-        return redirect(url_for("control.detalle", jid=jid, m="Técnico no válido"))
+        msg = "Técnico no válido"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     st, v, conf = J.aplicar(db, row, {"technicianId": code, "estadoDispatch": "ASSIGNED" if code else "QUEUE"},
                             u["username"], "control", version_base=request.form.get("version", type=int))
     db.commit()
-    return redirect(url_for("control.detalle", jid=jid, m="Asignada" if st == "ACCEPTED" else
-                            f"Conflicto: {', '.join(conf)} cambió; recarga"))
+    if st == "ACCEPTED":
+        msg = "Asignada"
+        if is_ajax:
+            return jsonify({"ok": True, "msg": msg, "version": v, "technicianId": code or ""})
+    else:
+        msg = f"Conflicto: {', '.join(conf)} cambió; recarga"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg, "version": v})
+    return redirect(url_for("control.detalle", jid=jid, m=msg))
 
 
 @bp.post("/jobs/<int:jid>/estado")
@@ -197,12 +225,24 @@ def estado(u, jid):
     if not _version_vigente(row):
         return redirect(url_for("control.detalle", jid=jid, m="Conflicto: la orden cambió (ahora v%d); recarga" % row["version"]))
     nuevo = request.form.get("estado")
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if nuevo not in J.ESTADOS or not transicion_valida(row["estado"], nuevo, u["role"]):
-        return redirect(url_for("control.detalle", jid=jid, m=f"Transición no permitida: {row['estado']} → {nuevo}"))
+        msg = f"Transición no permitida: {row['estado']} → {nuevo}"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg})
+        return redirect(url_for("control.detalle", jid=jid, m=msg))
     st, v, conf = J.aplicar(db, row, {"estado": nuevo}, u["username"], "control",
                             version_base=request.form.get("version", type=int))
     db.commit()
-    return redirect(url_for("control.detalle", jid=jid, m="Estado actualizado" if st == "ACCEPTED" else "Conflicto"))
+    if st == "ACCEPTED":
+        msg = "Estado actualizado"
+        if is_ajax:
+            return jsonify({"ok": True, "msg": msg, "version": v, "estado": nuevo})
+    else:
+        msg = "Conflicto"
+        if is_ajax:
+            return jsonify({"ok": False, "msg": msg, "version": v})
+    return redirect(url_for("control.detalle", jid=jid, m=msg))
 
 
 @bp.route("/nueva", methods=["GET", "POST"])

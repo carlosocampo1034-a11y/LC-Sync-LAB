@@ -14,12 +14,20 @@ public final class LabSession {
     /** Prueba con dos teléfonos: HTTPS por la Wi-Fi privada, con la CA de laboratorio (network_security_config). */
     public static final String LAB_LAN_URL = "https://10.0.0.121:5443/api/";
 
-    /** Servidor elegido: solo dos valores posibles (sin texto libre). Se conserva al cerrar la sesión. */
+    /** Servidor elegido. Permite override explícito vía "lab_http_url" para pruebas locales. */
     public static String urlServidor(Context c) {
+        String override = p(c).getString("lab_http_url", null);
+        if (override != null && !override.isEmpty()) return override;
         if ("com.lc.technician.dev".equals(c.getPackageName())) {
             return com.lc.technician.BuildConfig.SUPABASE_URL + "/";
         }
         return "WIFI".equals(p(c).getString("servidor", "LOCAL")) ? LAB_LAN_URL : LAB_BASE_URL;
+    }
+
+    /** Configura el override de URL HTTP para backend LAB local. null para limpiar. */
+    public static void setLabHttpUrl(Context c, String url) {
+        if (url == null || url.isEmpty()) p(c).edit().remove("lab_http_url").apply();
+        else p(c).edit().putString("lab_http_url", url).apply();
     }
 
     public static boolean servidorWifi(Context c) { return "WIFI".equals(p(c).getString("servidor", "LOCAL")); }
@@ -91,6 +99,32 @@ public final class LabSession {
 
     public static String usuario(Context c) { return p(c).getString("usuario", null); }
     public static String technicianId(Context c) { return p(c).getString("technicianId", null); }
+    public static String nombre(Context c) { return p(c).getString("nombre", null); }
+
+    /**
+     * Resuelve un technicianId (código o UUID) a nombre de display.
+     * 1. Si coincide con la sesión activa → displayName de la sesión.
+     * 2. Si hay Room DB y el técnico existe → TechnicianEntity.nombre.
+     * 3. Fallback → raw technicianId.
+     */
+    public static String resolverNombre(Context c, String techId) {
+        if (techId == null || techId.isEmpty()) return "Sin asignar";
+        // Check current session
+        String sessionId = technicianId(c);
+        if (techId.equals(sessionId)) {
+            String n = nombre(c);
+            if (n != null && !n.isEmpty()) return n;
+        }
+        // Try Room DB (non-blocking only if already on bg thread; skip on main thread)
+        if (!android.os.Looper.getMainLooper().isCurrentThread()) {
+            try {
+                com.lc.technician.model.TechnicianEntity ent =
+                    com.lc.technician.data.LcDatabase.getInstance(c).technicianDao().getById(techId);
+                if (ent != null && ent.nombre != null && !ent.nombre.isEmpty()) return ent.nombre;
+            } catch (Exception ignored) { }
+        }
+        return techId;
+    }
 
     public static long cursor(Context c) { return p(c).getLong("cursor", 0); }
     public static void setCursor(Context c, long v) { p(c).edit().putLong("cursor", v).apply(); }

@@ -19,6 +19,9 @@ from functools import wraps
 from flask import (Flask, request, jsonify, render_template, redirect,
                    url_for, session, flash, send_file)
 import auth_config
+import hashlib
+import hmac
+import secrets
 
 app = Flask(__name__)
 app.secret_key = auth_config.get_secret_key()
@@ -143,6 +146,11 @@ def init_db():
             platform TEXT DEFAULT 'android'
         );
     """)
+    conn.commit()
+    # Migrate sync_technicians: add pin_hash for backend-authorised PIN validation
+    tech_cols = [row[1] for row in c.execute("PRAGMA table_info(sync_technicians)").fetchall()]
+    if "pin_hash" not in tech_cols:
+        c.execute("ALTER TABLE sync_technicians ADD COLUMN pin_hash TEXT")
     conn.commit()
     # Add sync_conflicts table
     c.execute("""CREATE TABLE IF NOT EXISTS sync_conflicts (
@@ -280,6 +288,110 @@ def api_health():
         "timestamp": int(time.time() * 1000),
         "db": os.path.exists(DB_PATH)
     })
+
+
+# ── PBKDF2 helpers (stdlib only — no bcrypt dependency) ──────────────────────
+_PBKDF2_ALGO = 'sha256'
+_PBKDF2_ITERS = 200_000
+
+
+def _pbkdf2_hash(value: str) -> str:
+    """Hash a PIN or password with PBKDF2-HMAC-SHA256. Prefix: pbkdf2:"""
+    salt = secrets.token_bytes(16)
+    h = hashlib.pbkdf2_hmac(_PBKDF2_ALGO, value.encode(), salt, _PBKDF2_ITERS)
+    return f"pbkdf2:{salt.hex()}:{h.hex()}"
+
+
+def _pbkdf2_verify(value: str, stored: str) -> bool:
+    """Verify against a stored pbkdf2: hash or legacy plain-sha256 hash."""
+    if stored.startswith("pbkdf2:"):
+        parts = stored.split(":")
+        if len(parts) != 3:
+            return False
+        try:
+            salt = bytes.fromhex(parts[1])
+            stored_hash = bytes.fromhex(parts[2])
+            test = hashlib.pbkdf2_hmac(_PBKDF2_ALGO, value.encode(), salt, _PBKDF2_ITERS)
+            return hmac.compare_digest(test, stored_hash)
+        except Exception:
+            return False
+    # Legacy: unsalted SHA-256 (migration only)
+    return hmac.compare_digest(hashlib.sha256(value.encode()).hexdigest(), stored)
+
+
+# ── PIN Validation (PUBLIC — limited rate, no session required) ───────────────
+# Rate-limit state: { ip → [timestamp, ...] }
+_pin_attempts = {}
+_pin_attempts_lock = threading.Lock()
+_PIN_LIMIT = 5        # max attempts
+_PIN_WINDOW = 60      # seconds
+
+
+def _pin_rate_ok(ip):
+    now = time.time()
+    with _pin_attempts_lock:
+        times = [t for t in _pin_attempts.get(ip, []) if now - t < _PIN_WINDOW]
+        if len(times) >= _PIN_LIMIT:
+            return False
+        times.append(now)
+        _pin_attempts[ip] = times
+        return True
+
+
+@app.route("/api/validate_pin", methods=["POST"])
+def api_validate_pin():
+    """Validates a technician PIN against the backend registry.
+    Returns {"valid": true, "role": "TECNICO"} on match.
+    Rate-limited to 5 attempts per 60 s per IP — brute-force deterrent.
+    Does NOT return the stored hash or any sensitive data."""
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if not _pin_rate_ok(ip):
+        return jsonify({"valid": False, "error": "too_many_attempts"}), 429
+
+    data = request.get_json(silent=True) or {}
+    pin = data.get("pin", "").strip()
+    if not pin or len(pin) < 4 or len(pin) > 8 or not pin.isdigit():
+        return jsonify({"valid": False, "error": "invalid_format"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    rows = c.execute(
+        "SELECT id, nombre, rol, pin_hash FROM sync_technicians "
+        "WHERE activo=1 AND pin_hash IS NOT NULL"
+    ).fetchall()
+    conn.close()
+
+    for row in rows:
+        try:
+            match = _pbkdf2_verify(pin, row["pin_hash"])
+        except Exception:
+            continue
+        if match:
+            return jsonify({"valid": True, "role": row["rol"],
+                            "userId": row["id"], "nombre": row["nombre"]})
+
+    return jsonify({"valid": False})
+
+
+@app.route("/api/technicians/<tech_id>/set_pin", methods=["POST"])
+@role_required("admin")
+def api_set_technician_pin(tech_id):
+    """Admin-only: sets or resets a technician's PIN (PBKDF2-hashed server-side)."""
+    data = request.get_json(silent=True) or {}
+    pin = data.get("pin", "").strip()
+    if not pin or len(pin) < 4 or len(pin) > 8 or not pin.isdigit():
+        return jsonify({"error": "PIN must be 4–8 digits"}), 400
+
+    pin_hash = _pbkdf2_hash(pin)
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE sync_technicians SET pin_hash=? WHERE id=?", (pin_hash, tech_id))
+    if c.rowcount == 0:
+        conn.close()
+        return jsonify({"error": "technician not found"}), 404
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
 
 
 # ── Sync Push (PUBLIC — Android app) ─────────────────────────────────────────
@@ -2437,7 +2549,6 @@ def api_users_list():
 @app.route("/api/users", methods=["POST"])
 @role_required("admin")
 def api_users_create():
-    import bcrypt as _bcrypt
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip()
     password = data.get("password", "")
@@ -2450,7 +2561,7 @@ def api_users_create():
     users = auth_config.load_users()
     if username in users:
         return jsonify({"error": "username already exists"}), 409
-    pw_hash = _bcrypt.hashpw(password.encode(), _bcrypt.gensalt(12)).decode()
+    pw_hash = _pbkdf2_hash(password)
     users[username] = {"username": username, "password_hash": pw_hash, "role": role, "name": name}
     save_users(users)
     return jsonify({"status": "created", "username": username}), 201
@@ -2459,7 +2570,6 @@ def api_users_create():
 @app.route("/api/users/<username>", methods=["PUT"])
 @role_required("admin")
 def api_users_update(username):
-    import bcrypt as _bcrypt
     data = request.get_json(silent=True) or {}
     users = auth_config.load_users()
     if username not in users:
@@ -2472,7 +2582,7 @@ def api_users_update(username):
             return jsonify({"error": "invalid role"}), 400
         user["role"] = data["role"]
     if data.get("password"):
-        pw_hash = _bcrypt.hashpw(data["password"].encode(), _bcrypt.gensalt(12)).decode()
+        pw_hash = _pbkdf2_hash(data["password"])
         user["password_hash"] = pw_hash
     users[username] = user
     save_users(users)

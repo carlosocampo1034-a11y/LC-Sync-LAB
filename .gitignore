@@ -3,10 +3,29 @@ instance/
 .env
 *.env
 local.properties
+server/.secret_key
+server/users.json
 
 # Evidencias de QA y Backups
 QA_ANDROID/
 LC_backups/
+backups/
+lc-public-repo/
+
+# Screenshots de QA (generadas por ADB — no van al repo)
+qa_*.png
+clean_*.png
+flask_out.txt
+
+# HTML generado por QA en raíz (capturas/reportes temporales — no son plantillas)
+/qa_*.html
+/login*.html
+/ctrl*.html
+/ctrl2.txt
+/ctrl3.txt
+# NOTA: server/templates/, lab/backend/lc_lab/templates/ y backups/stage_c_*/
+# contienen plantillas reales del Control Center y SÍ son rastreadas por git.
+# Solo se excluyen los .html sueltos en la raíz del repo generados por ADB/QA.
 
 # Python
 __pycache__/
@@ -41,3 +60,8 @@ local.properties
 .DS_Store
 *.log
 KEYSTORE_CREDENTIALS.txt
+
+# Bases de datos SQLite (nunca al repo)
+*.db
+*.sqlite
+*.sqlite3

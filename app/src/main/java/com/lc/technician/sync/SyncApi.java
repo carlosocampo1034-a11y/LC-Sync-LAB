@@ -48,6 +48,9 @@ public interface SyncApi {
     @GET("v2/auth/pin-pending")
     Call<com.google.gson.JsonObject> pinPendiente(@retrofit2.http.Header("Authorization") String auth);
 
+    @POST("validate_pin")
+    Call<SyncModels.ValidatePinResponse> validatePin(@Body SyncModels.ValidatePinRequest req);
+
     @GET("v2/sync/pull")
     Call<SyncModels.PullV2Response> pullV2(@retrofit2.http.Header("Authorization") String auth,
                                            @Query("since") long since, @Query("deviceId") String deviceId);

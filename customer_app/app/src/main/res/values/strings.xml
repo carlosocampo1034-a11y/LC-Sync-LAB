@@ -1,1 +1,13 @@
-<resources><string name="app_name">L&amp;C Cliente LAB</string></resources>
+<resources>
+    <string name="app_name">L&amp;C Home Services</string>
+    <string name="tagline">Tu hogar, en buenas manos.</string>
+    <string name="tagline_en">Your home, in good hands.</string>
+    <string name="mi_cuenta">Mi Cuenta</string>
+    <string name="ai_saludo">¡Hola! Bienvenido a L&amp;C Home Services. Soy tu asistente virtual y estoy aquí para ayudarte a cuidar tu hogar. ¿En qué puedo ayudarte hoy?</string>
+    <string name="accion_solicitar">SOLICITAR SERVICIO</string>
+    <string name="accion_foto">ENVIAR FOTO</string>
+    <string name="accion_foto_sub">Muéstranos el problema</string>
+    <string name="accion_chat">HABLAR O ESCRIBIR</string>
+    <string name="accion_chat_sub">Cuéntanos qué sucede</string>
+    <string name="promo_intro">🎉 Mantenimiento introductorio desde $50. Pregunta a tu asistente.</string>
+</resources>
