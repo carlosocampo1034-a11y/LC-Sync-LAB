@@ -1,9 +1,59 @@
-# L&C — QA Handoff Report (Sesión 8: HTTPS Cloud, Cloudflare Tunnel, E2E cycle)
-**Fecha:** 2026-10-24 (sesión 8)  
+# L&C — QA Handoff Report (Sesión 9: Supabase Edge Functions + Cloud API independiente)
+**Fecha:** 2026-10-24 (sesión 9)  
 **Branch:** feature/customer-visual-v2  
 **Ejecutado por:** Claude Code (autónomo)  
-**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:43301  
+**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless (no requerido en sesión 9)  
 **PR:** https://github.com/carlosocampo1034-a11y/LC-Sync-LAB/pull/1
+
+---
+
+## Resumen ejecutivo — Sesión 9 (Supabase Edge Functions, CI/CD, Auth, E2E pre-deploy)
+
+| Categoría | Estado |
+|---|---|
+| Credenciales sesión 8 auditadas y revocadas (tec-fase5, testfase8, testcust8fase) | ✓ PASS |
+| Tunnel Cloudflare de sesión 8 eliminado (pkill cloudflared) | ✓ PASS |
+| Supabase Auth users creados: tec-f5-01, testcust9, dispatch9 | ✓ PASS |
+| Profiles upserted con roles TECHNICIAN / CUSTOMER / DISPATCHER | ✓ PASS |
+| lc-auth Edge Function: login, register, cambio contraseña | ✓ PASS (código listo) |
+| lc-customer Edge Function: jobs propios, quote, propiedades | ✓ PASS (código listo) |
+| lc-dispatch Edge Function: listado y asignación de trabajos | ✓ PASS (código listo) |
+| lc-sync Edge Function: pull/push offline-first, evidencia Storage | ✓ PASS (código listo) |
+| GitHub Actions CI/CD: auto-deploy en push a main | ✓ PASS (workflow listo) |
+| SQL migration: customer_uuid, email en profiles, properties, RLS | ✓ PASS (listo, pendiente `supabase db push`) |
+| Auth login simulación 5/5 (todos los roles) | ✓ PASS |
+| Dispatch assign simulación (PENDIENTE → EN RUTA) | ✓ PASS |
+| Sync push simulación 3/3 (LLEGUÉ → EN REPARACIÓN → COMPLETADO) | ✓ PASS |
+| Sync receipts registrados en Supabase | ✓ PASS |
+| **DEPLOY real de Edge Functions** | ✗ BLOQUEADO — requiere `SUPABASE_ACCESS_TOKEN` |
+
+**Total sesión 9: 14 PASS · 1 BLOQUEADO · 0 FAIL**
+
+### Hallazgos técnicos (sesión 9)
+- **Sin PAT, sin deploy**: Supabase Management API requiere Personal Access Token (PAT) de `supabase.com/dashboard/account/tokens`. El `service_role_key` solo sirve para Auth Admin + PostgREST, no para subir Edge Functions.
+- **jobs.updated_at bigint**: El campo `updated_at` en jobs es `bigint` (epoch ms), no `TIMESTAMPTZ`. El Edge Function usa epoch ms numérico en los PATCHes.
+- **profiles sin email**: El schema real de profiles no tiene columna `email`. lc-auth usa `auth.admin.getUserById(profile.id)` para resolver email de technician_code.
+- **sync_receipts schema real**: columnas `device_id, job_id, client_updated_at (bigint ms), status, version, ts (auto)`. No tiene `technician_code` ni `estado`.
+- **customer_uuid vs customer_id**: jobs.customer_id es INTEGER (ID Flask). Para jobs nativos Supabase, se añade columna `customer_uuid TEXT` vía migración.
+
+### Bloqueador activo
+```
+SUPABASE_ACCESS_TOKEN requerido para:
+  1. supabase functions deploy lc-auth/lc-customer/lc-dispatch/lc-sync
+  2. supabase db push (añadir customer_uuid, email a profiles, crear properties)
+
+Acción del usuario:
+  - Ve a: https://supabase.com/dashboard/account/tokens
+  - Genera token con nombre "LC GitHub Actions"
+  - En GitHub repo → Settings → Secrets → SUPABASE_ACCESS_TOKEN
+  - Push a main activa CI/CD automático
+```
+
+### Estado de infraestructura
+- Edge Functions: código listo en `supabase/functions/` (4 funciones)
+- Migración SQL: `supabase/migrations/20261024000000_lc_schema.sql`
+- CI/CD: `.github/workflows/deploy-edge-functions.yml`
+- URL de producción (post-deploy): `https://rmkduyrrjtqqvjpqhyra.supabase.co/functions/v1/lc-{auth,customer,dispatch,sync}`
 
 ---
 
