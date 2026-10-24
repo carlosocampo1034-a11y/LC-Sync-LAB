@@ -36,7 +36,7 @@
 | tec-fase5 | [REDACTADO] | TECHNICIAN (tec-f5-01) | Technician |
 | despacho_lab | [REDACTADO] | DISPATCHER | Flask API |
 
-> **Seguridad:** Contraseñas rotadas 2026-10-24 tras detección en repositorio público. Credenciales anteriores (`CustF10Test!`, `TecF10Reset!`, `Despacho10!`) **ya inválidas**. Commits anteriores en historial git conservan texto antiguo — inactivo. Limpieza de historial pendiente de autorización explícita.
+> **Seguridad:** Contraseñas rotadas 2026-10-24 tras detección en repositorio público. Las credenciales anteriores están **ya inválidas**. Commits anteriores en historial git conservan texto antiguo — inactivo. Limpieza de historial pendiente de autorización explícita del propietario.
 
 ### Evidencias fotográficas
 Capturas en `/QA_ANDROID/FASE10_20261024/`:
