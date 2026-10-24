@@ -5,15 +5,27 @@ import threading
 import json
 from flask import Blueprint, g, jsonify, request
 
-# Simple in-process rate limiter for /guest/quote (IP-based, max 5 req/min)
+# In-process rate limiter for /guest/quote.
+# Uses request.remote_addr ONLY — never X-Forwarded-For (client-controlled header).
+# In production behind a trusted reverse proxy, configure the proxy to set REMOTE_ADDR
+# (e.g. Nginx proxy_set_header X-Real-IP + ProxyFix with trusted_hosts) instead of
+# reading X-Forwarded-For here.
 _RATE_LOCK = threading.Lock()
 _RATE_BUCKETS: dict = {}   # ip → [timestamp, ...]
 _RATE_WINDOW = 60          # seconds
 _RATE_MAX = 5              # requests per window per IP
+# Evict IPs not seen in the last 2 windows to keep memory bounded
+_RATE_EVICT_AFTER = _RATE_WINDOW * 2
 
 def _rate_ok(ip: str) -> bool:
     now = time.time()
     with _RATE_LOCK:
+        # Bounded eviction: drop IPs silent for > 2 windows
+        if len(_RATE_BUCKETS) > 500:
+            stale = [k for k, v in _RATE_BUCKETS.items()
+                     if not v or now - v[-1] > _RATE_EVICT_AFTER]
+            for k in stale:
+                del _RATE_BUCKETS[k]
         hits = _RATE_BUCKETS.get(ip, [])
         hits = [t for t in hits if now - t < _RATE_WINDOW]
         if len(hits) >= _RATE_MAX:
@@ -366,8 +378,8 @@ def guest_quote():
     """Solicitud de presupuesto sin cuenta (modo invitado de la app Customer).
     No requiere autenticación. Crea un cliente lead y una orden PENDIENTE en la cola de despacho.
     Protegido: rate limit por IP (5/min), deduplicación por teléfono (5 min), max lengths."""
-    # Rate limiting (in-process, no persistence — sufficient for LAB; use Redis in prod)
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    # Rate limit keyed on REMOTE_ADDR only — never trust client-supplied headers
+    ip = request.remote_addr or "unknown"
     if not _rate_ok(ip):
         return _err("demasiadas solicitudes, intenta en un momento", 429)
 
@@ -378,6 +390,8 @@ def guest_quote():
     direccion = (d.get("direccion") or "").strip()[:300]
     descripcion = (d.get("descripcion") or "").strip()[:1000]
     categoria = (d.get("categoria") or "").strip()[:50] or None
+    # Idempotency key supplied by mobile app (UUID4). Absent = stateless submission.
+    cri = (d.get("clientRequestId") or "").strip()[:64] or None
 
     if len(nombre) < 3:
         return _err("nombre requerido (mínimo 3 caracteres)")
@@ -393,19 +407,40 @@ def guest_quote():
     db = get_db()
     t = now_ms()
 
-    # Duplicate guard: same telefono within 5 minutes → return existing referencia
-    recent = db.execute(
-        "SELECT id FROM jobs WHERE telefono=? AND origin='CUSTOMER' AND created_at > ? "
-        "AND estado NOT IN ('CANCELADO') ORDER BY created_at DESC LIMIT 1",
-        (telefono, t - _GUEST_DEDUP_WINDOW_MS)
-    ).fetchone()
-    if recent:
-        referencia = f"LC-{recent['id']:04d}"
-        return jsonify(ok=True, id=recent["id"], referencia=referencia,
-                       mensaje=f"Ya tienes una solicitud reciente ({referencia}). "
-                                "Te contactaremos pronto."), 200
+    # --- Idempotency (P1: confiable, keyed by clientRequestId not by phone alone) ---
+    # Priority 1: exact clientRequestId match — strongest guarantee, safe for retries
+    if cri:
+        existing = db.execute(
+            "SELECT j.id FROM jobs j "
+            "JOIN audit_log a ON a.entity='job' AND a.entity_id=j.id "
+            "WHERE a.action='GUEST_QUOTE' AND a.detail LIKE ? LIMIT 1",
+            (f"%cri={cri}%",)
+        ).fetchone()
+        if existing:
+            jid = existing["id"]
+            referencia = f"LC-{jid:04d}"
+            return jsonify(ok=True, id=jid, referencia=referencia,
+                           mensaje=f"Solicitud ya registrada ({referencia}). "
+                                    "Te contactaremos pronto.", duplicate=True), 200
 
-    # Crear cliente lead (sin cuenta)
+    # Priority 2: soft dedup — same phone+description within 5 min
+    # This only fires when cri is absent AND the content is identical (not just same phone).
+    # Purpose: catch double-taps from the UI; does NOT block different legitimate requests.
+    if not cri:
+        recent = db.execute(
+            "SELECT id FROM jobs WHERE telefono=? AND descripcion=? AND origin='CUSTOMER' "
+            "AND created_at > ? AND estado NOT IN ('CANCELADO') "
+            "ORDER BY created_at DESC LIMIT 1",
+            (telefono, descripcion, t - _GUEST_DEDUP_WINDOW_MS)
+        ).fetchone()
+        if recent:
+            jid = recent["id"]
+            referencia = f"LC-{jid:04d}"
+            return jsonify(ok=True, id=jid, referencia=referencia,
+                           mensaje=f"Solicitud ya registrada ({referencia}). "
+                                    "Te contactaremos pronto.", duplicate=True), 200
+
+    # --- Create customer lead and job ---
     cid = db.execute(
         "INSERT INTO customers(nombre, telefono, email, created_at, updated_at) VALUES (?,?,?,?,?)",
         (nombre, telefono, email, t, t)
@@ -425,7 +460,8 @@ def guest_quote():
 
     jid = J.crear(db, datos, "CUSTOMER", "guest_app", "customer_app",
                   extra={"customer_id": cid, "estado_dispatch": "QUEUE", "prioridad": "NORMAL"})
-    audit(db, "guest_app", "GUEST_QUOTE", "job", jid, f"tel={telefono} ip={ip}")
+    cri_tag = f" cri={cri}" if cri else ""
+    audit(db, "guest_app", "GUEST_QUOTE", "job", jid, f"tel={telefono} ip={ip}{cri_tag}")
     db.commit()
 
     referencia = f"LC-{jid:04d}"

@@ -278,6 +278,7 @@ public class GuestRequestActivity extends AppCompatActivity {
     // ── Envío ─────────────────────────────────────────────────────────────────
 
     private Button btnEnviar;
+    private String pendingClientRequestId; // stable per form-open, cleared on success
 
     private void enviar() {
         String nom  = nombre.getText().toString().trim();
@@ -306,6 +307,11 @@ public class GuestRequestActivity extends AppCompatActivity {
         btnEnviar.setText(en ? "SENDING…" : "ENVIANDO…");
 
         String emailVal = email.getText().toString().trim();
+        // Stable idempotency key for this submission attempt — survives retries on the same form open
+        if (pendingClientRequestId == null) {
+            pendingClientRequestId = java.util.UUID.randomUUID().toString();
+        }
+        final String cri = pendingClientRequestId;
         Handler main = new Handler(Looper.getMainLooper());
         Executors.newSingleThreadExecutor().execute(() -> {
             Api.Respuesta r;
@@ -316,6 +322,7 @@ public class GuestRequestActivity extends AppCompatActivity {
                 body.put("email", emailVal.isEmpty() ? null : emailVal);
                 body.put("direccion", dir);
                 body.put("descripcion", desc);
+                body.put("clientRequestId", cri);
                 r = Api.post(this, "/guest/quote", body);
             } catch (Exception e) {
                 r = new Api.Respuesta(-1, null);
@@ -324,10 +331,16 @@ public class GuestRequestActivity extends AppCompatActivity {
             main.post(() -> {
                 btnEnviar.setEnabled(true);
                 btnEnviar.setText(en ? "SEND REQUEST" : "ENVIAR SOLICITUD");
-                if (resultado.codigo == 201) {
-                    String ref = resultado.cuerpo != null
-                            ? resultado.cuerpo.optString("referencia", "") : "";
-                    mostrarConfirmacion(nom, ref);
+                // Accept both 201 (new order) and 200 (duplicate — same reference returned)
+                // Both have ok=true and a valid referencia field
+                boolean serverOk = (resultado.codigo == 201 || resultado.codigo == 200)
+                        && resultado.cuerpo != null
+                        && resultado.cuerpo.optBoolean("ok", false);
+                if (serverOk) {
+                    String ref = resultado.cuerpo.optString("referencia", "");
+                    boolean isDuplicate = resultado.cuerpo.optBoolean("duplicate", false);
+                    pendingClientRequestId = null; // clear only on confirmed success
+                    mostrarConfirmacion(nom, ref, isDuplicate);
                 } else {
                     String err = resultado.error();
                     Toast.makeText(this,
@@ -339,19 +352,25 @@ public class GuestRequestActivity extends AppCompatActivity {
         });
     }
 
-    private void mostrarConfirmacion(String nomCliente, String referencia) {
+    private void mostrarConfirmacion(String nomCliente, String referencia, boolean isDuplicate) {
         String primer = nomCliente.trim().split("\\s+")[0];
         String refLine = referencia.isEmpty() ? "" :
                 (en ? "\n\nReference number: " + referencia
                     : "\n\nNúmero de referencia: " + referencia);
-        String titulo = en ? "Request received!" : "¡Solicitud recibida!";
-        String msg = en
-            ? "Thank you, " + primer + ". Your request has been registered." + refLine + "\n\n"
-              + "An L&C advisor will contact you to confirm the visit.\n\n"
-              + "📞 You can also call us directly."
-            : "Gracias, " + primer + ". Tu solicitud fue registrada." + refLine + "\n\n"
-              + "Un asesor de L&C se pondrá en contacto contigo para confirmar la visita.\n\n"
-              + "📞 También puedes llamarnos directamente.";
+        String titulo = isDuplicate
+                ? (en ? "Already registered" : "Ya registrada")
+                : (en ? "Request received!" : "¡Solicitud recibida!");
+        String msg = isDuplicate
+            ? (en
+                ? "You already have a recent request." + refLine + "\n\nWe will contact you soon."
+                : "Ya tienes una solicitud reciente." + refLine + "\n\nTe contactaremos pronto.")
+            : (en
+                ? "Thank you, " + primer + ". Your request has been registered." + refLine + "\n\n"
+                  + "An L&C advisor will contact you to confirm the visit.\n\n"
+                  + "📞 You can also call us directly."
+                : "Gracias, " + primer + ". Tu solicitud fue registrada." + refLine + "\n\n"
+                  + "Un asesor de L&C se pondrá en contacto contigo para confirmar la visita.\n\n"
+                  + "📞 También puedes llamarnos directamente.");
         String ok = en ? "Got it" : "Entendido";
 
         new androidx.appcompat.app.AlertDialog.Builder(this)
