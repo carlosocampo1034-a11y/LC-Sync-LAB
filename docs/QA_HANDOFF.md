@@ -7,6 +7,29 @@
 
 ---
 
+## Corrección crítica — Sesión 9b (Auditoría pre-deploy)
+
+| Corrección | Resultado |
+|---|---|
+| T1: Auth (3 roles) | ✓ PASS |
+| T2.1: Anon bloqueado (jobs) | ✓ PASS |
+| T2.2: Cliente ve 0 trabajos propios (sin FK Flask) | ✓ PASS |
+| T2.3: Cliente ve solo su propio perfil | ✓ PASS |
+| T2.4: Técnico ve solo trabajos tec-f5-01 | ✓ PASS |
+| T2.5: Dispatcher ve todos los trabajos (correcto por rol) | ✓ PASS |
+| T2.6: Dispatcher NO puede INSERT en sync_receipts | ✓ PASS |
+| T3.1-4: Pull usa BIGINT (epoch ms), no ISO — paginación cursor OK | ✓ PASS |
+| T4.1-3: CAS atómico: versión incorrecta=0 filas, correcta=1 fila | ✓ PASS |
+| T5.1-4: Estado ASIGNADO ≠ EN RUTA — técnico auto-inicia EN RUTA | ✓ PASS |
+| T6.1-2: Idempotencia de receipts (upsert job_id+version) | ✓ PASS |
+| T7.1-3: Sin secretos hardcodeados, workflow solo manual | ✓ PASS |
+
+**Total correcciones: 26/26 PASS · 0 FAIL**
+
+### Bloqueador de push
+El PAT de GitHub carece del scope  para subir .  
+**Acción**: GitHub → Settings → Developer Settings → Personal access tokens → editar → añadir scope **workflow**.
+
 ## Resumen ejecutivo — Sesión 9 (Supabase Edge Functions, CI/CD, Auth, E2E pre-deploy)
 
 | Categoría | Estado |
