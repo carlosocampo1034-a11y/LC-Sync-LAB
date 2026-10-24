@@ -15,9 +15,17 @@ lc-public-repo/
 # Screenshots de QA (generadas por ADB — no van al repo)
 qa_*.png
 clean_*.png
-qa_*.html
-*.html
 flask_out.txt
+
+# HTML generado por QA en raíz (capturas/reportes temporales — no son plantillas)
+/qa_*.html
+/login*.html
+/ctrl*.html
+/ctrl2.txt
+/ctrl3.txt
+# NOTA: server/templates/, lab/backend/lc_lab/templates/ y backups/stage_c_*/
+# contienen plantillas reales del Control Center y SÍ son rastreadas por git.
+# Solo se excluyen los .html sueltos en la raíz del repo generados por ADB/QA.
 
 # Python
 __pycache__/
