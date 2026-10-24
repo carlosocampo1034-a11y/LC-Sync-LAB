@@ -120,6 +120,30 @@ def test_version_remota_mas_nueva_no_se_pisa(entorno):
     assert sb.jobs[(900004,)]["estado"] == "CERRADO_EN_NUBE"
 
 
+def test_recibos_ts_iso8601_y_client_updated_at_bigint(entorno):
+    """ts → ISO 8601 UTC (timestamptz); client_updated_at → BIGINT sin convertir."""
+    db, sb, esp = entorno
+    _orden(db, 900010)
+    ms = 1_792_852_906_146  # epoch-ms que causaba error 22008 en Supabase
+    db.execute("INSERT INTO sync_receipts(device_id, job_id, client_updated_at, status, version, ts) "
+               "VALUES ('dev-reg', 900010, ?, 'ACCEPTED', 1, ?)", (ms, ms))
+    db.commit()
+    esp.ciclo()
+    assert len(sb.recibos) == 1
+    clave = list(sb.recibos)[0]
+    fila = sb.recibos[clave]
+    # ts debe ser ISO 8601 terminado en +00:00
+    ts_val = fila["ts"]
+    assert isinstance(ts_val, str) and ts_val.endswith("+00:00"), f"ts no es ISO 8601 UTC: {ts_val!r}"
+    # client_updated_at debe llegar como entero (BIGINT), no como string
+    assert fila["client_updated_at"] == ms, f"client_updated_at alterado: {fila['client_updated_at']!r}"
+    # idempotencia: segundo ciclo no duplica
+    db.execute("UPDATE supabase_mirror_state SET value = 0 WHERE name = 'receipts_rowid'")
+    db.commit()
+    esp.ciclo()
+    assert len(sb.recibos) == 1
+
+
 def test_recibos_idempotentes_con_ts_repetido(entorno):
     db, sb, esp = entorno
     _orden(db, 900005)

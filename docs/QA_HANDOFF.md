@@ -1,9 +1,32 @@
-# L&C — QA Handoff Report (Sesión 5: Integración y QA Real)
-**Fecha:** 2026-10-24 (sesión 5)  
+# L&C — QA Handoff Report (Sesión 6: Fix sync_receipts datestyle)
+**Fecha:** 2026-10-24 (sesión 6)  
 **Branch:** feature/customer-visual-v2  
 **Ejecutado por:** Claude Code (autónomo)  
 **Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:36639  
 **PR:** https://github.com/carlosocampo1034-a11y/LC-Sync-LAB/pull/1
+
+---
+
+## Resumen ejecutivo — Sesión 6 (Fix sync_receipts datestyle)
+
+| Categoría | Estado |
+|---|---|
+| Fix `_recibos()`: `ts` → `_iso(r["ts"])` en supabase_mirror.py | ✓ PASS |
+| `client_updated_at` conservado como BIGINT (sin convertir) | ✓ PASS |
+| Regresión `test_recibos_ts_iso8601_y_client_updated_at_bigint` | ✓ PASS |
+| 5/6 tests pytest (1 falla pre-existente no relacionada) | ✓ PASS |
+| Mirror cycle live: 15 sync_receipts enviados a Supabase (ok=1) | ✓ PASS |
+| Cursor `receipts_rowid` avanzado a 15 | ✓ PASS |
+| Log id=35: `ok=1`, sin errores 22008 | ✓ PASS |
+| Commit en feature/customer-visual-v2 | ✓ PASS |
+
+**Total sesión 6: 8/8 PASS · 0 FAIL**
+
+### Bug corregido
+- **I4** (Media) — `sync_receipts.ts` se enviaba como epoch-ms entero (e.g. `1792852906146`).
+  Supabase (`timestamptz`) rechazaba con HTTP 400 / PostgreSQL 22008 "date/time field value out of range".
+  Fix: `"ts": _iso(r["ts"])` — `_iso()` ya existía en el módulo.
+  Verificado: cursor atascado avanzó, 15 recibos pendientes de sesión 5 sincronizados exitosamente.
 
 ---
 
@@ -42,7 +65,7 @@
 |---|---|
 | P-HTTPS | Conectividad HTTPS estable — tunnel público pendiente |
 | P-LOGIN-UI | Login Customer desde UI sin workaround de sesión inyectada |
-| P-SUPABASE | Fix datestyle en sync_receipts → Supabase |
+| ~~P-SUPABASE~~ | ~~Fix datestyle en sync_receipts → Supabase~~ — **RESUELTO sesión 6** |
 | P-MOVIL | Pruebas con datos móviles / redes distintas al WiFi local |
 | P-CORS | CORS allowlist producción en /guest/quote |
 | P-REDIS | Redis para rate-limit en producción |
