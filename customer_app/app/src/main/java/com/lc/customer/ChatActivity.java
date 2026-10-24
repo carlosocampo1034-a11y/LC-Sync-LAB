@@ -151,11 +151,13 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     // ── Saludos y sugerencias ─────────────────────────────────────────────────
+    // NOTE: This assistant uses programmed keyword-based responses (not AI/LLM).
+    // Real AI integration is pending backend authorization. REGLA 4 / FASE 7.
 
     private String saludo() {
         return en
-            ? "Hello! Welcome to L&C Home Services. I'm your virtual assistant, here to help you take care of your home. How can I help you today?"
-            : "¡Hola! Bienvenido a L&C Home Services. Soy tu asistente virtual y estoy aquí para ayudarte a cuidar tu hogar. ¿En qué puedo ayudarte hoy?";
+            ? "Hello! Welcome to L&C Home Services. I'm your automated assistant, ready to answer common questions about our services. For complex inquiries, our team will contact you directly. How can I help you?"
+            : "¡Hola! Bienvenido a L&C Home Services. Soy el asistente automático, listo para responder preguntas frecuentes sobre nuestros servicios. Para consultas complejas, nuestro equipo te contactará directamente. ¿En qué puedo ayudarte?";
     }
 
     private String[] sugerencias() {
