@@ -60,3 +60,8 @@ local.properties
 .DS_Store
 *.log
 KEYSTORE_CREDENTIALS.txt
+
+# Bases de datos SQLite (nunca al repo)
+*.db
+*.sqlite
+*.sqlite3
