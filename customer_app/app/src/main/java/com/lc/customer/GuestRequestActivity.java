@@ -13,6 +13,8 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.text.InputType;
 import android.util.TypedValue;
@@ -26,6 +28,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.util.concurrent.Executors;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -161,7 +165,8 @@ public class GuestRequestActivity extends AppCompatActivity {
 
         // Botón enviar
         cont.addView(espacio(24));
-        Button enviar = new Button(this);
+        btnEnviar = new Button(this);
+        Button enviar = btnEnviar;
         enviar.setText(en ? "SEND REQUEST" : "ENVIAR SOLICITUD");
         enviar.setAllCaps(true);
         enviar.setTypeface(Typeface.DEFAULT_BOLD);
@@ -272,6 +277,8 @@ public class GuestRequestActivity extends AppCompatActivity {
 
     // ── Envío ─────────────────────────────────────────────────────────────────
 
+    private Button btnEnviar;
+
     private void enviar() {
         String nom  = nombre.getText().toString().trim();
         String tel  = telefono.getText().toString().trim();
@@ -294,17 +301,55 @@ public class GuestRequestActivity extends AppCompatActivity {
             return;
         }
 
-        mostrarConfirmacion(nom);
+        // Disable button while the request is in flight
+        btnEnviar.setEnabled(false);
+        btnEnviar.setText(en ? "SENDING…" : "ENVIANDO…");
+
+        String emailVal = email.getText().toString().trim();
+        Handler main = new Handler(Looper.getMainLooper());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Api.Respuesta r;
+            try {
+                org.json.JSONObject body = new org.json.JSONObject();
+                body.put("nombre", nom);
+                body.put("telefono", tel);
+                body.put("email", emailVal.isEmpty() ? null : emailVal);
+                body.put("direccion", dir);
+                body.put("descripcion", desc);
+                r = Api.post(this, "/guest/quote", body);
+            } catch (Exception e) {
+                r = new Api.Respuesta(-1, null);
+            }
+            final Api.Respuesta resultado = r;
+            main.post(() -> {
+                btnEnviar.setEnabled(true);
+                btnEnviar.setText(en ? "SEND REQUEST" : "ENVIAR SOLICITUD");
+                if (resultado.codigo == 201) {
+                    String ref = resultado.cuerpo != null
+                            ? resultado.cuerpo.optString("referencia", "") : "";
+                    mostrarConfirmacion(nom, ref);
+                } else {
+                    String err = resultado.error();
+                    Toast.makeText(this,
+                            en ? "Could not send request: " + err
+                               : "No se pudo enviar la solicitud: " + err,
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+        });
     }
 
-    private void mostrarConfirmacion(String nomCliente) {
+    private void mostrarConfirmacion(String nomCliente, String referencia) {
         String primer = nomCliente.trim().split("\\s+")[0];
+        String refLine = referencia.isEmpty() ? "" :
+                (en ? "\n\nReference number: " + referencia
+                    : "\n\nNúmero de referencia: " + referencia);
         String titulo = en ? "Request received!" : "¡Solicitud recibida!";
         String msg = en
-            ? "Thank you, " + primer + ". Your request has been registered.\n\n"
+            ? "Thank you, " + primer + ". Your request has been registered." + refLine + "\n\n"
               + "An L&C advisor will contact you to confirm the visit.\n\n"
               + "📞 You can also call us directly."
-            : "Gracias, " + primer + ". Tu solicitud fue registrada.\n\n"
+            : "Gracias, " + primer + ". Tu solicitud fue registrada." + refLine + "\n\n"
               + "Un asesor de L&C se pondrá en contacto contigo para confirmar la visita.\n\n"
               + "📞 También puedes llamarnos directamente.";
         String ok = en ? "Got it" : "Entendido";

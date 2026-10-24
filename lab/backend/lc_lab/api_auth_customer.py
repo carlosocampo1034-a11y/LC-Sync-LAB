@@ -339,6 +339,65 @@ def decidir_variacion(vid):
     return jsonify(variacion=out)
 
 
+@bp.post("/guest/quote")
+def guest_quote():
+    """Solicitud de presupuesto sin cuenta (modo invitado de la app Customer).
+    No requiere autenticación. Crea un cliente lead y una orden PENDIENTE en la cola de despacho."""
+    d = _json()
+    nombre = (d.get("nombre") or "").strip()
+    telefono = (d.get("telefono") or "").strip()
+    email = (d.get("email") or "").strip() or None
+    direccion = (d.get("direccion") or "").strip()
+    descripcion = (d.get("descripcion") or "").strip()
+    categoria = (d.get("categoria") or "").strip() or None
+
+    if len(nombre) < 3:
+        return _err("nombre requerido (mínimo 3 caracteres)")
+    if not telefono:
+        return _err("teléfono requerido")
+    if not TEL_RE.match(telefono):
+        return _err("teléfono inválido (solo dígitos, 7-15 caracteres)")
+    if not direccion:
+        return _err("dirección requerida")
+    if len(descripcion) < 5:
+        return _err("descripción muy corta (mínimo 5 caracteres)")
+
+    db = get_db()
+    t = now_ms()
+
+    # Crear cliente lead (sin cuenta, marcado como GUEST en notas)
+    cid = db.execute(
+        "INSERT INTO customers(nombre, telefono, email, created_at, updated_at) VALUES (?,?,?,?,?)",
+        (nombre, telefono, email, t, t)
+    ).lastrowid
+
+    datos = {
+        "cliente": nombre,
+        "telefono": telefono,
+        "direccion": direccion,
+        "descripcion": descripcion,
+        "categoria": categoria,
+        "estado": "PENDIENTE",
+    }
+    errs = J.validar(datos, creando=True)
+    if errs:
+        return _err("; ".join(errs))
+
+    jid = J.crear(db, datos, "CUSTOMER", "guest_app", "customer_app",
+                  extra={"customer_id": cid, "estado_dispatch": "QUEUE", "prioridad": "NORMAL"})
+    audit(db, "guest_app", "GUEST_QUOTE", "job", jid, f"tel={telefono}")
+    db.commit()
+
+    referencia = f"LC-{jid:04d}"
+    return jsonify(
+        ok=True,
+        id=jid,
+        referencia=referencia,
+        mensaje=f"Tu solicitud fue registrada con el número {referencia}. "
+                f"Nos pondremos en contacto al {telefono} para confirmar la visita."
+    ), 201
+
+
 @bp.get("/auth/pin-pending")
 @requiere("TECHNICIAN")
 def pin_pendiente():
