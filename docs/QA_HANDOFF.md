@@ -1,9 +1,69 @@
-# L&C — QA Handoff Report (Sesión 9: Supabase Edge Functions + Cloud API independiente)
-**Fecha:** 2026-10-24 (sesión 9)  
+# L&C — QA Handoff Report (Sesión 10: Integración Cloud + E2E completo en dispositivo)
+**Fecha:** 2026-10-24 (sesión 10)  
 **Branch:** feature/customer-visual-v2  
 **Ejecutado por:** Claude Code (autónomo)  
-**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless (no requerido en sesión 9)  
+**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:44941  
 **PR:** https://github.com/carlosocampo1034-a11y/LC-Sync-LAB/pull/1
+
+---
+
+## Sesión 10 — E2E completo en UI real (Flask + Cloudflared)
+
+### Resumen ejecutivo
+
+| Paso | App | Resultado |
+|---|---|---|
+| Customer login (custf10 / CustF10Test!) | Customer (com.lc.customer.lab) | ✓ PASS — "Hola, Cliente" |
+| Agregar propiedad "CallCalle 123 Centro F10QA" | Customer | ✓ PASS — guardada en Flask |
+| Solicitar servicio HVAC (descripción: Aire acondicionado) | Customer | ✓ PASS — Job #8000000000013 creado |
+| Asignar job a tec-f5-01 (dispatcher: despacho_lab) | Flask API | ✓ PASS — estadoDispatch: ASSIGNED |
+| Job aparece en app de técnico post-sync (búsqueda F10QA) | Technician (com.lc.technician.dev) | ✓ PASS — PENDIENTE visible |
+| Técnico transiciona: PENDIENTE → EN RUTA | Technician | ✓ PASS — VOY EN CAMINO + confirmar |
+| Técnico transiciona: EN RUTA → LLEGUÉ | Technician | ✓ PASS — LLEGUÉ confirmado |
+| Técnico transiciona: LLEGUÉ → EN REPARACIÓN | Technician | ✓ PASS — INICIAR REPARACIÓN |
+| Notas diagnóstico: "Diagnostico: refrigerante bajo. Se recargo." | Technician | ✓ PASS — guardado local |
+| Evidencia fotográfica (lab test photo, categoría Antes) | Technician | ✓ PASS — foto añadida |
+| Técnico transiciona: EN REPARACIÓN → COMPLETADO | Technician | ✓ PASS — UI muestra COMPLETADO |
+| Sync push a Flask (estado COMPLETADO, version=3) | Flask via sync/push | ✓ PASS — accepted:1 |
+| Flask verifica COMPLETADO (estado + categoriaAgenda) | Flask API | ✓ PASS — COMPLETADO / COMPLETADOS |
+
+**Total sesión 10: 13/13 PASS · 0 BLOQUEADO · 0 FAIL**
+
+### Credenciales QA usadas (Sesión 10)
+| Usuario | Contraseña | Rol | App |
+|---|---|---|---|
+| custf10 | CustF10Test! | CUSTOMER (customer_id=18) | Customer |
+| tec-fase5 | TecF10Reset! | TECHNICIAN (tec-f5-01) | Technician |
+| despacho_lab | Despacho10! | DISPATCHER | Flask API |
+
+### Evidencias fotográficas
+Capturas en `/QA_ANDROID/FASE10_20261024/`:
+- `f10_cust_07_logged_in.png` — Customer autenticado ("Hola, Cliente")
+- `f10_cust_09_prop_saved.png` — Propiedad guardada en lista
+- `f10_cust_12_svc_sent.png` — "Solicitud enviada · Nº 8000000000013"
+- `f10_tec_01_job_found.png` — Job F10QA en app de técnico (PENDIENTE)
+- `f10_tec_02_job_detail.png` — Detalle del trabajo asignado
+- `f10_tec_03_en_ruta.png` — Estado EN RUTA
+- `f10_tec_04_llegue.png` — Estado LLEGUÉ con INICIAR REPARACIÓN
+- `f10_tec_05_en_reparacion.png` — Estado EN REPARACIÓN
+- `f10_tec_06_foto_added.png` — Evidencia fotográfica agregada
+- `f10_tec_07_completado.png` — Estado COMPLETADO en app
+
+### Hallazgos técnicos (Sesión 10)
+- **ENTRAR button y teclado**: El teclado virtual cubre el botón ENTRAR durante entrada de contraseña. Solución: `KEYCODE_BACK` para cerrar teclado antes de tapear botón. Bounds de ENTRAR en login: `[56,1828][1024,1980]`.
+- **`input text` con espacios**: `adb input text "texto con espacios"` termina en el primer espacio. Solución: enviar palabras individualmente + `KEYCODE_SPACE` entre ellas.
+- **SINCRONIZAR AHORA**: El sync manual empuja cambios locales a Flask vía `POST /api/v2/sync/push`. Requiere navegar a Ajustes → SINCRONIZAR AHORA. El sync automático es cada 15 min.
+- **Completion requiere evidencia**: El app no deja marcar COMPLETADO sin al menos una foto. La opción "Foto de prueba (laboratorio)" es válida para QA.
+- **Flask vs Supabase Edge Functions**: Backend activo es Flask (tunnel cloudflared). Edge Functions no desplegadas aún (requiere PAT Supabase). El flujo completo funciona sobre Flask.
+- **Tunnel URL activa**: `https://shown-slide-you-meaningful.trycloudflare.com/api/v2` (cambia al reiniciar cloudflared).
+
+### Bloqueadores pendientes (sin cambio respecto a Sesión 9)
+1. **Supabase PAT**: Para `supabase functions deploy`. Ve a `supabase.com/dashboard/account/tokens`.
+2. **GitHub PAT scope `workflow`**: Para subir `.github/workflows/deploy-edge-functions.yml`.
+
+---
+
+## Corrección crítica — Sesión 9b (Auditoría pre-deploy)
 
 ---
 
