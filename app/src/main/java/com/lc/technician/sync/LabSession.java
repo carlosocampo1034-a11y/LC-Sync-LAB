@@ -14,12 +14,20 @@ public final class LabSession {
     /** Prueba con dos teléfonos: HTTPS por la Wi-Fi privada, con la CA de laboratorio (network_security_config). */
     public static final String LAB_LAN_URL = "https://10.0.0.121:5443/api/";
 
-    /** Servidor elegido: solo dos valores posibles (sin texto libre). Se conserva al cerrar la sesión. */
+    /** Servidor elegido. Permite override explícito vía "lab_http_url" para pruebas locales. */
     public static String urlServidor(Context c) {
+        String override = p(c).getString("lab_http_url", null);
+        if (override != null && !override.isEmpty()) return override;
         if ("com.lc.technician.dev".equals(c.getPackageName())) {
             return com.lc.technician.BuildConfig.SUPABASE_URL + "/";
         }
         return "WIFI".equals(p(c).getString("servidor", "LOCAL")) ? LAB_LAN_URL : LAB_BASE_URL;
+    }
+
+    /** Configura el override de URL HTTP para backend LAB local. null para limpiar. */
+    public static void setLabHttpUrl(Context c, String url) {
+        if (url == null || url.isEmpty()) p(c).edit().remove("lab_http_url").apply();
+        else p(c).edit().putString("lab_http_url", url).apply();
     }
 
     public static boolean servidorWifi(Context c) { return "WIFI".equals(p(c).getString("servidor", "LOCAL")); }
