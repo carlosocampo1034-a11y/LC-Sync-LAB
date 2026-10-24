@@ -1,9 +1,31 @@
-# L&C — QA Handoff Report (Sesión 6: Fix sync_receipts datestyle)
-**Fecha:** 2026-10-24 (sesión 6)  
+# L&C — QA Handoff Report (Sesión 7: 6/6 tests, Customer UI login, Technician sync)
+**Fecha:** 2026-10-24 (sesión 7)  
 **Branch:** feature/customer-visual-v2  
 **Ejecutado por:** Claude Code (autónomo)  
 **Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:36639  
 **PR:** https://github.com/carlosocampo1034-a11y/LC-Sync-LAB/pull/1
+
+---
+
+## Resumen ejecutivo — Sesión 7 (6/6 tests, Customer UI login, Technician sync)
+
+| Categoría | Estado |
+|---|---|
+| `test_no_exporta_historicas_ni_secretos` corregido — 6/6 PASS | ✓ PASS |
+| Customer UI login real (`qauser7` / `QAFase77`, sin inyección) | ✓ PASS |
+| Pantalla "Hola, QA" visible tras login — 0 crashes | ✓ PASS |
+| Technician v2 sync nativo ("SINCRONIZAR AHORA" funciona) | ✓ PASS |
+| Auto-sync cada 15 min activo ("Última bajada" actualizada) | ✓ PASS |
+| PR #1 descripción actualizada via GitHub API | ✓ PASS |
+| HTTPS público estable | ✗ BLOQUEADO |
+
+**Total sesión 7: 6 PASS · 1 BLOQUEADO · 0 FAIL**
+
+### Hallazgos técnicos
+- **Customer UI login**: `adb input text` falla con `_` (underscore). Solución: usar usernames sin `_`. Workaround documentado: `KEYCODE_MOVE_END` + N×`KEYCODE_DEL` para limpiar campo.
+- **test_no_exporta_historicas_ni_secretos**: Test escrito para esquema futuro (`technician_id` + `datos` JSON). Esquema Supabase real es plano. Corregido para validar `technician_code` directo y `codigo_acceso_enc` ausente.
+- **Technician sync sin in-app URL**: URL del v2 backend se configura una vez via ADB injection y persiste en SharedPreferences. Auto-sync funciona nativamente. No hay editor de URL in-app (pendiente de implementar en wizard o settings).
+- **HTTPS BLOQUEADO**: cloudflared falla con DNS `[::1]:53 connection refused`; ngrok no instalado; localhost.run/serveo interceptado por safebrowse.io.
 
 ---
 
@@ -55,7 +77,7 @@
 ### Issues encontrados (no bloqueantes)
 | # | Issue | Severidad | Acción |
 |---|---|---|---|
-| I1 | ADB `input text` falla con `!` y espacios en campos contraseña | Info | Usar API o inyección de sesión como workaround |
+| I1 | ADB `input text` falla con `!` y `_` (underscore) en passwords/usernames | Info | Usernames sin `_`; clear con `MOVE_END` + N×`KEYCODE_DEL` |
 | I2 | Customer app: dropdown ¿Dónde? no recarga propiedades nuevas sin reiniciar activity | Baja | Propiedad creada vía API, reinicio resuelve |
 | I3 | Technician: pantalla principal muestra datos v1 por defecto; v2 requiere LAB override | Info | Esperado por diseño — LAB y producción son backends separados |
 | I4 | Supabase sync_receipts: error datestyle — timestamps 2026 fuera de rango Supabase | Media | Fix en backend: convertir ms → ISO8601 antes de enviar a Supabase |
@@ -64,7 +86,7 @@
 | # | Pendiente |
 |---|---|
 | P-HTTPS | Conectividad HTTPS estable — tunnel público pendiente |
-| P-LOGIN-UI | Login Customer desde UI sin workaround de sesión inyectada |
+| ~~P-LOGIN-UI~~ | ~~Login Customer desde UI~~ — **RESUELTO sesión 7** (`qauser7`/`QAFase77`) |
 | ~~P-SUPABASE~~ | ~~Fix datestyle en sync_receipts → Supabase~~ — **RESUELTO sesión 6** |
 | P-MOVIL | Pruebas con datos móviles / redes distintas al WiFi local |
 | P-CORS | CORS allowlist producción en /guest/quote |

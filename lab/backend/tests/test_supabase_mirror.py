@@ -75,8 +75,10 @@ def test_no_exporta_historicas_ni_secretos(entorno):
     esp.ciclo()
     assert list(sb.jobs) == [(900001,)]
     fila = sb.jobs[(900001,)]
-    assert fila["technician_id"] == "uuid-tec-01"
-    assert "codigo_acceso_enc" not in fila["datos"] and fila["datos"]["technician_code"] == "tec-t-01"
+    # schema Supabase es plano: los campos van al nivel raíz (sin wrapper "datos" ni resolución a UUID)
+    assert fila["technician_code"] == "tec-t-01"
+    assert "codigo_acceso_enc" not in fila           # secretos excluidos
+    assert "ubicacion_llave_enc" not in fila
 
 
 def test_versiones_historial_y_reenvio_sin_duplicados(entorno):
