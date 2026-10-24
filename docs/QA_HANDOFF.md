@@ -13,7 +13,7 @@
 
 | Paso | App | Resultado |
 |---|---|---|
-| Customer login (custf10 / CustF10Test!) | Customer (com.lc.customer.lab) | ✓ PASS — "Hola, Cliente" |
+| Customer login (custf10) | Customer (com.lc.customer.lab) | ✓ PASS — "Hola, Cliente" |
 | Agregar propiedad "CallCalle 123 Centro F10QA" | Customer | ✓ PASS — guardada en Flask |
 | Solicitar servicio HVAC (descripción: Aire acondicionado) | Customer | ✓ PASS — Job #8000000000013 creado |
 | Asignar job a tec-f5-01 (dispatcher: despacho_lab) | Flask API | ✓ PASS — estadoDispatch: ASSIGNED |
@@ -32,9 +32,11 @@
 ### Credenciales QA usadas (Sesión 10)
 | Usuario | Contraseña | Rol | App |
 |---|---|---|---|
-| custf10 | CustF10Test! | CUSTOMER (customer_id=18) | Customer |
-| tec-fase5 | TecF10Reset! | TECHNICIAN (tec-f5-01) | Technician |
-| despacho_lab | Despacho10! | DISPATCHER | Flask API |
+| custf10 | [REDACTADO] | CUSTOMER (customer_id=18) | Customer |
+| tec-fase5 | [REDACTADO] | TECHNICIAN (tec-f5-01) | Technician |
+| despacho_lab | [REDACTADO] | DISPATCHER | Flask API |
+
+> **Seguridad:** Contraseñas rotadas 2026-10-24 tras detección en repositorio público. Credenciales anteriores (`CustF10Test!`, `TecF10Reset!`, `Despacho10!`) **ya inválidas**. Commits anteriores en historial git conservan texto antiguo — inactivo. Limpieza de historial pendiente de autorización explícita.
 
 ### Evidencias fotográficas
 Capturas en `/QA_ANDROID/FASE10_20261024/`:
