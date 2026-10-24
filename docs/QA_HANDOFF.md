@@ -1,8 +1,51 @@
-# L&C — QA Handoff Report (Sesión 4: Instalación en dispositivo)
-**Fecha:** 2026-10-24 (sesión 4)  
+# L&C — QA Handoff Report (Sesión 5: Integración y QA Real)
+**Fecha:** 2026-10-24 (sesión 5)  
 **Branch:** feature/customer-visual-v2  
 **Ejecutado por:** Claude Code (autónomo)  
-**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:36639
+**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:36639  
+**PR:** https://github.com/carlosocampo1034-a11y/LC-Sync-LAB/pull/1
+
+---
+
+## Resumen ejecutivo — Sesión 5 (Integración y QA Real)
+
+| Categoría | Estado |
+|---|---|
+| PR creado — feature/customer-visual-v2 → main | ✓ PR #1 abierto |
+| GitHub — branch sincronizado en `0f020e5` | ✓ PASS |
+| Technician: wizard de configuración completo (5 pasos) | ✓ PASS |
+| Technician: PIN login validado contra backend v1 | ✓ PASS |
+| Technician: LAB session inyectada (tec-f5-01 / v2) | ✓ PASS |
+| Customer: registro de cuenta via API | ✓ PASS |
+| Customer: sesión inyectada y app en estado autenticado | ✓ PASS |
+| Customer: orden creada (job 8000000000011 HVAC) | ✓ PASS |
+| Control: orden asignada a tec-f5-01 via dispatch | ✓ PASS |
+| Technician sync pull: job recibido (v2, PENDIENTE) | ✓ PASS |
+| Ciclo servicio: EN RUTA→LLEGUÉ→EN REPARACIÓN→COMPLETADO | ✓ 5/5 ACCEPTED |
+| Customer: detalle muestra COMPLETADA + historial completo | ✓ PASS |
+| Control board: COMPLETADOS=1 confirmado | ✓ PASS |
+| Supabase mirror: job 8000000000011 sincronizado | ✓ PASS |
+| Logcat: 0 crashes / 0 errores en ambas apps | ✓ PASS |
+
+**Total sesión 5: 15/15 PASS · 0 FAIL**
+
+### Issues encontrados (no bloqueantes)
+| # | Issue | Severidad | Acción |
+|---|---|---|---|
+| I1 | ADB `input text` falla con `!` y espacios en campos contraseña | Info | Usar API o inyección de sesión como workaround |
+| I2 | Customer app: dropdown ¿Dónde? no recarga propiedades nuevas sin reiniciar activity | Baja | Propiedad creada vía API, reinicio resuelve |
+| I3 | Technician: pantalla principal muestra datos v1 por defecto; v2 requiere LAB override | Info | Esperado por diseño — LAB y producción son backends separados |
+| I4 | Supabase sync_receipts: error datestyle — timestamps 2026 fuera de rango Supabase | Media | Fix en backend: convertir ms → ISO8601 antes de enviar a Supabase |
+
+### Pendientes para producción
+| # | Pendiente |
+|---|---|
+| P-HTTPS | Conectividad HTTPS estable — tunnel público pendiente |
+| P-LOGIN-UI | Login Customer desde UI sin workaround de sesión inyectada |
+| P-SUPABASE | Fix datestyle en sync_receipts → Supabase |
+| P-MOVIL | Pruebas con datos móviles / redes distintas al WiFi local |
+| P-CORS | CORS allowlist producción en /guest/quote |
+| P-REDIS | Redis para rate-limit en producción |
 
 ---
 
@@ -251,7 +294,52 @@ Tokens anteriores: invalidados (DELETE FROM tokens).
 
 ---
 
-## 6. Pendientes conocidos (actualizado sesión 4)
+## 10. Sesión 5 — Integración y QA Real (2026-10-24)
+
+### GitHub
+- PR #1 creado: `feature/customer-visual-v2` → `main`
+- Branch remoto sincronizado en `0f020e5`
+- Sin merge a main hasta completar verificaciones de producción
+
+### Supabase vs Flask local — Auditoría de operaciones
+| Operación | Supabase | Flask LAB v2 local |
+|---|---|---|
+| Creación de órdenes (jobs) | ✓ Mirror automático | Fuente de verdad |
+| Actualización de estado (sync push) | ✓ Mirror automático | Fuente de verdad |
+| Historial de eventos (job_history) | ✓ Mirror automático | Fuente de verdad |
+| sync_receipts (log de push) | ✗ Error datestyle (timestamps 2026) | OK local |
+| Usuarios/autenticación | ✗ No sincroniza — queda en Flask | Flask |
+| Propiedades de clientes | ✗ No sincroniza actualmente | Flask |
+| Device registry | ✗ No sincroniza actualmente | Flask |
+
+**Regla activa:** `incluir_historicas=false` — registros eliminados localmente no reaparecen vía sync.
+
+### Permisos por rol verificados (API v2)
+| Rol | Endpoint | Resultado |
+|---|---|---|
+| CUSTOMER | `POST /customer/requests` | ✓ Solo ve sus propias órdenes |
+| TECHNICIAN | `GET /sync/pull` | ✓ Solo recibe órdenes asignadas a su technicianId |
+| ADMIN/DISPATCHER | `GET /dispatch/board` | ✓ Ve todas las órdenes |
+| Sin autenticar | Cualquier endpoint protegido | ✓ 401 Unauthorized |
+
+### Evidencias (screenshots sesión 5)
+| Archivo | Contenido |
+|---|---|
+| `qa_wiz0_sm.png` → `qa_wiz4_sm.png` | Wizard Technician — 5 páginas |
+| `qa_tech_logged2_sm.png` | Technician — login con PIN exitoso |
+| `qa_cust_in_sm.png` | Customer — sesión activa "Hola, Cliente" |
+| `qa_cust_detail_sm.png` | Customer — detalle orden COMPLETADA + historial |
+| `qa_tech_f5_main_sm.png` | Technician — pantalla principal post-login |
+
+### Seguridad — verificaciones sesión 5
+- `supabase_sync.json` y credenciales: fuera de git (instance/ excluido)
+- URL del servidor no visible en pantallas de usuario en Customer app
+- Tokens JWT: no aparecen en logcat
+- Sesión inyectada via ADB `run-as` (acceso debug): solo en entorno LAB
+
+---
+
+## 6. Pendientes conocidos (actualizado sesión 5)
 
 | # | Issue | Severidad | Estado |
 |---|---|---|---|
@@ -267,6 +355,10 @@ Tokens anteriores: invalidados (DELETE FROM tokens).
 | P10 | Customer LAB: login + solicitud de servicio desde UI real | Alta | Pendiente (sesión 5) |
 | P11 | Pruebas entre redes distintas (datos móviles o WiFi diferente) | Media | Pendiente |
 | P12 | Limpieza segura de datos locales post-QA en dispositivo | Media | Pendiente |
+| P13 | Login Customer via UI (ADB `!` workaround) — sesión inyectada como alternativa | Media | Pendiente |
+| P14 | Supabase sync_receipts: fix datestyle ms→ISO8601 | Media | Pendiente |
+| P15 | Customer ¿Dónde? dropdown: refrescar propiedades sin reiniciar activity | Baja | Pendiente |
+| P16 | Technician v2 sync en pantalla principal sin necesidad de inyección manual | Media | Pendiente |
 
 ---
 
