@@ -1,9 +1,33 @@
-# L&C — QA Handoff Report (Sesión 7: 6/6 tests, Customer UI login, Technician sync)
-**Fecha:** 2026-10-24 (sesión 7)  
+# L&C — QA Handoff Report (Sesión 8: HTTPS Cloud, Cloudflare Tunnel, E2E cycle)
+**Fecha:** 2026-10-24 (sesión 8)  
 **Branch:** feature/customer-visual-v2  
 **Ejecutado por:** Claude Code (autónomo)  
-**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:36639  
+**Dispositivo:** SM-S928U · Serial R5CX12Y1XWA · ADB wireless 10.0.0.121:43301  
 **PR:** https://github.com/carlosocampo1034-a11y/LC-Sync-LAB/pull/1
+
+---
+
+## Resumen ejecutivo — Sesión 8 (HTTPS Cloud, Cloudflare Tunnel, E2E cycle)
+
+| Categoría | Estado |
+|---|---|
+| Credenciales QA redactadas de QA_HANDOFF.md | ✓ PASS |
+| Contraseña QA rotada via API (antiguas = inválidas) | ✓ PASS |
+| Cloudflare Tunnel HTTPS activo (`trycloudflare.com`) | ✓ PASS |
+| Customer app: Diagnóstico 4/4 sobre HTTPS público | ✓ PASS |
+| Ciclo E2E via HTTPS: Customer→Control→Technician→COMPLETADO | ✓ PASS (4/4 ACCEPTED) |
+| Technician: Supabase Realtime WebSocket abierto (WSS) | ✓ PASS |
+| Technician: Última bajada actualizada (1:28 PM), hace 0 min | ✓ PASS |
+| HTTPS público estable (sin ADB/IP privada) | ✓ PASS |
+
+**Total sesión 8: 8 PASS · 0 BLOQUEADO · 0 FAIL**
+
+### Hallazgos técnicos (sesión 8)
+- **DNS en Termux**: binarios Go (`ngrok`, `cloudflared` descargado) fallan con `[::1]:53`. Solución: instalar `cloudflared` via `pkg install cloudflared` (Android-native, usa bionic DNS).
+- **safebrowse.io**: bloquea dominios de túneles externos en la red local (localhost.run, ngrok). `trycloudflare.com` NO está bloqueado.
+- **Tunnel URL**: `https://terms-diet-bumper-sports.trycloudflare.com/api/v2` — cambia en cada reinicio. Para producción se necesita tunnel con nombre (requiere cuenta Cloudflare).
+- **Technician sync**: `SINCRONIZAR AHORA` dispara `LcSyncWorker` (Supabase bridge). El sync LAB Flask dispara al navegar a la lista de trabajos. Ambos confirmados OK.
+- **ADB port rotation**: Puerto cambia al reiniciar depuración inalámbrica. Se requiere nuevo `adb connect` cada sesión.
 
 ---
 
@@ -85,12 +109,14 @@
 ### Pendientes para producción
 | # | Pendiente |
 |---|---|
-| P-HTTPS | Conectividad HTTPS estable — tunnel público pendiente |
+| ~~P-HTTPS~~ | ~~Conectividad HTTPS estable~~ — **RESUELTO sesión 8** (cloudflared trycloudflare.com) |
 | ~~P-LOGIN-UI~~ | ~~Login Customer desde UI~~ — **RESUELTO sesión 7** (credenciales QA rotadas) |
 | ~~P-SUPABASE~~ | ~~Fix datestyle en sync_receipts → Supabase~~ — **RESUELTO sesión 6** |
+| P-TUNNEL-PROD | Tunnel con nombre persistente (cuenta Cloudflare) — URL cambia en cada reinicio |
 | P-MOVIL | Pruebas con datos móviles / redes distintas al WiFi local |
 | P-CORS | CORS allowlist producción en /guest/quote |
 | P-REDIS | Redis para rate-limit en producción |
+| P-URL-EDITOR | Editor de URL in-app para Technician (actualmente requiere ADB injection) |
 
 ---
 
