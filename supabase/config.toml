@@ -1,6 +1,7 @@
 # Configuración de las Edge Functions de L&C LAB. Sin secretos: los valores sensibles van en
 # los secretos del proyecto (nunca en este archivo ni en el repositorio).
-project_id = "rmkduyrrjtqqvjpqhyra"
+# Rama QA: proyecto LC-Sync-QA (el anterior, rmkduyrrjtqqvjpqhyra, no se toca desde esta rama)
+project_id = "zzbplbkrcdxmegoisxtf"
 
 [functions.lc-api]
 verify_jwt = false   # la función valida el JWT por usuario y rol (Supabase Auth)

@@ -10,8 +10,8 @@ export interface Job {
 
 /** Campos que un rol puede escribir. Lista EXPLÍCITA: todo lo demás se ignora. */
 export const PERMITIDOS: Record<Rol, ReadonlyArray<string>> = {
-  ADMIN: ["estado", "notas", "prioridad", "horas", "programado_para", "technician_id", "technician_code"],
-  DISPATCHER: ["estado", "notas", "prioridad", "horas", "programado_para", "technician_id", "technician_code"],
+  ADMIN: ["estado", "estado_dispatch", "notas", "prioridad", "horas", "programado_para", "technician_id", "technician_code"],
+  DISPATCHER: ["estado", "estado_dispatch", "notas", "prioridad", "horas", "programado_para", "technician_id", "technician_code"],
   TECHNICIAN: ["estado", "notas", "horas"],
   CUSTOMER: [],
   SYNC: ["estado", "notas", "prioridad", "horas", "programado_para"],
