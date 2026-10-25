@@ -218,18 +218,25 @@ def main():
               f"notas={job(c)['notas']}")
 
 
-        # ── S2b · campos distintos con versión REALMENTE antigua ──────────────────────────────
-        print("\nS2b · campos distintos con base antigua (merge parcial)")
-        v_base = job(c)["version"]
-        _procesar_job(c, tec_b, DEV_B, {"id": JOB, "updatedAt": t + 900, "version": v_base,
-                                        "estado": "EN CAMINO"})
-        estado_tras_a = job(c)["estado"]
-        r = _procesar_job(c, desp, DEV_D, {"id": JOB, "updatedAt": t + 901, "version": v_base,
-                                           "notas": "nota con base vieja"})
-        check("S2b.1 el campo independiente se aplica", r["status"] == "ACCEPTED"
-              and job(c)["notas"] == "nota con base vieja", f"{r['status']} notas={job(c)['notas']}")
-        check("S2b.2 el campo ajeno no se toca", job(c)["estado"] == estado_tras_a,
-              f"estado={job(c)['estado']}")
+        # ── S2b · dos campos independientes con la MISMA base vieja ──────────────────────────
+        print("\nS2b · dos campos independientes, base compartida (sin tocar el estado)")
+        base2 = job(c)["version"]
+        ids_antes = {x["id"] for x in conflictos(c)}
+        r1 = _procesar_job(c, tec_b, DEV_B, {"id": JOB, "updatedAt": t + 900, "version": base2,
+                                             "notas": "nota del tecnico"})
+        r2 = _procesar_job(c, desp, DEV_D, {"id": JOB, "updatedAt": t + 901, "version": base2,
+                                            "prioridad": "ALTA"})
+        check("S2b.1 el técnico aplica su campo", r1["status"] == "ACCEPTED", f"{r1['status']}")
+        check("S2b.2 el despacho aplica el suyo con la base vieja", r2["status"] == "ACCEPTED",
+              f"{r2['status']} (motivo: {r2.get('reason','-')})")
+        check("S2b.3 ambos valores se conservan",
+              job(c)["notas"] == "nota del tecnico" and job(c)["prioridad"] == "ALTA",
+              f"notas={job(c)['notas']!r} prioridad={job(c)['prioridad']!r}")
+        check("S2b.4 la versión subió exactamente 2", job(c)["version"] == base2 + 2,
+              f"v{base2} → v{job(c)['version']}")
+        nuevos = [x for x in conflictos(c) if x["id"] not in ids_antes]
+        check("S2b.5 campos distintos no generan conflicto", len(nuevos) == 0,
+              f"{len(nuevos)} conflicto(s) nuevos (acumulados {len(conflictos(c))})")
 
         # ── S8 · sin versión, negativa y futura ───────────────────────────────────────────────
         print("\nS8 · intentos de saltarse el control de concurrencia")
@@ -264,13 +271,60 @@ def main():
         check("S9.2 queda registrada como conflicto", r["status"] == "CONFLICT"
               and len(conflictos(c)) >= 1, f"{r['status']} · {len(conflictos(c))} pendientes")
 
+
+        # ── S10 · concurrencia real: dos conexiones SQLite y dos hilos ───────────────────────
+        print("\nS10 · concurrencia real (2 conexiones, 2 hilos, mismo campo y misma base)")
+        import threading
+        base10 = job(c)["version"]
+        barrera = threading.Barrier(2)
+        salida = {}
+
+        def empujar(nombre, usuario, device, valor):
+            import sqlite3 as _s
+            with app.app_context():
+                conn = _s.connect(path, timeout=15, isolation_level=None)   # conexión propia
+                conn.row_factory = _s.Row
+                conn.execute("PRAGMA busy_timeout = 15000")
+                try:
+                    barrera.wait(10)                                         # arrancan a la vez
+                    conn.execute("BEGIN IMMEDIATE")                          # y compiten por el bloqueo
+                    salida[nombre] = _procesar_job(conn, usuario, device,
+                                                   {"id": JOB, "updatedAt": t + 1000 + len(nombre),
+                                                    "version": base10, "notas": valor})
+                    conn.commit()
+                except Exception as e:
+                    salida[nombre] = {"status": "EXCEPTION",
+                                      "reason": (str(e) or type(e).__name__)[:100]}
+                finally:
+                    conn.close()
+
+        try:
+            c.commit()                                # el contexto principal no retiene bloqueos
+        except Exception:
+            pass
+        h1 = threading.Thread(target=empujar, args=("h1", tec_b, "dev-hilo-1", "concurrente A"))
+        h2 = threading.Thread(target=empujar, args=("h2", desp, "dev-hilo-2", "concurrente B"))
+        h1.start(); h2.start(); h1.join(20); h2.join(20)
+        estados = sorted(v.get("status") for v in salida.values())
+        for k, v in salida.items():
+            if v.get("status") == "EXCEPTION":
+                print(f"   [motivo {k}] {v.get('reason')}")
+        check("S10.1 ninguno termina en excepción", "EXCEPTION" not in estados, f"estados={estados}")
+        check("S10.2 exactamente uno gana", estados.count("ACCEPTED") == 1, f"estados={estados}")
+        check("S10.3 el otro queda en CONFLICT", estados.count("CONFLICT") == 1, f"estados={estados}")
+        check("S10.4 no se pierden ambos valores",
+              job(c)["notas"] in ("concurrente A", "concurrente B"), f"notas={job(c)['notas']!r}")
+        check("S10.5 el perdedor queda registrado", len(conflictos(c)) >= 1, f"{len(conflictos(c))} pendientes")
+
     fails = [r for r in RESULTS if r[1] is False]
     blocks = [r for r in RESULTS if r[1] is None]
     oks = [r for r in RESULTS if r[1] is True]
     print(f"\n== PASS {len(oks)} · FAIL {len(fails)} · BLOCKED {len(blocks)} · total {len(RESULTS)} ==")
     for n, _, d in fails:
         print(f"  FALLA: {n} · {d}")
-    return 1 if fails else 0
+    for n, _, d in blocks:
+        print(f"  BLOQUEADO: {n} · {d}")
+    return 1 if (fails or blocks) else 0
 
 
 if __name__ == "__main__":
