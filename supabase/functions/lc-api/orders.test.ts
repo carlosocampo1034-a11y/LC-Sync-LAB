@@ -32,7 +32,18 @@ Deno.test("mismo campo tocado por otro no se pisa", () => {
 Deno.test("el técnico no puede reasignar ni reprogramar", () => {
   assertEquals(puedeEditar("TECHNICIAN", "notas"), true);
   assertEquals(puedeEditar("TECHNICIAN", "technician_code"), false);
+  assertEquals(puedeEditar("TECHNICIAN", "programado_para"), false);
   assertEquals(puedeEditar("CUSTOMER", "estado"), false);
+});
+
+Deno.test("campos protegidos no son editables por ningún rol", () => {
+  for (const rol of ["ADMIN", "DISPATCHER", "TECHNICIAN", "CUSTOMER", "SYNC"] as const) {
+    for (const campo of ["id", "customer_id", "version", "created_by", "created_at", "origin"]) {
+      assertEquals(puedeEditar(rol, campo), false, `${rol} no debe poder escribir ${campo}`);
+    }
+  }
+  assertEquals(puedeEditar("ADMIN", "technician_id"), true);
+  assertEquals(puedeEditar("TECHNICIAN", "technician_id"), false);
 });
 
 Deno.test("idempotencia del recibo", () => {

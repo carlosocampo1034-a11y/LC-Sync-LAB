@@ -8,13 +8,22 @@ export interface Job {
   notas?: string | null; prioridad?: string | null; updated_at: number;
 }
 
-export const CAMPOS_CLIENTE = ["estado", "notas", "prioridad", "horas", "programado_para"] as const;
+/** Campos que un rol puede escribir. Lista EXPLÍCITA: todo lo demás se ignora. */
+export const PERMITIDOS: Record<Rol, ReadonlyArray<string>> = {
+  ADMIN: ["estado", "notas", "prioridad", "horas", "programado_para", "technician_id", "technician_code"],
+  DISPATCHER: ["estado", "notas", "prioridad", "horas", "programado_para", "technician_id", "technician_code"],
+  TECHNICIAN: ["estado", "notas", "horas"],
+  CUSTOMER: [],
+  SYNC: ["estado", "notas", "prioridad", "horas", "programado_para"],
+};
+
+/** Nunca escribibles por API, para ningún rol. */
+export const PROTEGIDOS: ReadonlyArray<string> = ["id", "customer_id", "version", "created_by", "created_at", "origin"];
 
 /** Reglas de transición por rol: el técnico no reasigna ni reprograma. */
 export function puedeEditar(rol: Rol, campo: string): boolean {
-  if (rol === "ADMIN" || rol === "DISPATCHER") return true;
-  if (rol === "TECHNICIAN") return !["technician_code", "programado_para", "prioridad"].includes(campo);
-  return false; // CUSTOMER no edita órdenes existentes
+  if (PROTEGIDOS.includes(campo)) return false;
+  return PERMITIDOS[rol]?.includes(campo) ?? false;
 }
 
 /** Versión obligatoria: sin esto un cliente saltaría el control de concurrencia. */
