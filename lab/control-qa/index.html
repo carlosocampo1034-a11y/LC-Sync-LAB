@@ -124,7 +124,8 @@ dt { color: var(--muted) } dd { margin: 0; overflow-wrap: anywhere }
   let device; try { device = localStorage.getItem("lcqa.device"); } catch {}
   if (!device) { device = "control-web-" + crypto.randomUUID().slice(0, 8); try { localStorage.setItem("lcqa.device", device); } catch {} }
 
-  const jobs = new Map(); let techs = []; let selected = null; let lastMsg = null;  // mensaje del último guardado; sobrevive al repintado por Realtime let maxUpdated = 0; let channel = null;
+  const jobs = new Map(); let techs = []; let selected = null; let lastMsg = null;  // mensaje del último guardado; sobrevive al repintado por Realtime
+  let maxUpdated = 0; let channel = null;
 
   async function api(method, path, body) {
     const { data: { session } } = await sb.auth.getSession();
