@@ -201,8 +201,18 @@ final class SyncV2 {
                     // leer-comprobar-escribir en una transacción: ninguna edición local se cuela en medio
                     boolean aplicado = db.runInTransaction(() -> {
                         JobEntity local = db.jobDao().getJobById(c.id);
-                        // solo si sigue en tránsito: si el técnico volvió a editarla, se reintenta con su cambio
-                        if (local == null || local.synced != 2) return false;
+                        if (local == null) return false;
+                        if (local.synced != 2) {
+                            // La orden ya no está en tránsito (el técnico la volvió a editar o el ciclo
+                            // anterior la dejó pendiente). NO se aplica la copia del servidor para no
+                            // pisar su trabajo, pero SÍ se adopta la versión del servidor: sin esto el
+                            // siguiente envío reutiliza una base obsoleta y el conflicto se repite
+                            // indefinidamente (un recibo CONFLICT por reintento, siempre la misma versión).
+                            if (c.version != null) local.serverVersion = c.version;
+                            local.lastSyncedAt = ts;
+                            db.jobDao().insert(local);
+                            return false;
+                        }
                         resolverConflicto(local, c, ts);
                         db.jobDao().insert(local);
                         auditar(db, c.id, "SYNC_CONFLICTO", c.conflictFields != null

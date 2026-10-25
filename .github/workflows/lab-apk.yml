@@ -36,6 +36,8 @@ jobs:
           # y rompe processDebugResources. No se toca el archivo del repo: sólo la copia efímera.
           sed -i '/aapt2FromMavenOverride/d' gradle.properties customer_app/gradle.properties 2>/dev/null || true
           grep -c aapt2FromMavenOverride gradle.properties || echo "0 overrides en el runner"
+      - name: Pruebas unitarias JVM (política de sync, estados, reglas)
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
       - name: Technician (debug, applicationId com.lc.technician.dev)
         run: ./gradlew --no-daemon --stacktrace assembleDebug
       - name: Customer (debug, applicationId com.lc.customer.lab)
