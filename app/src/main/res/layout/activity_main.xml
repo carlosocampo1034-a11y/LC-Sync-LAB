@@ -224,7 +224,10 @@
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- Botón SOLICITAR SERVICIO — ancho completo en la parte inferior -->
+    <!-- id bottomBar: MainActivity llama InsetsHelper.padBottom(findViewById(R.id.bottomBar));
+         sin id el botón quedaba bajo la barra de navegación del sistema. -->
     <LinearLayout
+        android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
