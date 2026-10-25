@@ -1,0 +1,39 @@
+name: Generar keystore LAB (una vez)
+# Ejecución manual. Genera un PKCS12, lo publica como ARTEFACTO privado del run y muestra su
+# huella SHA-256. La clave NO se guarda en el repositorio: se carga como secreto del repo.
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Generar keystore y huella
+        run: |
+          PASS="$(openssl rand -hex 24)"
+          keytool -genkeypair -v -keystore lab-release.p12 -storetype PKCS12 \
+            -alias lclab -keyalg RSA -keysize 4096 -validity 10950 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=L&C LAB, OU=QA, O=L&C Home Services, L=Miami, ST=FL, C=US"
+          echo "::add-mask::$PASS"
+          echo "LAB_KEYSTORE_PASS=$PASS" >> "$GITHUB_ENV"
+          keytool -list -v -keystore lab-release.p12 -storepass "$PASS" | grep -E "SHA256:|Alias name" | tee fingerprint.txt
+          base64 -w0 lab-release.p12 > lab-release.p12.b64
+          echo "PASS_LENGTH=$(echo -n "$PASS" | wc -c)"
+          echo "FINGERPRINT=$(grep -m1 'SHA256:' fingerprint.txt | cut -d: -f2- | tr -d ' ')"
+      - name: Guardar el secreto en la salida del job (sólo el nombre, nunca el valor)
+        run: echo "keystore listo; descarga el artefacto y cárgalo como secreto LAB_KEYSTORE_B64"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab-keystore
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            lab-release.p12.b64
+            fingerprint.txt
+
