@@ -182,7 +182,9 @@
         android:layout_height="match_parent"
         android:layout_below="@id/divider"
         android:layout_above="@id/bottomBar"
-        android:scrollbars="none">
+        android:scrollbars="none"
+        android:clipToPadding="false"
+        android:paddingBottom="96dp">
 
         <LinearLayout
             android:layout_width="match_parent"
