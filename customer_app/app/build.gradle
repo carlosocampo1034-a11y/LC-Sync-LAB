@@ -27,6 +27,12 @@ android {
         }
     }
     buildTypes {
+        // QA aislada: com.lc.customer.qa (ver androidComponents abajo), sin HTTP en claro ni backend Flask.
+        qa {
+            initWith debug
+            matchingFallbacks = ['debug']
+            buildConfigField "String", "API_BASE", "\"\""
+        }
         debug {
             if (localProps['KEYSTORE_FILE']) { signingConfig signingConfigs.release }
         }
@@ -46,4 +52,11 @@ configurations.all {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
+}
+
+// applicationId propio para QA (los build types solo admiten sufijo y daría com.lc.customer.lab.qa)
+androidComponents {
+    onVariants(selector().withBuildType('qa')) { variant ->
+        variant.applicationId.set('com.lc.customer.qa')
+    }
 }

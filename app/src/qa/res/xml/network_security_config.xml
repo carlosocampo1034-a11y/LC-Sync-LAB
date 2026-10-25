@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SOLO variante QA (com.lc.technician.qa): Supabase por HTTPS con certificados del sistema.
+     Sin HTTP en claro, sin CA de laboratorio y sin IPs locales (10.0.0.121 / 127.0.0.1). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

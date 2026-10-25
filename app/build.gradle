@@ -58,6 +58,19 @@ android {
                 signingConfig signingConfigs.release
             }
         }
+        // QA aislada: com.lc.technician.qa, instalable junto a .dev y la release sin compartir datos.
+        // Nunca lleva cuenta compartida ni PINs incrustados: cada usuario inicia sesión con su cuenta.
+        qa {
+            initWith debug
+            applicationIdSuffix '.qa'
+            versionNameSuffix '-qa'
+            matchingFallbacks = ['debug']
+            buildConfigField "String", "PIN_TECNICO",            "\"\""
+            buildConfigField "String", "PIN_DISPATCHER",         "\"\""
+            buildConfigField "String", "PIN_ADMIN",              "\"\""
+            buildConfigField "String", "SUPABASE_AUTH_EMAIL",    "\"\""
+            buildConfigField "String", "SUPABASE_AUTH_PASSWORD", "\"\""
+        }
         release {
             minifyEnabled true
             shrinkResources true
