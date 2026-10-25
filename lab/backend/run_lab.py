@@ -72,6 +72,9 @@ if __name__ == "__main__":
     # Espejo hacia Supabase (solo si el propietario creó instance/supabase_sync.json); Flask es el único escritor
     from lc_lab.supabase_mirror import arrancar  # noqa: E402
     arrancar(app, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "local.properties"))
+    # Puente con LC-Sync-QA (solo si existe instance/qa_bridge.json con una cuenta DESPACHO; nunca service_role)
+    from lc_lab import qa_bridge  # noqa: E402
+    qa_bridge.arrancar(app)
     esquema = "https" if CTX else "http"
     print(f"L&C LAB · base {app.config['DATABASE']} · usuarios nuevos: {n} · {esquema}://{HOST}:{PORT}"
           + (f" · lista blanca: {sorted(PERMITIDAS)}" if PERMITIDAS else ""), flush=True)

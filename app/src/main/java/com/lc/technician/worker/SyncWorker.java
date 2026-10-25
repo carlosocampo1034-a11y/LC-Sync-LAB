@@ -148,6 +148,8 @@ public class SyncWorker extends Worker {
                     pulledJobs = mergeJobRows(db, pullResp.body(), now);
                     upsertSyncState(db, "PULL_JOB", now);
                     android.util.Log.i(TAG, "pull: " + pulledJobs + " jobs ← Supabase");
+                    // Igual que SyncV2: sin esto lo bajado (p. ej. una asignación del Control) no aparecía en la lista
+                    if (pulledJobs > 0) com.lc.technician.data.JobRepository.get().recargarCacheAsync(null);
                 }
             } catch (Exception e) {
                 android.util.Log.w(TAG, "pull error: " + e.getMessage());
