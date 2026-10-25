@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
  * Variante QA: traduce las rutas del contrato v2 que usan las pantallas a Supabase LC-Sync-QA
  * (Supabase Auth + Edge Function lc-api). Las pantallas no cambian.
  * - Sesión por cliente (access + refresh token); nunca hay contraseñas en la APK.
- * - Propiedades y equipos se guardan en el teléfono (QA no tiene esas tablas); su dirección viaja con la orden.
+ * - Propiedades y equipos van a Supabase (lc-api /properties) con copia local y cola de altas sin conexión.
  * - Lo que lc-api aún no ofrece (fotos, propuestas, PDF) responde 501 con un mensaje claro.
  * Llamar SIEMPRE fuera del hilo principal.
  */
@@ -143,6 +143,10 @@ final class CloudApi {
                 .put("descripcion", desc.toString())
                 .put("direccion", prop.optString("direccion"))
                 .put("categoria", body.optString("categoria"));
+        // con la propiedad ya en la nube, el Control ve tipo, acceso, instrucciones y mascotas de la orden
+        if (prop.optBoolean("nube") && prop.optLong("id") > 0) orden.put("property_id", prop.optLong("id"));
+        if (!body.optString("ventanaPreferida").isEmpty()) orden.put("ventana_preferida", body.optString("ventanaPreferida"));
+        if (body.has("fechaPreferida")) orden.put("ventana_preferida", String.valueOf(body.optLong("fechaPreferida")));
         String tel = local(c).getString("telefono", "");
         if (!tel.isEmpty()) orden.put("telefono", tel);
         Api.Respuesta r = lcApi(c, "POST", "/orders", orden);
@@ -163,7 +167,9 @@ final class CloudApi {
         return o;
     }
 
-    // ── Propiedades locales ─────────────────────────────────────────────────────────────────────
+    // ── Propiedades y equipos: Supabase (lc-api) con copia local para trabajar sin conexión ──────────
+    // "properties" guarda la última lista conocida (id local = id de la nube) y las altas pendientes de
+    // subir (pendiente=true, request_id estable): al volver la conexión se suben sin duplicar.
 
     private static SharedPreferences local(Context c) {
         return c.getApplicationContext().getSharedPreferences(LOCAL, Context.MODE_PRIVATE);
@@ -173,25 +179,103 @@ final class CloudApi {
         return new JSONArray(local(c).getString("properties", "[]"));
     }
 
+    private static void guardar(Context c, JSONArray ps) {
+        local(c).edit().putString("properties", ps.toString()).apply();
+    }
+
     private static JSONObject buscarPropiedad(Context c, long id) throws Exception {
         JSONArray ps = listaPropiedades(c);
         for (int i = 0; i < ps.length(); i++) if (ps.optJSONObject(i).optLong("id") == id) return ps.optJSONObject(i);
         return null;
     }
 
+    /** Fila de customer_properties (+ customer_equipment) → forma que pinta PropertiesActivity. */
+    private static JSONObject desdeNube(JSONObject r) throws Exception {
+        JSONObject p = new JSONObject().put("id", r.optLong("id")).put("nube", true)
+                .put("direccion", r.optString("direccion"))
+                .put("tipoPropiedad", r.isNull("tipo") ? "" : r.optString("tipo"))
+                .put("tipoAcceso", r.isNull("tipo_acceso") ? "" : r.optString("tipo_acceso"))
+                .put("instrucciones", r.isNull("instrucciones") ? "" : r.optString("instrucciones"))
+                .put("mascota", r.isNull("mascota") ? "" : r.optString("mascota"))
+                .put("contactoRespaldo", r.isNull("contacto_respaldo") ? "" : r.optString("contacto_respaldo"));
+        JSONArray eq = new JSONArray(), in = r.optJSONArray("customer_equipment");
+        for (int i = 0; in != null && i < in.length(); i++) {
+            JSONObject e = in.optJSONObject(i);
+            eq.put(new JSONObject().put("id", e.optLong("id")).put("nombre", e.optString("tipo"))
+                    .put("marca", e.isNull("marca") ? "" : e.optString("marca"))
+                    .put("modelo", e.isNull("modelo") ? "" : e.optString("modelo")));
+        }
+        return p.put("equipos", eq);
+    }
+
+    private static JSONObject aNube(JSONObject p) throws Exception {
+        return new JSONObject().put("request_id", p.optString("request_id"))
+                .put("direccion", p.optString("direccion").trim()).put("tipo", p.optString("tipoPropiedad"))
+                .put("tipo_acceso", p.optString("tipoAcceso")).put("instrucciones", p.optString("instrucciones"))
+                .put("mascota", p.optString("mascota")).put("contacto_respaldo", p.optString("contactoRespaldo"));
+    }
+
+    private static JSONObject equipoANube(JSONObject e) throws Exception {
+        String serie = e.optString("serial").trim();
+        return new JSONObject().put("request_id", e.optString("request_id")).put("tipo", e.optString("nombre"))
+                .put("marca", e.optString("marca")).put("modelo", e.optString("modelo"))
+                .put("notas", serie.isEmpty() ? "" : "Serie: " + serie);
+    }
+
+    /** Sube lo pendiente (propiedades de versiones anteriores incluidas) y devuelve la lista de la nube. */
+    private static Api.Respuesta sincronizarPropiedades(Context c) throws Exception {
+        JSONArray ps = listaPropiedades(c);
+        for (int i = 0; i < ps.length(); i++) {
+            JSONObject p = ps.optJSONObject(i);
+            if (p.optBoolean("nube")) {
+                // equipos añadidos sin conexión a una propiedad que ya está en la nube
+                JSONArray eq = p.optJSONArray("equipos");
+                for (int k = 0; eq != null && k < eq.length(); k++) {
+                    JSONObject e = eq.optJSONObject(k);
+                    if (!e.optBoolean("pendiente")) continue;
+                    Api.Respuesta r = lcApi(c, "POST", "/properties/" + p.optLong("id") + "/equipment", equipoANube(e));
+                    if (r.codigo <= 0) return null;
+                }
+                continue;
+            }
+            if (p.optString("request_id").isEmpty()) p.put("request_id", "legacy-" + p.optLong("id"));
+            Api.Respuesta r = lcApi(c, "POST", "/properties", aNube(p));
+            if (r.codigo <= 0) return null;                 // sin conexión: se reintenta en la próxima carga
+            if (!r.ok()) continue;
+            long nube = r.cuerpo.optLong("id");
+            JSONArray eq = p.optJSONArray("equipos");
+            for (int k = 0; eq != null && k < eq.length(); k++) {
+                JSONObject e = eq.optJSONObject(k);
+                if (e.optString("request_id").isEmpty()) e.put("request_id", "legacy-" + e.optLong("id"));
+                lcApi(c, "POST", "/properties/" + nube + "/equipment", equipoANube(e));
+            }
+        }
+        Api.Respuesta r = lcApi(c, "GET", "/properties", null);
+        if (!r.ok()) return r.codigo <= 0 ? null : r;
+        JSONArray in = r.cuerpo.optJSONArray("items"), outs = new JSONArray();
+        for (int i = 0; in != null && i < in.length(); i++) outs.put(desdeNube(in.optJSONObject(i)));
+        guardar(c, outs);
+        return new Api.Respuesta(200, new JSONObject().put("properties", outs));
+    }
+
     private static Api.Respuesta propiedades(Context c) throws Exception {
-        return new Api.Respuesta(200, new JSONObject().put("properties", listaPropiedades(c)));
+        Api.Respuesta r = sincronizarPropiedades(c);
+        if (r != null) return r;
+        return new Api.Respuesta(200, new JSONObject().put("properties", listaPropiedades(c)).put("sinConexion", true));
     }
 
     private static Api.Respuesta nuevaPropiedad(Context c, JSONObject body) throws Exception {
         if (body == null || body.optString("direccion").trim().isEmpty()) {
             return new Api.Respuesta(422, new JSONObject().put("error", "Escribe la dirección"));
         }
+        JSONObject p = new JSONObject(body.toString()).put("id", -System.currentTimeMillis())
+                .put("request_id", "prop-" + java.util.UUID.randomUUID()).put("pendiente", true).put("equipos", new JSONArray());
+        p.remove("codigoAcceso");  // el código de acceso no se guarda en claro en el teléfono ni viaja
         JSONArray ps = listaPropiedades(c);
-        JSONObject p = new JSONObject(body.toString()).put("id", System.currentTimeMillis()).put("equipos", new JSONArray());
-        p.remove("codigoAcceso");  // el código de acceso no se guarda en claro en el teléfono
         ps.put(p);
-        local(c).edit().putString("properties", ps.toString()).apply();
+        guardar(c, ps);
+        Api.Respuesta r = lcApi(c, "POST", "/properties", aNube(p));
+        if (r.ok()) sincronizarPropiedades(c);
         return new Api.Respuesta(201, p);
     }
 
@@ -200,9 +284,14 @@ final class CloudApi {
         for (int i = 0; i < ps.length(); i++) {
             JSONObject p = ps.optJSONObject(i);
             if (p.optLong("id") != pid) continue;
-            JSONObject e = new JSONObject(body.toString()).put("id", System.currentTimeMillis());
+            JSONObject e = new JSONObject(body.toString()).put("id", -System.currentTimeMillis())
+                    .put("request_id", "eq-" + java.util.UUID.randomUUID()).put("pendiente", true);
             p.optJSONArray("equipos").put(e);
-            local(c).edit().putString("properties", ps.toString()).apply();
+            guardar(c, ps);
+            if (p.optBoolean("nube")) {
+                Api.Respuesta r = lcApi(c, "POST", "/properties/" + pid + "/equipment", equipoANube(e));
+                if (r.ok()) sincronizarPropiedades(c);
+            }
             return new Api.Respuesta(201, e);
         }
         return new Api.Respuesta(404, new JSONObject().put("error", "Propiedad no encontrada"));

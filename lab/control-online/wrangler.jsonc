@@ -1,0 +1,8 @@
+// L&C Control ORIGINAL · QA online. Solo archivos estáticos (sin Worker propio): el backend es Supabase LC-Sync-QA.
+{
+  "name": "lc-control-qa",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "workers_dev": true,
+  "preview_urls": false
+}

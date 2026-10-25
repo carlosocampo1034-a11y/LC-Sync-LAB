@@ -69,4 +69,8 @@ public interface SupabaseApi {
     /** Rol del usuario autenticado según profiles (lo decide el servidor, no la app). */
     @GET("functions/v1/lc-api/auth/me")
     Call<ResponseBody> me(@Header("Authorization") String authorization);
+
+    /** Notificaciones del técnico (asignaciones) creadas después de {@code since} (epoch ms). */
+    @GET("functions/v1/lc-api/notifications")
+    Call<ResponseBody> notifications(@Header("Authorization") String authorization, @Query("since") long since);
 }

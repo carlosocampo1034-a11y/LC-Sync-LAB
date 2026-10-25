@@ -25,6 +25,7 @@ public class NotificationPollWorker extends Worker {
             Context ctx = getApplicationContext();
             SharedPreferences prefs = ctx.getSharedPreferences("lc_prefs", Context.MODE_PRIVATE);
             long lastPoll = prefs.getLong("last_notif_poll", 0);
+            if (com.lc.technician.BuildConfig.CLOUD_LOGIN) return sondearQa(ctx, prefs, lastPoll);
 
             SyncApi api = ApiClient.get(ctx);
             Response<SyncModels.NotificationResponse> resp = api.getNotifications(lastPoll).execute();
@@ -52,5 +53,29 @@ public class NotificationPollWorker extends Worker {
         } catch (Exception e) {
             return Result.retry();
         }
+    }
+
+    /** QA: lc-api /notifications (antes pedía /sync/notifications de Flask a Supabase y recibía 404). */
+    private Result sondearQa(Context ctx, SharedPreferences prefs, long lastPoll) throws Exception {
+        com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(ctx);
+        if (!sb.hasUserSession()) return Result.success();
+        // primera vez: no se repiten avisos antiguos, solo lo que llegue desde ahora
+        if (lastPoll == 0) {
+            prefs.edit().putLong("last_notif_poll", System.currentTimeMillis()).apply();
+            return Result.success();
+        }
+        Response<okhttp3.ResponseBody> r = sb.api().notifications(sb.authHeader(), lastPoll).execute();
+        if (!r.isSuccessful() || r.body() == null) return Result.retry();
+        org.json.JSONArray lista = new org.json.JSONArray(r.body().string());
+        long maximo = lastPoll;
+        for (int i = 0; i < lista.length(); i++) {
+            org.json.JSONObject n = lista.getJSONObject(i);
+            maximo = Math.max(maximo, n.optLong("created_at"));
+            if ("ASIGNACION".equals(n.optString("tipo")) && !n.isNull("job_id")) {
+                NotificationHelper.notifyJobAssigned(ctx, n.optString("cuerpo", n.optString("titulo")), "", n.getLong("job_id"));
+            }
+        }
+        prefs.edit().putLong("last_notif_poll", maximo).apply();
+        return Result.success();
     }
 }
