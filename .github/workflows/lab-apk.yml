@@ -19,12 +19,17 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - name: Aceptar licencias e instalar plataforma 36
+      - name: SDK de Android (el del runner; setup-android@v3 falla por el paquete 'tools')
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || sdkmanager "platforms;android-36" >/dev/null 2>&1 || true
-          echo "SDK: $ANDROID_HOME"; ls "$ANDROID_HOME/platforms" 2>/dev/null | tail -3
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" 2>/dev/null || true
+          SDKM=$(command -v sdkmanager || ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          echo "sdkmanager: $SDKM"
+          if [ ! -d "$ANDROID_HOME/platforms/android-36" ]; then
+            yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+            "$SDKM" "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || "$SDKM" "platforms;android-36" >/dev/null 2>&1 || true
+          fi
+          ls "$ANDROID_HOME/platforms" | tail -4
       - name: Technician (debug, applicationId com.lc.technician.dev)
         run: ./gradlew --no-daemon --stacktrace assembleDebug
       - name: Customer (debug, applicationId com.lc.customer.lab)
