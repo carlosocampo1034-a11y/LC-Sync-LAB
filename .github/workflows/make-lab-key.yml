@@ -1,7 +1,10 @@
 name: Generar keystore LAB (una vez)
 # Ejecución manual. Genera un PKCS12, lo publica como ARTEFACTO privado del run y muestra su
 # huella SHA-256. La clave NO se guarda en el repositorio: se carga como secreto del repo.
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [qa/hermes-lab-build]
 permissions:
   contents: read
 jobs:
