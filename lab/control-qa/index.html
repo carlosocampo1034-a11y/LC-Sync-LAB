@@ -22,6 +22,7 @@
   --bg: #111816; --panel: #19221f; --fg: #e4ece9; --muted: #95a59f; --line: #2c3834;
   --accent: #4fc2ad; --accent-fg: #06201b; --warn: #f0b35a; --bad: #ff8a80; --ok: #7bd88f; color-scheme: dark }
 * { box-sizing: border-box }
+[hidden] { display: none !important }  /* main/section usan display:grid; hidden debe ganar */
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--sans);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px 32px }
 header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; padding-block: 4px 12px; border-bottom: 1px solid var(--line) }
@@ -36,6 +37,7 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px }
 form { display: grid; gap: 8px }
 label { font-size: 12px; color: var(--muted); display: grid; gap: 3px }
+input, select, textarea { width: 100%; min-width: 0 }
 input, select, textarea, button { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 7px 9px }
 button { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); cursor: pointer; font-weight: 600 }
 button.secondary { background: transparent; color: var(--fg); border-color: var(--line); font-weight: 400 }
@@ -122,7 +124,7 @@ dt { color: var(--muted) } dd { margin: 0; overflow-wrap: anywhere }
   let device; try { device = localStorage.getItem("lcqa.device"); } catch {}
   if (!device) { device = "control-web-" + crypto.randomUUID().slice(0, 8); try { localStorage.setItem("lcqa.device", device); } catch {} }
 
-  const jobs = new Map(); let techs = []; let selected = null; let maxUpdated = 0; let channel = null;
+  const jobs = new Map(); let techs = []; let selected = null; let lastMsg = null;  // mensaje del último guardado; sobrevive al repintado por Realtime let maxUpdated = 0; let channel = null;
 
   async function api(method, path, body) {
     const { data: { session } } = await sb.auth.getSession();
@@ -173,7 +175,7 @@ dt { color: var(--muted) } dd { margin: 0; overflow-wrap: anywhere }
           <label for="aEstado">Estado<select id="aEstado">${ESTADOS.map((e) => `<option${e === j.estado ? " selected" : ""}>${e}</option>`).join("")}</select></label>
         </div>
         <label for="aNotas">Notas<textarea id="aNotas" rows="2">${esc(j.notas || "")}</textarea></label>
-        <button id="actBtn">Guardar cambios</button><div id="actMsg" class="err"></div>
+        <button id="actBtn">Guardar cambios</button><div id="actMsg" class="${lastMsg?.ok ? "okmsg" : "err"}">${esc(lastMsg?.id === j.id ? lastMsg.text : "")}</div>
       </form>`;
     $("actForm").addEventListener("submit", save);
   }
@@ -189,10 +191,11 @@ dt { color: var(--muted) } dd { margin: 0; overflow-wrap: anywhere }
     $("actBtn").disabled = true;
     const r = await api("PATCH", "/orders/" + j.id, body);
     $("actBtn").disabled = false;
-    if (r.status === 200) { $("actMsg").className = "okmsg"; $("actMsg").textContent = `Guardado · versión ${r.body.version}`;
+    if (r.status === 200) { lastMsg = { id: j.id, ok: true, text: `Guardado · versión ${r.body.version}` }; $("actMsg").className = "okmsg"; $("actMsg").textContent = lastMsg.text;
       log(`orden ${j.id} → v${r.body.version} ${JSON.stringify(body)}`); await refresh(j.id); }
     else if (r.status === 409) { $("actMsg").className = "err";
-      $("actMsg").textContent = `Otro usuario cambió ${(r.body?.conflictFields || []).join(", ") || "la orden"}. Se recargó la versión actual; revisa y guarda de nuevo.`;
+      lastMsg = { id: j.id, ok: false, text: `Otro usuario cambió ${(r.body?.conflictFields || []).join(", ") || "la orden"}. Se recargó la versión actual; revisa y guarda de nuevo.` };
+      $("actMsg").textContent = lastMsg.text;
       log(`orden ${j.id} CONFLICT ${JSON.stringify(r.body)}`); await refresh(j.id); }
     else { $("actMsg").className = "err"; $("actMsg").textContent = `No se guardó (${r.status} ${r.body?.error || ""}).`; log(`orden ${j.id} HTTP ${r.status} ${JSON.stringify(r.body)}`); }
   }
@@ -234,7 +237,7 @@ dt { color: var(--muted) } dd { margin: 0; overflow-wrap: anywhere }
     log(`sesión ${me.body.role} · ${techs.length} técnicos · dispositivo ${device}`);
   }
 
-  $("orders").addEventListener("click", (e) => { const tr = e.target.closest("tr.order"); if (tr) { selected = Number(tr.dataset.id); render(); } });
+  $("orders").addEventListener("click", (e) => { const tr = e.target.closest("tr.order"); if (tr) { selected = Number(tr.dataset.id); lastMsg = null; render(); } });
   $("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault(); $("loginErr").textContent = ""; $("loginBtn").disabled = true;
     const { data, error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pass").value });
