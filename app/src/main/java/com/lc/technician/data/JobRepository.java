@@ -227,12 +227,20 @@ public class JobRepository {
         });
     }
 
+    /** Sesión de laboratorio, o en QA (CLOUD_LOGIN) sesión de Supabase del técnico: sin esto QA esperaba 15 min. */
+    private boolean envioInmediatoActivo() {
+        if (appContext == null) return false;
+        if (com.lc.technician.sync.LabSession.activa(appContext)) return true;
+        return com.lc.technician.BuildConfig.CLOUD_LOGIN
+                && com.lc.technician.sync.SupabaseClient.get(appContext).hasUserSession();
+    }
+
     /**
      * Con sesión de laboratorio, un cambio de estado se envía en cuanto haya red (no a los 15 min).
      * APPEND_OR_REPLACE: si ya hay una sincronización en curso, esta corre después y no se pierde.
      */
     public void solicitarSyncInmediata() {
-        if (appContext == null || !com.lc.technician.sync.LabSession.activa(appContext)) return;
+        if (!envioInmediatoActivo()) return;
         androidx.work.OneTimeWorkRequest req = new androidx.work.OneTimeWorkRequest.Builder(
                 com.lc.technician.worker.SyncWorker.class)
                 .setConstraints(new androidx.work.Constraints.Builder()
@@ -246,7 +254,7 @@ public class JobRepository {
 
     /** Una sola ejecución extra tras un envío, para lo editado mientras estaba en tránsito. */
     public void solicitarSyncSeguimiento() {
-        if (appContext == null || !com.lc.technician.sync.LabSession.activa(appContext)) return;
+        if (!envioInmediatoActivo()) return;
         androidx.work.OneTimeWorkRequest req = new androidx.work.OneTimeWorkRequest.Builder(
                 com.lc.technician.worker.SyncWorker.class)
                 .setInitialDelay(3, java.util.concurrent.TimeUnit.SECONDS)
