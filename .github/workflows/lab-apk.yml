@@ -85,7 +85,8 @@ jobs:
             dir=${spec%%:*}; want=${spec##*:}; apk=$(ls "$dir"/*.apk | head -1)
             got=$("$BT/aapt2" dump packagename "$apk")
             echo "$apk -> $got"; [ "$got" = "$want" ] || { echo "::error::applicationId $got != $want"; exit 1; }
-            "$BT/apksigner" verify --print-certs "$apk" | grep -E 'Signer #1 certificate (DN|SHA-256)'
+            sig=$("$BT/apksigner" verify --verbose --print-certs "$apk" 2>&1) || { echo "$sig"; echo "::error::firma invalida en $apk"; exit 1; }
+            echo "$sig" | grep -E 'Verified using|certificate (DN|SHA-256)' || echo "$sig" | head -20
             sha256sum "$apk"
             unzip -p "$apk" 'classes*.dex' | strings | grep -qiE 'sb_secret_|service_role' && { echo "::error::secreto en $apk"; exit 1; } || true
             unzip -p "$apk" 'classes*.dex' | strings | grep -q 'zzbplbkrcdxmegoisxtf' || { echo "::error::$apk no apunta a LC-Sync-QA"; exit 1; }
