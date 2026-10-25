@@ -30,6 +30,17 @@ jobs:
             "$SDKM" "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || "$SDKM" "platforms;android-36" >/dev/null 2>&1 || true
           fi
           ls "$ANDROID_HOME/platforms" | tail -4
+      - name: Firma LAB permanente (desde secretos, nunca en el repo)
+        env:
+          KS_B64: ${{ secrets.LAB_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.LAB_KEYSTORE_PASS }}
+        run: |
+          if [ -z "$KS_B64" ]; then echo "::error::falta el secreto LAB_KEYSTORE_B64"; exit 1; fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/lab-release.p12"
+          printf 'KEYSTORE_FILE=%s\nKEYSTORE_PASSWORD=%s\nKEY_ALIAS=lclab\nKEY_PASSWORD=%s\n' \
+            "$RUNNER_TEMP/lab-release.p12" "$KS_PASS" "$KS_PASS" > local.properties
+          chmod 600 local.properties "$RUNNER_TEMP/lab-release.p12"
+          echo "firma configurada (contenido no impreso)"
       - name: Quitar el override de aapt2 del entorno Termux (solo en el runner)
         run: |
           # gradle.properties apunta aapt2 a una ruta de Termux/PRoot que no existe en el runner

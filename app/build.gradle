@@ -52,6 +52,11 @@ android {
         debug {
             applicationIdSuffix '.dev'
             versionNameSuffix '-dev'
+            // En CI se firma con la clave LAB permanente (local.properties la aporta desde secretos).
+            // Sin local.properties (máquina de desarrollo) se mantiene el debug normal de siempre.
+            if (localProps['KEYSTORE_FILE']) {
+                signingConfig signingConfigs.release
+            }
         }
         release {
             minifyEnabled true
