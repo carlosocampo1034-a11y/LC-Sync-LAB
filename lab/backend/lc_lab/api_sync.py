@@ -145,10 +145,11 @@ def _procesar_job(db, user, device, d):
         elif d.get("version") == 0:
             res = {"id": jid, "status": "REJECTED", "clientUpdatedAt": cua,
                    "reason": "versión 0 no válida: envía la versión actual del servidor"}
-        elif isinstance(d.get("version"), int) and d["version"] != row["version"]:
+        elif isinstance(d.get("version"), int) and d["version"] > row["version"]:
+            # Versión del futuro: imposible salvo error o manipulación; no se aplica nada.
             actual = db.execute("SELECT * FROM jobs WHERE id = ?", (jid,)).fetchone()
             res = {"id": jid, "status": "CONFLICT", "version": row["version"], "clientUpdatedAt": cua,
-                   "reason": f"versión {d['version']} desfasada (servidor: {row['version']})",
+                   "reason": f"versión {d['version']} no válida (servidor: {row['version']})",
                    "conflictFields": [], "server": J.a_api(actual, user, db)}
         else:
             datos = dict(d)
