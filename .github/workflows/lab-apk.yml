@@ -58,9 +58,42 @@ jobs:
       - name: Customer (debug, applicationId com.lc.customer.lab)
         working-directory: customer_app
         run: ./gradlew --no-daemon --stacktrace assembleDebug
+      - name: URL y clave anónima de Supabase LAB para QA (solo anon; nunca service_role)
+        id: qa
+        env:
+          SB_URL: ${{ secrets.QA_SUPABASE_URL }}
+          SB_ANON: ${{ secrets.QA_SUPABASE_ANON_KEY }}
+        run: |
+          # Sin los secretos QA se omiten las variantes QA y la compilación LAB sigue igual que antes.
+          if [ -z "$SB_URL" ] || [ -z "$SB_ANON" ]; then echo "::warning::sin QA_SUPABASE_URL / QA_SUPABASE_ANON_KEY: se omite QA"; exit 0; fi
+          printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SB_URL" "$SB_ANON" >> local.properties
+          printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SB_URL" "$SB_ANON" >> customer_app/local.properties
+          echo "Supabase QA configurado (contenido no impreso)"
+          echo "enabled=1" >> "$GITHUB_OUTPUT"
+      - name: Technician QA (applicationId com.lc.technician.qa)
+        if: steps.qa.outputs.enabled == '1'
+        run: ./gradlew --no-daemon --stacktrace assembleQa
+      - name: Customer QA (applicationId com.lc.customer.qa)
+        if: steps.qa.outputs.enabled == '1'
+        working-directory: customer_app
+        run: ./gradlew --no-daemon --stacktrace assembleQa
+      - name: Verificar APK QA (applicationId, firma, SHA-256, sin secretos)
+        if: steps.qa.outputs.enabled == '1'
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          for spec in "app/build/outputs/apk/qa:com.lc.technician.qa" "customer_app/app/build/outputs/apk/qa:com.lc.customer.qa"; do
+            dir=${spec%%:*}; want=${spec##*:}; apk=$(ls "$dir"/*.apk | head -1)
+            got=$("$BT/aapt2" dump packagename "$apk")
+            echo "$apk -> $got"; [ "$got" = "$want" ] || { echo "::error::applicationId $got != $want"; exit 1; }
+            "$BT/apksigner" verify --print-certs "$apk" | grep -E 'Signer #1 certificate (DN|SHA-256)'
+            sha256sum "$apk"
+            unzip -p "$apk" 'classes*.dex' | strings | grep -qiE 'sb_secret_|service_role' && { echo "::error::secreto en $apk"; exit 1; } || true
+            unzip -p "$apk" 'classes*.dex' | strings | grep -q 'zzbplbkrcdxmegoisxtf' || { echo "::error::$apk no apunta a LC-Sync-QA"; exit 1; }
+            unzip -p "$apk" 'classes*.dex' | strings | grep -qE 'rmkduyrrjtqqvjpqhyra|10\.0\.0\.121' && echo "::warning::$apk contiene referencias LAB (codigo de otras variantes)" || true
+          done
       - name: Resumen de APKs
         run: |
-          find . -name "*.apk" -path "*debug*" -printf "%p %s bytes\n" | tee apks.txt
+          find . -name "*.apk" \( -path "*debug*" -o -path "*/qa/*" \) -printf "%p %s bytes\n" | tee apks.txt
       - uses: actions/upload-artifact@v4
         with:
           name: lab-apks
@@ -69,6 +102,8 @@ jobs:
           path: |
             app/build/outputs/apk/debug/*.apk
             customer_app/app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/qa/*.apk
+            customer_app/app/build/outputs/apk/qa/*.apk
 
   sync-tests:
     runs-on: ubuntu-latest
