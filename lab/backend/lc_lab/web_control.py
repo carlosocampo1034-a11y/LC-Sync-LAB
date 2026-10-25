@@ -46,7 +46,9 @@ def _csrf():
 
 
 def _check_csrf():
-    if request.form.get("csrf") != session.get("csrf"):
+    # Tras el login la sesión se limpia y aún no hay token: None == None no puede contar como válido
+    esperado = session.get("csrf")
+    if not esperado or not secrets.compare_digest(request.form.get("csrf", ""), esperado):
         abort(400, "CSRF")
 
 
