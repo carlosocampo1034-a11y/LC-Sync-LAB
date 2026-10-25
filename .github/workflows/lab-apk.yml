@@ -1,5 +1,7 @@
 name: LAB APK (debug)
-# Compila APK de QA (debug) de Technician y Customer. NO firma release, NO publica, NO usa secretos.
+# Compila las APK de QA (debug) de Technician y Customer en una sola ejecución.
+# Firma: clave LAB permanente desde los secretos LAB_KEYSTORE_B64 y LAB_KEYSTORE_PASS
+# (nunca en el repositorio ni en los artefactos). Sin otros secretos de producción.
 on:
   workflow_dispatch:
   push:
@@ -40,6 +42,8 @@ jobs:
           printf 'KEYSTORE_FILE=%s\nKEYSTORE_PASSWORD=%s\nKEY_ALIAS=lclab\nKEY_PASSWORD=%s\n' \
             "$RUNNER_TEMP/lab-release.p12" "$KS_PASS" "$KS_PASS" > local.properties
           chmod 600 local.properties "$RUNNER_TEMP/lab-release.p12"
+          cp local.properties customer_app/local.properties   # Customer es un proyecto Gradle aparte
+          chmod 600 customer_app/local.properties
           echo "firma configurada (contenido no impreso)"
       - name: Quitar el override de aapt2 del entorno Termux (solo en el runner)
         run: |

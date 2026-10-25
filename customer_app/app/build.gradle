@@ -1,5 +1,11 @@
 plugins { id 'com.android.application' }
 
+// Misma clave LAB que Technician (llega por local.properties en CI; en local no existe y se usa
+// el debug normal). Sin claves ni contraseñas en el repositorio.
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) { localProps.load(new FileInputStream(localPropsFile)) }
+
 // L&C Customer — LABORATORIO. Identificador propio: nunca com.lc.technician ni com.lc.technician.dev.
 android {
     namespace 'com.lc.customer'
@@ -11,6 +17,19 @@ android {
         versionCode 1
         versionName "0.1.0-lab"
         buildConfigField "String", "API_BASE", "\"http://127.0.0.1:5055/api/v2\""
+    }
+    signingConfigs {
+        release {
+            storeFile file(localProps['KEYSTORE_FILE'] ?: 'keystore_not_configured.jks')
+            storePassword localProps['KEYSTORE_PASSWORD'] ?: ''
+            keyAlias localProps['KEY_ALIAS'] ?: ''
+            keyPassword localProps['KEY_PASSWORD'] ?: ''
+        }
+    }
+    buildTypes {
+        debug {
+            if (localProps['KEYSTORE_FILE']) { signingConfig signingConfigs.release }
+        }
     }
     buildFeatures { buildConfig true }
     compileOptions {
