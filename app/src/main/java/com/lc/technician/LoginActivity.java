@@ -94,10 +94,10 @@ public class LoginActivity extends AppCompatActivity {
         if (matches(pin, BuildConfig.PIN_TECNICO))    return "TECNICO";
         if (matches(pin, BuildConfig.PIN_DISPATCHER)) return "DISPATCHER";
         if (matches(pin, BuildConfig.PIN_ADMIN))      return "ADMIN";
-        // Primera instalación (LAB/DEV sin PIN configurado): el PIN que el técnico escribe queda
-        // registrado como su PIN local. Sin esto la app recién instalada es inutilizable, porque
-        // las builds de laboratorio no llevan PIN en BuildConfig. No recupera credenciales antiguas.
-        if (sinPinConfigurado(p) && pin.matches("\\d{4,8}")) {
+        // Aprovisionamiento SOLO en compilaciones de laboratorio (BuildConfig.DEBUG). En release no
+        // existe: sin PIN compilado o dinámico la app no deja entrar y la autenticación real es la
+        // del servidor. El PIN local no sustituye a la autenticación Cloud.
+        if (BuildConfig.DEBUG && sinPinConfigurado(p) && pin.matches("\\d{4,8}")) {
             p.edit().putString(KEY_PIN_TECNICO, pin).apply();
             return "TECNICO";
         }
