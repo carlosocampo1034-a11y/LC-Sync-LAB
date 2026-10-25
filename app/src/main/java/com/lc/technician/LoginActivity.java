@@ -94,7 +94,23 @@ public class LoginActivity extends AppCompatActivity {
         if (matches(pin, BuildConfig.PIN_TECNICO))    return "TECNICO";
         if (matches(pin, BuildConfig.PIN_DISPATCHER)) return "DISPATCHER";
         if (matches(pin, BuildConfig.PIN_ADMIN))      return "ADMIN";
+        // Primera instalación (LAB/DEV sin PIN configurado): el PIN que el técnico escribe queda
+        // registrado como su PIN local. Sin esto la app recién instalada es inutilizable, porque
+        // las builds de laboratorio no llevan PIN en BuildConfig. No recupera credenciales antiguas.
+        if (sinPinConfigurado(p) && pin.matches("\\d{4,8}")) {
+            p.edit().putString(KEY_PIN_TECNICO, pin).apply();
+            return "TECNICO";
+        }
         return null;
+    }
+
+    private static boolean sinPinConfigurado(android.content.SharedPreferences p) {
+        return !matchesDynamic("x", p.getString(KEY_PIN_TECNICO, null))
+            && !matchesDynamic("x", p.getString(KEY_PIN_DISPATCH, null))
+            && !matchesDynamic("x", p.getString(KEY_PIN_ADMIN, null))
+            && (BuildConfig.PIN_TECNICO == null || BuildConfig.PIN_TECNICO.isEmpty())
+            && (BuildConfig.PIN_DISPATCHER == null || BuildConfig.PIN_DISPATCHER.isEmpty())
+            && (BuildConfig.PIN_ADMIN == null || BuildConfig.PIN_ADMIN.isEmpty());
     }
 
     // Keep backward-compatible no-context version for tests that still use it
