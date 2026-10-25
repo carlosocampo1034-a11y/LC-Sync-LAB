@@ -53,12 +53,17 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-2" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-3" });
     }
     const user = await authenticate(req);
     if (user instanceof Response) return user;
 
-    if (route === "/auth/me" && req.method === "GET") return out(200, { id: user.id, role: user.role });
+    if (route === "/auth/me" && req.method === "GET") {
+      // technician_code: la app del técnico lo usa para "Mis Jobs" (las órdenes llegan con technician_code)
+      if (user.role !== "TECHNICIAN") return out(200, { id: user.id, role: user.role });
+      const { data: t } = await db.from("profiles").select("technician_code").eq("id", user.id).maybeSingle();
+      return out(200, { id: user.id, role: user.role, technician_code: t?.technician_code ?? null });
+    }
     if ((route === "/protected-test" || route === "/tech-probe") && req.method === "GET") {
       return out(200, { ok: true, role: user.role });
     }

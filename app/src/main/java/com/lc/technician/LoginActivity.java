@@ -91,14 +91,16 @@ public class LoginActivity extends AppCompatActivity {
                     com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
                     sb.signIn(e, c, new com.lc.technician.sync.SupabaseClient.Callback() {
                         @Override public void onSuccess() {
-                            String rol = null;
+                            String rol = null, codigo = null;
                             try {
                                 retrofit2.Response<okhttp3.ResponseBody> r = sb.api().me(sb.authHeader()).execute();
                                 if (r.isSuccessful() && r.body() != null) {
-                                    rol = new org.json.JSONObject(r.body().string()).optString("role");
+                                    org.json.JSONObject me = new org.json.JSONObject(r.body().string());
+                                    rol = me.optString("role");
+                                    codigo = me.isNull("technician_code") ? null : me.optString("technician_code", null);
                                 }
                             } catch (Exception ignored) {}
-                            final String role = rol;
+                            final String role = rol, techCode = codigo;
                             runOnUiThread(() -> {
                                 if (!"TECHNICIAN".equals(role)) {
                                     sb.signOut();
@@ -106,7 +108,9 @@ public class LoginActivity extends AppCompatActivity {
                                             ? "Sin conexión con L&C" : "Esta app es para técnicos", Toast.LENGTH_LONG).show();
                                     return;
                                 }
-                                String name = e.contains("@") ? e.substring(0, e.indexOf('@')) : e;
+                                // Las órdenes llegan con technician_code (QA-T01): es la identidad que filtra "Mis Jobs"
+                                String name = techCode != null && !techCode.isEmpty() ? techCode
+                                        : e.contains("@") ? e.substring(0, e.indexOf('@')) : e;
                                 prefs.edit().putBoolean(KEY_SESSION, true).putString(KEY_ROLE, "TECNICO")
                                         .putString(KEY_NAME, name).apply();
                                 seedTechnicianIfNeeded(name, "TECNICO");
