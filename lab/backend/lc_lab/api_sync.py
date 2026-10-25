@@ -145,7 +145,12 @@ def _procesar_job(db, user, device, d):
         elif d.get("version") == 0:
             res = {"id": jid, "status": "REJECTED", "clientUpdatedAt": cua,
                    "reason": "versión 0 no válida: envía la versión actual del servidor"}
-        elif isinstance(d.get("version"), int) and d["version"] > row["version"]:
+        elif not isinstance(d.get("version"), int) or isinstance(d.get("version"), bool) or d["version"] < 1:
+            # Sin versión (o con una imposible) NO se puede tocar una orden existente: si se dejara
+            # pasar, un cliente saltaría el control de concurrencia y pisaría cambios de otros.
+            res = {"id": jid, "status": "REJECTED", "clientUpdatedAt": cua,
+                   "reason": "versión del servidor obligatoria (entero >= 1)"}
+        elif d["version"] > row["version"]:
             # Versión del futuro: imposible salvo error o manipulación; no se aplica nada.
             actual = db.execute("SELECT * FROM jobs WHERE id = ?", (jid,)).fetchone()
             res = {"id": jid, "status": "CONFLICT", "version": row["version"], "clientUpdatedAt": cua,

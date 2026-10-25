@@ -54,3 +54,16 @@ jobs:
           path: |
             app/build/outputs/apk/debug/*.apk
             customer_app/app/build/outputs/apk/debug/*.apk
+
+  sync-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencias del backend LAB
+        run: pip install flask
+      - name: Pruebas de integridad de sincronización (32 comprobaciones)
+        run: python lab/tests_sync/test_conflictos.py

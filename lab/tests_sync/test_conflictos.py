@@ -217,6 +217,53 @@ def main():
         check("S7.4 el valor del primero se conserva", job(c)["notas"] == "Nota A (técnico)",
               f"notas={job(c)['notas']}")
 
+
+        # ── S2b · campos distintos con versión REALMENTE antigua ──────────────────────────────
+        print("\nS2b · campos distintos con base antigua (merge parcial)")
+        v_base = job(c)["version"]
+        _procesar_job(c, tec_b, DEV_B, {"id": JOB, "updatedAt": t + 900, "version": v_base,
+                                        "estado": "EN CAMINO"})
+        estado_tras_a = job(c)["estado"]
+        r = _procesar_job(c, desp, DEV_D, {"id": JOB, "updatedAt": t + 901, "version": v_base,
+                                           "notas": "nota con base vieja"})
+        check("S2b.1 el campo independiente se aplica", r["status"] == "ACCEPTED"
+              and job(c)["notas"] == "nota con base vieja", f"{r['status']} notas={job(c)['notas']}")
+        check("S2b.2 el campo ajeno no se toca", job(c)["estado"] == estado_tras_a,
+              f"estado={job(c)['estado']}")
+
+        # ── S8 · sin versión, negativa y futura ───────────────────────────────────────────────
+        print("\nS8 · intentos de saltarse el control de concurrencia")
+        antes_estado, antes_v = job(c)["estado"], job(c)["version"]
+        r = _procesar_job(c, desp, DEV_D, {"id": JOB, "updatedAt": t + 950, "estado": "CANCELADO"})
+        check("S8.1 sin versión no puede saltarse el control",
+              r["status"] in ("REJECTED", "CONFLICT") and job(c)["estado"] == antes_estado,
+              f"{r['status']} estado={job(c)['estado']}")
+        r = _procesar_job(c, desp, DEV_D, {"id": JOB, "updatedAt": t + 951, "version": -3,
+                                           "estado": "CANCELADO"})
+        check("S8.2 versión negativa no puede saltarse el control",
+              r["status"] in ("REJECTED", "CONFLICT") and job(c)["estado"] == antes_estado,
+              f"{r['status']} estado={job(c)['estado']}")
+        r = _procesar_job(c, desp, DEV_D, {"id": JOB, "updatedAt": t + 952,
+                                           "version": job(c)["version"] + 5, "estado": "CANCELADO"})
+        check("S8.3 versión futura rechazada", r["status"] == "CONFLICT" and job(c)["estado"] == antes_estado,
+              f"{r['status']}")
+        check("S8.4 la versión no avanzó por los intentos", job(c)["version"] == antes_v,
+              f"v{antes_v} → v{job(c)['version']}")
+
+        # ── S9 · respuesta atrasada tras ediciones offline del técnico ────────────────────────
+        print("\nS9 · respuesta atrasada después de ediciones offline")
+        base_lectura = job(c)["version"]
+        _procesar_job(c, tec_b, DEV_B, {"id": JOB, "updatedAt": t + 960, "version": base_lectura,
+                                        "notas": "edición offline 1"})
+        _procesar_job(c, tec_b, DEV_B, {"id": JOB, "updatedAt": t + 961, "version": job(c)["version"],
+                                        "notas": "edición offline 2"})
+        r = _procesar_job(c, desp, DEV_D, {"id": JOB, "updatedAt": t + 962, "version": base_lectura,
+                                           "notas": "respuesta atrasada"})
+        check("S9.1 la respuesta atrasada no pisa las ediciones", job(c)["notas"] == "edición offline 2",
+              f"notas={job(c)['notas']} · respuesta={r['status']}")
+        check("S9.2 queda registrada como conflicto", r["status"] == "CONFLICT"
+              and len(conflictos(c)) >= 1, f"{r['status']} · {len(conflictos(c))} pendientes")
+
     fails = [r for r in RESULTS if r[1] is False]
     blocks = [r for r in RESULTS if r[1] is None]
     oks = [r for r in RESULTS if r[1] is True]
