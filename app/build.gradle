@@ -37,6 +37,8 @@ android {
         buildConfigField "String",  "SUPABASE_AUTH_PASSWORD",  "\"${localProps['SUPABASE_AUTH_PASSWORD']  ?: ''}\""
         // Cloud-first: bridge always active
         buildConfigField "boolean", "SUPABASE_BRIDGE_ENABLED", "true"
+        // QA: login por usuario en Supabase Auth y escrituras por lc-api (no PIN, no upsert directo)
+        buildConfigField "boolean", "CLOUD_LOGIN", "false"
     }
     signingConfigs {
         release {
@@ -70,6 +72,7 @@ android {
             buildConfigField "String", "PIN_ADMIN",              "\"\""
             buildConfigField "String", "SUPABASE_AUTH_EMAIL",    "\"\""
             buildConfigField "String", "SUPABASE_AUTH_PASSWORD", "\"\""
+            buildConfigField "boolean", "CLOUD_LOGIN", "true"
         }
         release {
             minifyEnabled true

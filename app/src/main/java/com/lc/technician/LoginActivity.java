@@ -28,7 +28,9 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        if (prefs.getBoolean(KEY_SESSION, false)) {
+        // QA: la sesión local solo vale si también hay sesión de Supabase Auth del técnico
+        if (prefs.getBoolean(KEY_SESSION, false)
+                && (!BuildConfig.CLOUD_LOGIN || com.lc.technician.sync.SupabaseClient.get(this).hasUserSession())) {
             goMain();
             return;
         }
@@ -42,6 +44,7 @@ public class LoginActivity extends AppCompatActivity {
         EditText etPin = findViewById(R.id.etPin);
 
         findViewById(R.id.btnIngresar).setOnClickListener(v -> {
+            if (BuildConfig.CLOUD_LOGIN) { loginCloud(prefs); return; }
             String pin = etPin.getText().toString().trim();
             String role = resolveRole(this, pin);
             if (role == null) {
@@ -58,6 +61,65 @@ public class LoginActivity extends AppCompatActivity {
             seedTechnicianIfNeeded(name, role);
             goMain();
         });
+    }
+
+    /** QA: correo y contraseña del técnico en Supabase Auth; el rol lo confirma lc-api (profiles). */
+    private void loginCloud(SharedPreferences prefs) {
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        box.setPadding(pad, pad / 2, pad, 0);
+        EditText email = new EditText(this);
+        email.setHint("Correo");
+        email.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText clave = new EditText(this);
+        clave.setHint("Contraseña");
+        clave.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        box.addView(email);
+        box.addView(clave);
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Iniciar sesión · L&C QA")
+                .setView(box)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Entrar", (d, w) -> {
+                    String e = email.getText().toString().trim();
+                    String c = clave.getText().toString();
+                    if (e.isEmpty() || c.isEmpty()) {
+                        Toast.makeText(this, "Escribe correo y contraseña", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
+                    sb.signIn(e, c, new com.lc.technician.sync.SupabaseClient.Callback() {
+                        @Override public void onSuccess() {
+                            String rol = null;
+                            try {
+                                retrofit2.Response<okhttp3.ResponseBody> r = sb.api().me(sb.authHeader()).execute();
+                                if (r.isSuccessful() && r.body() != null) {
+                                    rol = new org.json.JSONObject(r.body().string()).optString("role");
+                                }
+                            } catch (Exception ignored) {}
+                            final String role = rol;
+                            runOnUiThread(() -> {
+                                if (!"TECHNICIAN".equals(role)) {
+                                    sb.signOut();
+                                    Toast.makeText(LoginActivity.this, role == null
+                                            ? "Sin conexión con L&C" : "Esta app es para técnicos", Toast.LENGTH_LONG).show();
+                                    return;
+                                }
+                                String name = e.contains("@") ? e.substring(0, e.indexOf('@')) : e;
+                                prefs.edit().putBoolean(KEY_SESSION, true).putString(KEY_ROLE, "TECNICO")
+                                        .putString(KEY_NAME, name).apply();
+                                seedTechnicianIfNeeded(name, "TECNICO");
+                                goMain();
+                            });
+                        }
+                        @Override public void onError(String msg) {
+                            runOnUiThread(() -> Toast.makeText(LoginActivity.this,
+                                    "Correo o contraseña incorrectos", Toast.LENGTH_LONG).show());
+                        }
+                    });
+                })
+                .show();
     }
 
     private void seedTechnicianIfNeeded(String name, String role) {

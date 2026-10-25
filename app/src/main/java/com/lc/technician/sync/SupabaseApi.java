@@ -7,6 +7,8 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
+import retrofit2.http.PATCH;
+import retrofit2.http.Path;
 import retrofit2.http.Headers;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
@@ -53,4 +55,18 @@ public interface SupabaseApi {
             @Query("updated_at") String updatedAtFilter,
             @Query("select")     String selectCols,
             @Query("limit")      int    limit);
+
+    // ── lc-api (Edge Function) · variante QA ────────────────────────────────
+
+    /** Cambio de una orden con versión base, dispositivo y marca del cliente (idempotente). */
+    @Headers("Content-Type: application/json")
+    @PATCH("functions/v1/lc-api/orders/{id}")
+    Call<ResponseBody> patchOrder(
+            @Header("Authorization") String authorization,
+            @Path("id") long id,
+            @Body java.util.Map<String, Object> body);
+
+    /** Rol del usuario autenticado según profiles (lo decide el servidor, no la app). */
+    @GET("functions/v1/lc-api/auth/me")
+    Call<ResponseBody> me(@Header("Authorization") String authorization);
 }

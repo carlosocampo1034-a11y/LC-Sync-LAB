@@ -252,6 +252,12 @@ public class MainActivity extends AppCompatActivity {
             // Inicia suscripción Realtime para recibir cambios de Control y Customer
             SupabaseSyncBridge.get(this).startRealtime(null);
         }
+        // QA: sin backend de laboratorio; pull desde Supabase y Realtime con el token del técnico (RLS)
+        if (BuildConfig.CLOUD_LOGIN && com.lc.technician.sync.SupabaseClient.get(this).hasUserSession()) {
+            long ultima = getSharedPreferences("lc_prefs", MODE_PRIVATE).getLong("last_sync_time", 0);
+            if (System.currentTimeMillis() - ultima > 30_000L) JobRepository.get().solicitarSyncInmediata();
+            SupabaseSyncBridge.get(this).startRealtime(com.lc.technician.sync.SupabaseClient.get(this).accessToken());
+        }
     }
 
     private void recargarJobs() {

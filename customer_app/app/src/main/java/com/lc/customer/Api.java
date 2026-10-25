@@ -41,6 +41,7 @@ final class Api {
 
     /** URL activa: custom > WIFI hardcoded. Se conserva al cerrar sesión. */
     static String base(Context c) {
+        if (CloudApi.activo()) return CloudApi.base();
         String cu = urlCustom(c);
         if (cu != null) return cu;
         return API_WIFI;
@@ -66,7 +67,7 @@ final class Api {
                 .apply();
     }
 
-    static void cerrarSesion(Context c) { prefs(c).edit().remove("token").remove("nombre").apply(); }
+    static void cerrarSesion(Context c) { prefs(c).edit().remove("token").remove("refresh").remove("nombre").apply(); }
 
     static String nombre(Context c) { return prefs(c).getString("nombre", ""); }
 
@@ -75,6 +76,7 @@ final class Api {
     static Respuesta post(Context c, String ruta, JSONObject body) { return llamar(c, "POST", ruta, body); }
 
     private static Respuesta llamar(Context c, String metodo, String ruta, JSONObject body) {
+        if (CloudApi.activo()) return CloudApi.llamar(c, metodo, ruta, body);
         HttpURLConnection con = null;
         try {
             con = (HttpURLConnection) new URL(base(c) + ruta).openConnection();
@@ -100,6 +102,7 @@ final class Api {
 
     /** Descarga binaria con la sesión (p. ej. el PDF de la factura). null si falla o no es un PDF. */
     static byte[] descargarPdf(Context c, String ruta) {
+        if (CloudApi.activo()) return null;  // lc-api QA aún no genera facturas
         HttpURLConnection con = null;
         try {
             con = (HttpURLConnection) new URL(base(c) + ruta).openConnection();
@@ -134,6 +137,7 @@ final class Api {
 
     /** clientPhotoId > 0: el servidor no duplica la foto si se reintenta con el mismo número. */
     static Respuesta subirFoto(Context c, long jobId, byte[] datos, String mime, String categoria, long clientPhotoId) {
+        if (CloudApi.activo()) return CloudApi.noDisponible();  // lc-api QA aún no recibe fotos
         HttpURLConnection con = null;
         String limite = "----lc" + UUID.randomUUID();
         try {

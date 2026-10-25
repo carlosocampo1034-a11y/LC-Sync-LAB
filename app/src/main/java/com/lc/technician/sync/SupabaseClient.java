@@ -82,6 +82,11 @@ public class SupabaseClient {
         return "Bearer " + BuildConfig.SUPABASE_ANON_KEY;
     }
 
+    /** Access token del usuario (null si no hay sesión). Para Realtime con RLS. */
+    public String accessToken() {
+        return prefs.getString(KEY_AT, null);
+    }
+
     public boolean hasUserSession() {
         return prefs.getString(KEY_AT, null) != null;
     }
@@ -128,6 +133,7 @@ public class SupabaseClient {
         }
 
         // Fall back to password sign-in
+        if (BuildConfig.CLOUD_LOGIN) return "sin sesión de usuario: inicia sesión de nuevo";
         if (BuildConfig.SUPABASE_AUTH_EMAIL.isEmpty()) return "SUPABASE_AUTH_EMAIL not configured";
         try {
             retrofit2.Response<SupabaseModels.SignInResponse> r =

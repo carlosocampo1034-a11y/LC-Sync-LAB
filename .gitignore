@@ -41,3 +41,7 @@ local.properties
 .DS_Store
 *.log
 KEYSTORE_CREDENTIALS.txt
+
+# QA: configuración local de Control y temporales del CLI de Supabase
+lab/control-qa/config.js
+supabase/.temp/

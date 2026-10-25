@@ -88,7 +88,19 @@ public class SyncWorker extends Worker {
             });
 
             int pushed = 0;
-            if (!unsyncedJobs.isEmpty()) {
+            boolean pullCompleto = false;
+            boolean reintentar = false;
+            if (com.lc.technician.BuildConfig.CLOUD_LOGIN && !unsyncedJobs.isEmpty()) {
+                // QA: cada cambio va a lc-api con versión base (sin upsert directo, que RLS no permite)
+                com.lc.technician.sync.QaOrderSync.Resultado qr =
+                        com.lc.technician.sync.QaOrderSync.subir(getApplicationContext(), db, sb, unsyncedJobs);
+                db.jobDao().liberarEnTransito();  // lo no confirmado vuelve a la cola
+                pushed = qr.aceptados;
+                pullCompleto = qr.pullCompleto;
+                reintentar = qr.reintentar;
+                android.util.Log.i(TAG, "push QA: " + qr.aceptados + " aceptados, " + qr.conflictos
+                        + " conflictos, " + qr.rechazados + " rechazados");
+            } else if (!unsyncedJobs.isEmpty()) {
                 List<SupabaseModels.JobRow> rows = jobsToRows(unsyncedJobs);
                 boolean allOk = true;
                 for (int i = 0; i < rows.size(); i += 50) {
@@ -126,6 +138,7 @@ public class SyncWorker extends Worker {
             // ── PULL: Supabase → Room (last-write-wins) ────────────────────────
             SyncStateEntity pullState = db.syncStateDao().getByType("PULL_JOB");
             long since = (pullState != null && pullState.lastSyncAt > 0) ? pullState.lastSyncAt - 60_000L : 0;
+            if (pullCompleto) since = 0;
 
             int pulledJobs = 0;
             try {
@@ -148,6 +161,7 @@ public class SyncWorker extends Worker {
                     .putInt(KEY_PULLED_JOBS, pulledJobs)
                     .putBoolean("silent", isSilent)
                     .build();
+            if (reintentar) return Result.retry();  // cambios en cola: WorkManager reintenta con backoff
             return Result.success(out);
 
         } catch (Exception e) {
@@ -178,7 +192,12 @@ public class SyncWorker extends Worker {
             }
             long localUpdated = (existing != null && existing.updatedAt != null) ? existing.updatedAt : 0;
             long rowUpdated   = row.updatedAt != null ? row.updatedAt : 0;
-            if (existing == null || rowUpdated >= localUpdated) {
+            // QA: el servidor manda por versión (no por reloj del teléfono, que puede ir adelantado)
+            boolean aplicar = com.lc.technician.BuildConfig.CLOUD_LOGIN
+                    ? existing == null || existing.serverVersion == null || row.version == null
+                      || row.version >= existing.serverVersion
+                    : existing == null || rowUpdated >= localUpdated;
+            if (aplicar) {
                 JobEntity e = existing != null ? existing : new JobEntity();
                 e.id              = row.id;
                 e.cliente         = row.cliente;
@@ -203,9 +222,13 @@ public class SyncWorker extends Worker {
                 e.notasSeguridad  = row.notasSeguridad;
                 e.notas           = row.notas;
                 e.updatedAt       = rowUpdated > 0 ? rowUpdated : now;
+                if (row.version != null) e.serverVersion = row.version;
                 e.synced          = 1;
                 e.lastSyncedAt    = now;
                 db.jobDao().insert(e);
+                if (com.lc.technician.BuildConfig.CLOUD_LOGIN) {
+                    com.lc.technician.sync.QaOrderSync.guardarBase(getApplicationContext(), row);
+                }
                 count++;
             }
         }

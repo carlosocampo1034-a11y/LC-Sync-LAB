@@ -17,6 +17,9 @@ android {
         versionCode 1
         versionName "0.1.0-lab"
         buildConfigField "String", "API_BASE", "\"http://127.0.0.1:5055/api/v2\""
+        // Vacío fuera de QA: LAB y release siguen hablando con el backend de laboratorio.
+        buildConfigField "String", "SUPABASE_URL", "\"\""
+        buildConfigField "String", "SUPABASE_ANON_KEY", "\"\""
     }
     signingConfigs {
         release {
@@ -32,6 +35,11 @@ android {
             initWith debug
             matchingFallbacks = ['debug']
             buildConfigField "String", "API_BASE", "\"\""
+            // Supabase LC-Sync-QA: solo URL y clave publicable (la sesión es la de cada cliente).
+            buildConfigField "String", "SUPABASE_URL", "\"${localProps['SUPABASE_URL'] ?: ''}\""
+            buildConfigField "String", "SUPABASE_ANON_KEY", "\"${localProps['SUPABASE_ANON_KEY'] ?: ''}\""
+            // explícito: initWith copia debug antes de que su bloque asigne la firma LAB
+            if (localProps['KEYSTORE_FILE']) { signingConfig signingConfigs.release }
         }
         debug {
             if (localProps['KEYSTORE_FILE']) { signingConfig signingConfigs.release }

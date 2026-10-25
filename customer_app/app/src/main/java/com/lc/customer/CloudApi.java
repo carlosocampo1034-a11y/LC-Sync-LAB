@@ -1,0 +1,253 @@
+package com.lc.customer;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Variante QA: traduce las rutas del contrato v2 que usan las pantallas a Supabase LC-Sync-QA
+ * (Supabase Auth + Edge Function lc-api). Las pantallas no cambian.
+ * - Sesión por cliente (access + refresh token); nunca hay contraseñas en la APK.
+ * - Propiedades y equipos se guardan en el teléfono (QA no tiene esas tablas); su dirección viaja con la orden.
+ * - Lo que lc-api aún no ofrece (fotos, propuestas, PDF) responde 501 con un mensaje claro.
+ * Llamar SIEMPRE fuera del hilo principal.
+ */
+final class CloudApi {
+
+    private static final String LOCAL = "lc_customer_qa_local";
+
+    private CloudApi() {}
+
+    static boolean activo() { return !BuildConfig.SUPABASE_URL.isEmpty(); }
+
+    static String base() { return BuildConfig.SUPABASE_URL + "/functions/v1/lc-api"; }
+
+    static Api.Respuesta llamar(Context c, String metodo, String ruta, JSONObject body) {
+        try {
+            if ("POST".equals(metodo) && "/auth/login".equals(ruta)) return login(c, body);
+            if ("POST".equals(metodo) && "/auth/register".equals(ruta)) return registrar(c, body);
+            if ("/customer/properties".equals(ruta)) {
+                return "GET".equals(metodo) ? propiedades(c) : nuevaPropiedad(c, body);
+            }
+            if ("POST".equals(metodo) && ruta.matches("/customer/properties/\\d+/equipment")) {
+                return nuevoEquipo(c, Long.parseLong(ruta.split("/")[3]), body);
+            }
+            if ("GET".equals(metodo) && "/customer/requests".equals(ruta)) {
+                Api.Respuesta r = lcApi(c, "GET", "/orders", null);
+                if (!r.ok()) return r;
+                JSONArray in = r.cuerpo.optJSONArray("items");
+                JSONArray outs = new JSONArray();
+                for (int i = 0; in != null && i < in.length(); i++) outs.put(aContrato(in.optJSONObject(i)));
+                return new Api.Respuesta(200, new JSONObject().put("requests", outs));
+            }
+            if ("GET".equals(metodo) && ruta.matches("/customer/requests/\\d+")) {
+                Api.Respuesta r = lcApi(c, "GET", "/orders/" + ruta.substring(ruta.lastIndexOf('/') + 1), null);
+                return r.ok() ? new Api.Respuesta(200, aContrato(r.cuerpo)) : r;
+            }
+            if ("POST".equals(metodo) && "/customer/requests".equals(ruta)) return crearSolicitud(c, body);
+        } catch (Exception e) {
+            return new Api.Respuesta(-1, null);
+        }
+        return noDisponible();
+    }
+
+    static Api.Respuesta noDisponible() {
+        try {
+            return new Api.Respuesta(501, new JSONObject().put("error", "Función no disponible en la versión QA"));
+        } catch (Exception e) {
+            return new Api.Respuesta(501, new JSONObject());
+        }
+    }
+
+    // ── Auth ────────────────────────────────────────────────────────────────────────────────────
+
+    private static Api.Respuesta login(Context c, JSONObject body) throws Exception {
+        JSONObject cred = new JSONObject().put("email", body.optString("username").trim())
+                .put("password", body.optString("password"));
+        Api.Respuesta r = http("POST", BuildConfig.SUPABASE_URL + "/auth/v1/token?grant_type=password", null, cred);
+        if (!r.ok()) return new Api.Respuesta(r.codigo == -1 ? -1 : 401, new JSONObject().put("error",
+                r.codigo == -1 ? "Sin conexión con L&C" : "Correo o contraseña incorrectos"));
+        return sesionDesde(c, r.cuerpo, body.optString("username").trim());
+    }
+
+    private static Api.Respuesta registrar(Context c, JSONObject body) throws Exception {
+        JSONObject datos = new JSONObject().put("email", body.optString("email").trim())
+                .put("password", body.optString("password"))
+                .put("data", new JSONObject().put("nombre", body.optString("nombre")).put("telefono", body.optString("telefono")));
+        Api.Respuesta r = http("POST", BuildConfig.SUPABASE_URL + "/auth/v1/signup", null, datos);
+        if (!r.ok()) return new Api.Respuesta(r.codigo, new JSONObject().put("error",
+                r.cuerpo != null && r.cuerpo.has("msg") ? r.cuerpo.optString("msg") : "No se pudo crear la cuenta"));
+        if (!r.cuerpo.has("access_token")) {
+            return new Api.Respuesta(409, new JSONObject().put("error", "Revisa tu correo para confirmar la cuenta y luego entra."));
+        }
+        local(c).edit().putString("telefono", body.optString("telefono")).apply();
+        return sesionDesde(c, r.cuerpo, body.optString("nombre"));
+    }
+
+    /** Guarda la sesión de Supabase y devuelve lo que LoginActivity espera: token, displayName, role. */
+    private static Api.Respuesta sesionDesde(Context c, JSONObject tok, String nombre) throws Exception {
+        String access = tok.optString("access_token");
+        Api.prefs(c).edit().putString("token", access).putString("refresh", tok.optString("refresh_token")).apply();
+        Api.Respuesta me = http("GET", base() + "/auth/me", access, null);
+        if (!me.ok()) {
+            Api.prefs(c).edit().remove("token").remove("refresh").apply();
+            return me;
+        }
+        JSONObject meta = tok.optJSONObject("user") != null ? tok.optJSONObject("user").optJSONObject("user_metadata") : null;
+        String visible = meta != null && !meta.optString("nombre").isEmpty() ? meta.optString("nombre") : nombre;
+        return new Api.Respuesta(200, new JSONObject().put("token", access).put("displayName", visible)
+                .put("role", me.cuerpo.optString("role")));
+    }
+
+    /** Renueva el access token con el refresh token. false: hay que volver a entrar. */
+    private static synchronized boolean renovar(Context c) throws Exception {
+        String refresh = Api.prefs(c).getString("refresh", null);
+        if (refresh == null || refresh.isEmpty()) return false;
+        Api.Respuesta r = http("POST", BuildConfig.SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token", null,
+                new JSONObject().put("refresh_token", refresh));
+        if (!r.ok()) return false;
+        Api.prefs(c).edit().putString("token", r.cuerpo.optString("access_token"))
+                .putString("refresh", r.cuerpo.optString("refresh_token")).apply();
+        return true;
+    }
+
+    /** lc-api con la sesión del cliente; si caducó, se renueva una vez y se reintenta. */
+    private static Api.Respuesta lcApi(Context c, String metodo, String ruta, JSONObject body) throws Exception {
+        Api.Respuesta r = http(metodo, base() + ruta, Api.prefs(c).getString("token", null), body);
+        if (r.codigo == 401 && renovar(c)) r = http(metodo, base() + ruta, Api.prefs(c).getString("token", null), body);
+        if (r.codigo == 401) Api.cerrarSesion(c);
+        return r;
+    }
+
+    // ── Solicitudes ─────────────────────────────────────────────────────────────────────────────
+
+    private static Api.Respuesta crearSolicitud(Context c, JSONObject body) throws Exception {
+        JSONObject prop = buscarPropiedad(c, body.optLong("propertyId"));
+        if (prop == null) return new Api.Respuesta(422, new JSONObject().put("error", "Elige una propiedad"));
+        StringBuilder desc = new StringBuilder(body.optString("descripcion"));
+        if (body.has("fechaPreferida")) desc.append("\nPreferencia de fecha: ").append(Ui.fecha(body.optLong("fechaPreferida")));
+        if (!body.optString("ventanaPreferida").isEmpty()) desc.append("\nVentana: ").append(body.optString("ventanaPreferida"));
+        String nombre = Api.nombre(c).isEmpty() ? "Cliente" : Api.nombre(c);
+        JSONObject orden = new JSONObject()
+                .put("request_id", body.optString("clientRequestId"))  // mismo id en cada reintento: no duplica
+                .put("cliente", nombre)
+                .put("descripcion", desc.toString())
+                .put("direccion", prop.optString("direccion"))
+                .put("categoria", body.optString("categoria"));
+        String tel = local(c).getString("telefono", "");
+        if (!tel.isEmpty()) orden.put("telefono", tel);
+        Api.Respuesta r = lcApi(c, "POST", "/orders", orden);
+        return r.ok() ? new Api.Respuesta(r.codigo, new JSONObject().put("id", r.cuerpo.optLong("id"))) : r;
+    }
+
+    /** Fila de jobs → forma del contrato v2 que leen HomeActivity y RequestDetailActivity. */
+    private static JSONObject aContrato(JSONObject j) throws Exception {
+        JSONObject o = new JSONObject();
+        o.put("id", j.optLong("id"));
+        o.put("estado", j.optString("estado"));
+        o.put("descripcion", j.optString("descripcion"));
+        o.put("direccion", j.optString("direccion"));
+        o.put("equipo", j.optString("categoria"));
+        o.put("tecnicoNombre", j.isNull("technician_code") ? "" : j.optString("technician_code"));
+        if (!j.isNull("programado_para")) o.put("programadoPara", j.optLong("programado_para"));
+        o.put("updatedAt", j.optLong("updated_at"));
+        return o;
+    }
+
+    // ── Propiedades locales ─────────────────────────────────────────────────────────────────────
+
+    private static SharedPreferences local(Context c) {
+        return c.getApplicationContext().getSharedPreferences(LOCAL, Context.MODE_PRIVATE);
+    }
+
+    private static JSONArray listaPropiedades(Context c) throws Exception {
+        return new JSONArray(local(c).getString("properties", "[]"));
+    }
+
+    private static JSONObject buscarPropiedad(Context c, long id) throws Exception {
+        JSONArray ps = listaPropiedades(c);
+        for (int i = 0; i < ps.length(); i++) if (ps.optJSONObject(i).optLong("id") == id) return ps.optJSONObject(i);
+        return null;
+    }
+
+    private static Api.Respuesta propiedades(Context c) throws Exception {
+        return new Api.Respuesta(200, new JSONObject().put("properties", listaPropiedades(c)));
+    }
+
+    private static Api.Respuesta nuevaPropiedad(Context c, JSONObject body) throws Exception {
+        if (body == null || body.optString("direccion").trim().isEmpty()) {
+            return new Api.Respuesta(422, new JSONObject().put("error", "Escribe la dirección"));
+        }
+        JSONArray ps = listaPropiedades(c);
+        JSONObject p = new JSONObject(body.toString()).put("id", System.currentTimeMillis()).put("equipos", new JSONArray());
+        p.remove("codigoAcceso");  // el código de acceso no se guarda en claro en el teléfono
+        ps.put(p);
+        local(c).edit().putString("properties", ps.toString()).apply();
+        return new Api.Respuesta(201, p);
+    }
+
+    private static Api.Respuesta nuevoEquipo(Context c, long pid, JSONObject body) throws Exception {
+        JSONArray ps = listaPropiedades(c);
+        for (int i = 0; i < ps.length(); i++) {
+            JSONObject p = ps.optJSONObject(i);
+            if (p.optLong("id") != pid) continue;
+            JSONObject e = new JSONObject(body.toString()).put("id", System.currentTimeMillis());
+            p.optJSONArray("equipos").put(e);
+            local(c).edit().putString("properties", ps.toString()).apply();
+            return new Api.Respuesta(201, e);
+        }
+        return new Api.Respuesta(404, new JSONObject().put("error", "Propiedad no encontrada"));
+    }
+
+    // ── HTTP ────────────────────────────────────────────────────────────────────────────────────
+
+    /** Respuestas JSON; un array se entrega como {"items": [...]}. */
+    private static Api.Respuesta http(String metodo, String url, String token, JSONObject body) {
+        HttpURLConnection con = null;
+        try {
+            con = (HttpURLConnection) new URL(url).openConnection();
+            con.setRequestMethod(metodo);
+            con.setConnectTimeout(10000);
+            con.setReadTimeout(20000);
+            con.setRequestProperty("Accept", "application/json");
+            con.setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY);
+            if (token != null) con.setRequestProperty("Authorization", "Bearer " + token);
+            if (body != null) {
+                byte[] b = body.toString().getBytes(StandardCharsets.UTF_8);
+                con.setDoOutput(true);
+                con.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                try (OutputStream os = con.getOutputStream()) { os.write(b); }
+            }
+            int code = con.getResponseCode();
+            InputStream in = code >= 400 ? con.getErrorStream() : con.getInputStream();
+            String txt = "";
+            if (in != null) {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) > 0) bo.write(buf, 0, n);
+                in.close();
+                txt = bo.toString("UTF-8").trim();
+            }
+            JSONObject j;
+            if (txt.startsWith("[")) j = new JSONObject().put("items", new JSONArray(txt));
+            else {
+                try { j = txt.isEmpty() ? new JSONObject() : new JSONObject(txt); } catch (Exception e) { j = new JSONObject(); }
+            }
+            return new Api.Respuesta(code, j);
+        } catch (Exception e) {
+            return new Api.Respuesta(-1, null);
+        } finally {
+            if (con != null) con.disconnect();
+        }
+    }
+}
