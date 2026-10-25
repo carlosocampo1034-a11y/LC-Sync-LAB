@@ -148,6 +148,7 @@ public class SyncWorker extends Worker {
                     pulledJobs = mergeJobRows(db, pullResp.body(), now);
                     upsertSyncState(db, "PULL_JOB", now);
                     android.util.Log.i(TAG, "pull: " + pulledJobs + " jobs ← Supabase");
+                    if (com.lc.technician.BuildConfig.CLOUD_LOGIN) pulledJobs += marcarReasignadas(db, sb);
                     // Igual que SyncV2: sin esto lo bajado (p. ej. una asignación del Control) no aparecía en la lista
                     if (pulledJobs > 0) com.lc.technician.data.JobRepository.get().recargarCacheAsync(null);
                 }
@@ -177,6 +178,36 @@ public class SyncWorker extends Worker {
             if (dbRef != null) {
                 try { dbRef.jobDao().liberarEnTransito(); } catch (Exception ignored) {}
             }
+        }
+    }
+
+    /**
+     * QA: si el Control reasigna una orden a otro técnico, RLS deja de devolverla y el pull incremental
+     * nunca trae el cambio; la copia local seguía en "Mis Jobs". Se comparan los ids visibles y las órdenes
+     * propias ya sincronizadas que desaparecieron se marcan REASIGNADA (sin borrar fotos ni historial).
+     */
+    private int marcarReasignadas(LcDatabase db, com.lc.technician.sync.SupabaseClient sb) {
+        try {
+            retrofit2.Response<List<SupabaseModels.JobRow>> r =
+                    sb.api().getJobsSince(sb.authHeader(), "gte.0", "id", 1000).execute();
+            if (!r.isSuccessful() || r.body() == null || r.body().size() >= 1000) return 0;
+            java.util.Set<Long> visibles = new java.util.HashSet<>();
+            for (SupabaseModels.JobRow row : r.body()) visibles.add(row.id);
+            String yo = com.lc.technician.SessionManager.get(getApplicationContext()).getTechnicianName();
+            int n = 0;
+            for (JobEntity e : db.jobDao().getAll()) {
+                if (e.synced == 1 && yo != null && yo.equals(e.technicianId) && !visibles.contains(e.id)) {
+                    e.technicianId = "REASIGNADA";
+                    e.estadoDispatch = "REASIGNADA";
+                    db.jobDao().insert(e);
+                    android.util.Log.i(TAG, "job " + e.id + " ya no es de " + yo + ": REASIGNADA");
+                    n++;
+                }
+            }
+            return n;
+        } catch (Exception ex) {
+            android.util.Log.w(TAG, "reasignadas: " + ex.getMessage());
+            return 0;
         }
     }
 
