@@ -1,0 +1,43 @@
+name: LAB APK (debug)
+# Compila APK de QA (debug) de Technician y Customer. NO firma release, NO publica, NO usa secretos.
+on:
+  workflow_dispatch:
+  push:
+    branches: [qa/hermes-lab-build]
+permissions:
+  contents: read
+concurrency:
+  group: lab-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Aceptar licencias e instalar plataforma 36
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || sdkmanager "platforms;android-36" >/dev/null 2>&1 || true
+          echo "SDK: $ANDROID_HOME"; ls "$ANDROID_HOME/platforms" 2>/dev/null | tail -3
+      - name: Technician (debug, applicationId com.lc.technician.dev)
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+      - name: Customer (debug, applicationId com.lc.customer.lab)
+        working-directory: customer_app
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+      - name: Resumen de APKs
+        run: |
+          find . -name "*.apk" -path "*debug*" -printf "%p %s bytes\n" | tee apks.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab-apks
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            customer_app/app/build/outputs/apk/debug/*.apk
