@@ -261,6 +261,7 @@ public class MainActivity extends AppCompatActivity {
             // Oferta automática de trabajo: alerta con ACEPTAR / RECHAZAR mientras esta pantalla está abierta
             if (ofertas == null) ofertas = new com.lc.technician.sync.OfertasPoller(this);
             ofertas.iniciar();
+            com.lc.technician.push.PushTokenRegistrar.registrar(this);   // el servidor siempre tiene el token actual
         }
     }
 

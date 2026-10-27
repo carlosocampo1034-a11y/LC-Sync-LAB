@@ -34,6 +34,15 @@
         </activity>
 
         <activity android:name=".MainActivity" android:exported="false" />
+
+        <!-- Push (FCM): ofertas de trabajo y avisos. Mensajes de datos: la app decide cómo mostrarlos -->
+        <service
+            android:name=".push.PushNotificationService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <activity android:name=".DispatchActivity" android:exported="false" />
 
         <activity android:name=".JobDetailActivity" android:exported="false" />

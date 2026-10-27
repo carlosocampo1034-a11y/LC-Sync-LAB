@@ -1,5 +1,11 @@
 plugins { id 'com.android.application' }
 
+// Firebase Cloud Messaging. El google-services.json NO está en el repo (es público): en CI se escribe desde el secreto
+// GOOGLE_SERVICES_JSON_B64. Sin el archivo la app compila igual, sin push (PushTokenRegistrar lo detecta).
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
 // Load local.properties (NOT tracked by git)
 def localProps = new Properties()
 def localPropsFile = rootProject.file('local.properties')
@@ -14,8 +20,8 @@ android {
         applicationId "com.lc.technician"
         minSdk 24
         targetSdk 36
-        versionCode 10
-        versionName "0.3.6"
+        versionCode 11
+        versionName "0.3.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -101,6 +107,8 @@ dependencies {
     annotationProcessor 'androidx.room:room-compiler:2.6.1'
 
     // ML Kit on-device text recognition (OCR) — no cloud, no API key
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
     implementation 'com.google.mlkit:text-recognition:16.0.1'
 
     // ML Kit Barcode Scanning

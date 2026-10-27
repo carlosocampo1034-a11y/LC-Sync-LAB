@@ -45,3 +45,13 @@ KEYSTORE_CREDENTIALS.txt
 # QA: configuración local de Control y temporales del CLI de Supabase
 lab/control-qa/config.js
 supabase/.temp/
+
+# Firebase: configuración de cliente, se inyecta desde un secreto de Actions
+google-services.json
+
+# Credenciales de Firebase (cuenta de servicio y config): NUNCA al repo
+firebase-admin.json
+*firebase-adminsdk*.json
+*-firebase-adminsdk-*
+app/google-services.json
+.lc-secrets/

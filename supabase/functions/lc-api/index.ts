@@ -176,6 +176,105 @@ const forma = (p: Record<string, unknown>, tecnico: boolean) => {
 };
 const COLS_PROP = "id,job_id,local_id,revision,opciones,contenido_sha256,estado,opcion_elegida,total_aceptado,firmante,firma_sha256,decided_at,expires_at,created_at";
 
+
+// ── Push (FCM HTTP v1) ──────────────────────────────────────────────────────────────────────────────
+// La cuenta de servicio de Firebase vive SOLO en el secreto FCM_SERVICE_ACCOUNT de esta función (nunca en el repo).
+// Sin el secreto, todo lo de push es un no-op y el resto de la API funciona igual. Solo se envían mensajes de DATOS:
+// la app decide cómo mostrarlos (con la app cerrada, en segundo plano o abierta).
+type CuentaServicio = { project_id: string; client_email: string; private_key: string };
+let cuentaCache: CuentaServicio | null | undefined;
+function cuentaFcm(): CuentaServicio | null {
+  if (cuentaCache !== undefined) return cuentaCache;
+  try {
+    const raw = Deno.env.get("FCM_SERVICE_ACCOUNT");
+    const j = raw ? JSON.parse(raw) : null;
+    cuentaCache = j && j.private_key && j.client_email && j.project_id ? j as CuentaServicio : null;
+  } catch { cuentaCache = null; }
+  return cuentaCache;
+}
+const b64u = (b: Uint8Array | string) => {
+  const u = typeof b === "string" ? new TextEncoder().encode(b) : b;
+  return btoa(String.fromCharCode(...u)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+let accesoCache: { v: string; exp: number } | null = null;
+async function accesoFcm(c: CuentaServicio): Promise<string> {
+  if (accesoCache && accesoCache.exp > Date.now() + 60_000) return accesoCache.v;
+  const t = Math.floor(Date.now() / 1000);
+  const cab = b64u(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const cuerpo = b64u(JSON.stringify({ iss: c.client_email, scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token", iat: t, exp: t + 3600 }));
+  const der = Uint8Array.from(atob(c.private_key.replace(/-----[A-Z ]+-----/g, "").replace(/\s+/g, "")), (ch) => ch.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", der, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const firma = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(cab + "." + cuerpo)));
+  const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: cab + "." + cuerpo + "." + b64u(firma) }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new Error("fcm_auth_" + r.status);
+  accesoCache = { v: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 };
+  return accesoCache.v;
+}
+
+/** Envía un mensaje de datos a todos los teléfonos de esos usuarios. Los tokens que FCM da por muertos se borran. */
+async function enviarPush(userIds: string[], data: Record<string, string>, ttl = "120s"): Promise<{ configurado: boolean; enviados: number; fallidos: number }> {
+  const c = cuentaFcm();
+  if (!c) return { configurado: false, enviados: 0, fallidos: 0 };
+  if (userIds.length === 0) return { configurado: true, enviados: 0, fallidos: 0 };
+  const { data: toks } = await db.from("push_tokens").select("token").in("user_id", userIds);
+  let enviados = 0, fallidos = 0;
+  if (!toks || toks.length === 0) return { configurado: true, enviados, fallidos };
+  const acceso = await accesoFcm(c);
+  for (const t of toks) {
+    const r = await fetch(`https://fcm.googleapis.com/v1/projects/${c.project_id}/messages:send`, { method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer " + acceso },
+      body: JSON.stringify({ message: { token: t.token, data, android: { priority: "HIGH", ttl } } }) });
+    if (r.ok) { enviados++; continue; }
+    fallidos++;
+    const e = await r.json().catch(() => ({}));
+    const estado = e?.error?.status as string | undefined;
+    if (r.status === 404 || estado === "NOT_FOUND" || estado === "UNREGISTERED" || estado === "INVALID_ARGUMENT") {
+      await db.from("push_tokens").delete().eq("token", t.token);
+    } else {
+      await db.from("push_tokens").update({ last_error: `${r.status} ${estado ?? ""}`.trim() }).eq("token", t.token);
+    }
+  }
+  return { configurado: true, enviados, fallidos };
+}
+
+/** Avisa a los técnicos de cada oferta abierta que aún no se notificó (idempotente: la marca se reclama antes de enviar). */
+async function notificarOfertas(): Promise<void> {
+  if (!cuentaFcm()) return;
+  const ahora = Date.now();
+  const { data: ofs } = await db.from("job_offers").select("id,job_id,technician_id,jobs!inner(categoria,direccion)")
+    .eq("estado", "OFRECIDA").is("notified_at", null).gt("expires_at", ahora).limit(50);
+  if (!ofs || ofs.length === 0) return;
+  const { data: mias } = await db.from("job_offers").update({ notified_at: ahora })
+    .in("id", ofs.map((o) => o.id)).is("notified_at", null).select("id");
+  const propias = new Set((mias || []).map((m) => m.id));
+  for (const o of ofs) {
+    if (!propias.has(o.id)) continue;
+    const j = (o.jobs as unknown) as { categoria: string | null; direccion: string | null };
+    await enviarPush([o.technician_id], { tipo: "offer", offer_id: String(o.id), job_id: String(o.job_id),
+      titulo: "NUEVA OFERTA DE TRABAJO", cuerpo: [j?.categoria, j?.direccion].filter(Boolean).join(" · ").slice(0, 140) });
+  }
+}
+
+/** Aviso al técnico al que el Control le asigna una orden a mano. */
+async function notificarAsignacion(jobId: number, techId: string): Promise<void> {
+  if (!cuentaFcm()) return;
+  const { data: j } = await db.from("jobs").select("categoria,direccion,descripcion").eq("id", jobId).maybeSingle();
+  await enviarPush([techId], { tipo: "order", job_id: String(jobId), titulo: "Nueva orden asignada",
+    cuerpo: [j?.categoria, j?.direccion].filter(Boolean).join(" · ").slice(0, 140) || "Revisa tu lista de órdenes" }, "3600s");
+}
+
+/** No retrasa la respuesta HTTP: sigue en segundo plano (EdgeRuntime.waitUntil) y nunca propaga errores. */
+function segundoPlano(p: Promise<unknown>) {
+  const q = p.catch((e) => console.error("push", e instanceof Error ? e.message : "error"));
+  // deno-lint-ignore no-explicit-any
+  const er = (globalThis as any).EdgeRuntime;
+  if (er && typeof er.waitUntil === "function") er.waitUntil(q);
+}
+
 Deno.serve(async (req) => {
   const { H, out } = salida(req);
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: H });
@@ -183,7 +282,7 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-6" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-7" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
@@ -380,7 +479,33 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc("lc_create_order", {
         p_actor: user.id, p_request_id: typeof body.request_id === "string" ? body.request_id : null, p_data: body,
       });
+      if (!error) segundoPlano(notificarOfertas());   // una orden nueva sin técnico genera ofertas
       return error ? out(500, { error: "create_failed" }) : fromRpc(data, out);
+    }
+
+    // ── Push: token del teléfono y prueba ─────────────────────────────────────────────────────
+    if (route === "/me/push-token" && req.method === "POST") {
+      const token = typeof body?.token === "string" ? body.token.trim() : "";
+      if (token.length < 20 || token.length > 4096) return out(422, { error: "invalid_token" });
+      const plat = ["android", "ios", "web"].includes(body?.platform) ? body.platform : "android";
+      // el token es del teléfono: si cambia de usuario (otro inicio de sesión) se reasigna
+      const { error } = await db.from("push_tokens").upsert({ token, user_id: user.id, platform: plat,
+        app_id: txt(body?.app, 100) || null, updated_at: Date.now(), last_error: null }, { onConflict: "token" });
+      return error ? out(500, { error: "save_failed" }) : out(200, { ok: true });
+    }
+    if (route === "/me/push-token" && req.method === "DELETE") {
+      const t = (url.searchParams.get("token") || "").trim();
+      if (t.length < 20) return out(422, { error: "invalid_token" });
+      await db.from("push_tokens").delete().eq("token", t).eq("user_id", user.id);
+      return out(200, { ok: true });
+    }
+    if (route === "/push/test" && req.method === "POST") {
+      if (user.role !== "ADMIN") return out(403, { error: "role_denied" });
+      const uid = typeof body?.user_id === "string" ? body.user_id : user.id;
+      const { count } = await db.from("push_tokens").select("token", { count: "exact", head: true }).eq("user_id", uid);
+      const r = await enviarPush([uid], { tipo: body?.tipo === "offer" ? "offer" : "order", job_id: "0",
+        titulo: txt(body?.titulo, 80) || "Prueba de notificación L&C", cuerpo: txt(body?.cuerpo, 140) || "Si ves esto, el push funciona." }, "60s");
+      return out(200, { ...r, telefonos: count ?? 0 });
     }
 
     // ── Ofertas automáticas de trabajo (auto-dispatch) ───────────────────────────────────────
@@ -389,6 +514,7 @@ Deno.serve(async (req) => {
     if (route === "/offers" && req.method === "GET") {
       if (user.role !== "TECHNICIAN") return out(403, { error: "role_denied" });
       await db.rpc("lc_dispatch_sweep");   // vence ofertas viejas y reofrece lo que sigue sin técnico
+      segundoPlano(notificarOfertas());
       const ahora = Date.now();
       const [{ data, error }, { data: me }] = await Promise.all([
         db.from("job_offers").select("id,job_id,created_at,expires_at,jobs!inner(categoria,descripcion,direccion,ventana_preferida,programado_para,tipo_propiedad,equipo)")
@@ -406,6 +532,7 @@ Deno.serve(async (req) => {
       const { data, error } = mo[2] === "accept"
         ? await db.rpc("lc_offer_accept", { p_actor: user.id, p_offer: Number(mo[1]) })
         : await db.rpc("lc_offer_reject", { p_actor: user.id, p_offer: Number(mo[1]), p_motivo: txt(body?.motivo, 200) || null });
+      if (!error) segundoPlano(notificarOfertas());   // un rechazo puede abrir la oferta al siguiente técnico
       return error ? out(500, { error: "offer_failed" }) : fromRpc(data, out);
     }
 
@@ -420,6 +547,7 @@ Deno.serve(async (req) => {
     if (mdp && req.method === "POST") {   // el Control (re)lanza la oferta automática de una orden
       if (!staff) return out(403, { error: "role_denied" });
       const { data, error } = await db.rpc("lc_dispatch_job", { p_job: Number(mdp[1]) });
+      if (!error) segundoPlano(notificarOfertas());
       return error ? out(500, { error: "dispatch_failed" }) : out(200, { ofertasNuevas: data });
     }
 
@@ -545,6 +673,11 @@ Deno.serve(async (req) => {
         p_device: typeof body.device === "string" ? body.device : null,
         p_client_ts: Number.isSafeInteger(body.updatedAt) ? body.updatedAt : null,
       });
+      if (!error && data && (data as { http?: number }).http === 200) {
+        segundoPlano(notificarOfertas());   // devolver la orden a la cola puede generar ofertas
+        const nuevo = changes.technician_id;
+        if (typeof nuevo === "string" && nuevo && nuevo !== user.id) segundoPlano(notificarAsignacion(Number(m[1]), nuevo));
+      }
       return error ? out(500, { error: "update_failed" }) : fromRpc(data, out);
     }
 

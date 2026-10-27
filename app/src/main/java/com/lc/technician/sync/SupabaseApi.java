@@ -84,6 +84,12 @@ public interface SupabaseApi {
     @GET("functions/v1/lc-api/proposals")
     Call<ResponseBody> proposals(@Header("Authorization") String authorization, @Query("since") long since);
 
+    /** Token de FCM de este teléfono asociado al usuario con sesión (push de ofertas y avisos). */
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/me/push-token")
+    Call<ResponseBody> registerPushToken(@Header("Authorization") String authorization,
+                                         @Body java.util.Map<String, Object> body);
+
     /** Ofertas automáticas de trabajo abiertas para este técnico (el servidor también reofrece lo vencido). */
     @GET("functions/v1/lc-api/offers")
     Call<ResponseBody> offers(@Header("Authorization") String authorization);

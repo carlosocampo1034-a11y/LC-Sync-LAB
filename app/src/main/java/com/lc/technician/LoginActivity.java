@@ -101,6 +101,7 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             } catch (Exception ignored) {}
                             final String role = rol, techCode = codigo;
+                            com.lc.technician.push.PushTokenRegistrar.registrar(LoginActivity.this);   // push: token vigente en cada inicio de sesión
                             runOnUiThread(() -> {
                                 if (!"TECHNICIAN".equals(role)) {
                                     sb.signOut();

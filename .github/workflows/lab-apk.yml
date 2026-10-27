@@ -45,6 +45,14 @@ jobs:
           cp local.properties customer_app/local.properties   # Customer es un proyecto Gradle aparte
           chmod 600 customer_app/local.properties
           echo "firma configurada (contenido no impreso)"
+      - name: Firebase (google-services.json desde el secreto; nunca en el repo)
+        env:
+          GS_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -z "$GS_B64" ]; then echo "::warning::sin GOOGLE_SERVICES_JSON_B64: se compila sin push"; exit 0; fi
+          echo "$GS_B64" | base64 -d > app/google-services.json
+          chmod 600 app/google-services.json
+          echo "google-services.json configurado (contenido no impreso)"
       - name: Quitar el override de aapt2 del entorno Termux (solo en el runner)
         run: |
           # gradle.properties apunta aapt2 a una ruta de Termux/PRoot que no existe en el runner
