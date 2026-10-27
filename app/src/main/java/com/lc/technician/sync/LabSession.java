@@ -38,6 +38,15 @@ public final class LabSession {
         return p(c).getString("token", null) != null;
     }
 
+    /**
+     * Hay un servidor que valida propuestas y aprobaciones: sesión de laboratorio (Flask) o, en la variante QA,
+     * sesión de Supabase del técnico. Las pantallas de propuesta usan esta condición, no solo {@link #activa}.
+     */
+    public static boolean conServidor(Context c) {
+        return activa(c) || (com.lc.technician.BuildConfig.CLOUD_LOGIN
+                && com.lc.technician.sync.SupabaseClient.get(c).hasUserSession());
+    }
+
     public static String authHeader(Context c) {
         String t = p(c).getString("token", null);
         return t == null ? null : "Bearer " + t;

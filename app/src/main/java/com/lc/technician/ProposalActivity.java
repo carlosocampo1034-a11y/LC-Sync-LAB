@@ -214,7 +214,7 @@ public class ProposalActivity extends AppCompatActivity {
     };
 
     private void configurarModoLaboratorio() {
-        if (!com.lc.technician.sync.LabSession.activa(this) || proposal == null) return;
+        if (!com.lc.technician.sync.LabSession.conServidor(this) || proposal == null) return;
         // Aceptación en persona: la firma del cliente en este teléfono viaja al servidor como evidencia
         // (la propuesta se envía antes para que el servidor sepa exactamente qué versión se firmó)
         android.widget.LinearLayout barra = findViewById(R.id.bottomBar);
@@ -242,7 +242,7 @@ public class ProposalActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (com.lc.technician.sync.LabSession.activa(this)) refresco.post(tickEstado);
+        if (com.lc.technician.sync.LabSession.conServidor(this)) refresco.post(tickEstado);
     }
 
     @Override
@@ -405,7 +405,7 @@ public class ProposalActivity extends AppCompatActivity {
     }
 
     private void abrirFirma(int idx) {
-        if (com.lc.technician.sync.LabSession.activa(this) && proposal != null && !proposal.isLocked) {
+        if (com.lc.technician.sync.LabSession.conServidor(this) && proposal != null && !proposal.isLocked) {
             ProposalOptionEntity opt = buildOption(idx);
             if (opt.totalCalculado <= 0 || opt.titulo == null || opt.titulo.trim().isEmpty()) {
                 Toast.makeText(this, "La opción necesita título e importe", Toast.LENGTH_LONG).show();

@@ -481,7 +481,7 @@ public class JobDetailActivity extends AppCompatActivity {
 
     /** Estado de la propuesta en el servidor, visible sin salir del trabajo (tocar abre la propuesta). */
     private void mostrarEstadoPropuestaServidor() {
-        if (!com.lc.technician.sync.LabSession.activa(this) || estadoView == null) return;
+        if (!com.lc.technician.sync.LabSession.conServidor(this) || estadoView == null) return;
         JobRepository.get().getProposalForJobAsync(job.id, p -> {
             boolean hay = p != null && (p.serverEstado != null || p.syncState != 1);
             if (estadoPropuestaServidor == null) {
@@ -699,12 +699,12 @@ public class JobDetailActivity extends AppCompatActivity {
                 aplicarEstado(Job.STATUS_ARRIVED, "Llegada registrada"); break;
             case "Pedir aprobación al cliente":
                 aplicarEstado(Job.STATUS_AWAITING_APPROVAL, "Esperando aprobación del cliente");
-                if (com.lc.technician.sync.LabSession.activa(this)) abrirPropuesta();   // se prepara y envía allí
+                if (com.lc.technician.sync.LabSession.conServidor(this)) abrirPropuesta();   // se prepara y envía allí
                 break;
             case "Iniciar reparación directo":
                 aplicarEstado(Job.STATUS_EN_REPARACION, "Reparación iniciada directamente"); break;
             case "Cliente aprobó — Iniciar reparación":
-                if (com.lc.technician.sync.LabSession.activa(this)) {
+                if (com.lc.technician.sync.LabSession.conServidor(this)) {
                     // sin evidencia válida (firma del cliente confirmada por el servidor) no se marca aprobado
                     JobRepository.get().getProposalForJobAsync(job.id, p -> {
                         boolean ok = p != null && p.syncState == 1 && "APROBADA".equals(p.serverEstado);
