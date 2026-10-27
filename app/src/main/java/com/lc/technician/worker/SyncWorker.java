@@ -78,6 +78,9 @@ public class SyncWorker extends Worker {
             // Recuperación: si un envío anterior se interrumpió, sus trabajos vuelven a pendiente
             db.jobDao().liberarEnTransito();
 
+            if (com.lc.technician.BuildConfig.CLOUD_LOGIN) {
+                com.lc.technician.sync.QaOrderSync.reencolarSinBase(getApplicationContext(), db);
+            }
             // ── PUSH: unsynced jobs → Supabase upsert ─────────────────────────
             List<JobEntity> unsyncedJobs = db.runInTransaction(() -> {
                 List<JobEntity> lote = db.jobDao().getUnsynced();

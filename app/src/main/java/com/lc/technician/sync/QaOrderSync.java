@@ -69,11 +69,9 @@ public final class QaOrderSync {
         for (JobEntity j : lote) {
             String raw = bases(c).getString(String.valueOf(j.id), null);
             if (raw == null) {
-                // Orden que nunca vino del servidor (creada solo en el teléfono): el técnico no crea órdenes
-                // en lc-api; se conserva localmente y se marca para no reenviarla en bucle.
-                db.jobDao().marcarRechazado(j.id);
-                res.rechazados++;
-                Log.w(TAG, "orden " + j.id + " sin base del servidor; se conserva local");
+                // Orden creada en el teléfono: se da de alta en lc-api (idempotente) y su id local pasa al del servidor.
+                crearEnServidor(c, db, sb, j, res);
+                if (res.reintentar) break;
                 continue;
             }
             try {
@@ -127,5 +125,89 @@ public final class QaOrderSync {
             }
         }
         return res;
+    }
+
+    /** Las órdenes locales rechazadas antes de que existiera el alta vuelven a la cola una sola vez. */
+    public static void reencolarSinBase(Context c, LcDatabase db) {
+        SharedPreferences p = c.getApplicationContext().getSharedPreferences(BASES, Context.MODE_PRIVATE);
+        if (p.getBoolean("requeue_alta_v1", false)) return;
+        for (JobEntity j : db.jobDao().getRechazados()) {
+            if (p.getString(String.valueOf(j.id), null) == null && db.jobDao().reencolar(j.id) > 0) {
+                Log.i(TAG, "orden local " + j.id + " vuelve a la cola para darse de alta");
+            }
+        }
+        p.edit().putBoolean("requeue_alta_v1", true).apply();
+    }
+
+    private static void poner(Map<String, Object> b, String k, String v) {
+        if (v != null && !v.trim().isEmpty()) b.put(k, v.trim());
+    }
+
+    private static void crearEnServidor(Context c, LcDatabase db, SupabaseClient sb, JobEntity j, Resultado res) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("request_id", "tech-" + DeviceIdManager.getDeviceId(c) + "-" + j.id);
+        poner(body, "cliente", j.cliente);
+        poner(body, "descripcion", j.descripcion);
+        poner(body, "direccion", j.direccion);
+        poner(body, "telefono", j.telefono);
+        poner(body, "equipo", "Por asignar".equals(j.equipo) ? null : j.equipo);
+        poner(body, "tipo_propiedad", j.tipoPropiedad);
+        poner(body, "tipo_acceso", j.tipoAcceso);
+        poner(body, "instrucciones", j.instrucciones);
+        poner(body, "mascota", j.mascota);
+        poner(body, "contacto_respaldo", j.contactoRespaldo);
+        if (j.programadoPara != null) body.put("programado_para", j.programadoPara);
+        try {
+            retrofit2.Response<okhttp3.ResponseBody> r = sb.api().createOrder(sb.authHeader(), body).execute();
+            String txt = r.isSuccessful() ? (r.body() != null ? r.body().string() : "{}")
+                    : (r.errorBody() != null ? r.errorBody().string() : "{}");
+            JSONObject o = txt.trim().startsWith("{") ? new JSONObject(txt) : new JSONObject();
+            int code = r.code();
+            if ((code == 200 || code == 201) && o.optLong("id", 0) > 0) {
+                long nuevo = o.getLong("id");
+                int v = o.optInt("version", 1);
+                long marca = j.updatedAt != null ? j.updatedAt : j.id;
+                reasignarId(db, j.id, nuevo, v, System.currentTimeMillis());
+                try {
+                    bases(c).edit().putString(String.valueOf(nuevo), new JSONObject().put("v", v)
+                            .put("estado", j.estado == null ? JSONObject.NULL : j.estado)
+                            .put("notas", j.notas == null ? JSONObject.NULL : j.notas).toString()).apply();
+                } catch (Exception ignored) { }
+                res.aceptados++;
+                res.pullCompleto = true;
+                Log.i(TAG, "orden local " + j.id + " dada de alta como " + nuevo + " (marca " + marca + ")");
+            } else if (code == 401 || code == 429 || code >= 500) {
+                res.reintentar = true;
+                Log.w(TAG, "alta de " + j.id + " HTTP " + code + "; se reintentará");
+            } else {
+                db.jobDao().marcarRechazado(j.id);
+                res.rechazados++;
+                Log.w(TAG, "alta de " + j.id + " rechazada HTTP " + code + " " + o.optString("error"));
+            }
+        } catch (Exception e) {
+            res.reintentar = true;
+            Log.w(TAG, "alta de " + j.id + " sin conexión: " + e.getClass().getSimpleName());
+        }
+    }
+
+    /** Cambia el id local por el del servidor en la orden y en toda tabla con columna jobId (sin duplicar). */
+    private static void reasignarId(LcDatabase db, long viejo, long nuevo, int version, long ts) {
+        db.runInTransaction(() -> {
+            androidx.sqlite.db.SupportSQLiteDatabase w = db.getOpenHelper().getWritableDatabase();
+            java.util.List<String> tablas = new java.util.ArrayList<>();
+            try (android.database.Cursor t = w.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                    + " AND name NOT IN ('android_metadata','room_master_table','jobs')")) {
+                while (t.moveToNext()) tablas.add(t.getString(0));
+            }
+            for (String tn : tablas) {
+                boolean tiene = false;
+                try (android.database.Cursor cols = w.query("PRAGMA table_info(`" + tn + "`)")) {
+                    while (cols.moveToNext()) if ("jobId".equals(cols.getString(1))) tiene = true;
+                }
+                if (tiene) w.execSQL("UPDATE `" + tn + "` SET jobId = ? WHERE jobId = ?", new Object[]{nuevo, viejo});
+            }
+            w.execSQL("UPDATE jobs SET id = ?, synced = 1, lastSyncedAt = ?, serverVersion = ? WHERE id = ?",
+                    new Object[]{nuevo, ts, version, viejo});
+        });
     }
 }

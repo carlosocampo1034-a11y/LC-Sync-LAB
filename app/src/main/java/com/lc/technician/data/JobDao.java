@@ -92,6 +92,12 @@ public interface JobDao {
     @Query("UPDATE jobs SET synced = 3 WHERE id = :id AND synced = 2")
     int marcarRechazado(long id);
 
+    @Query("SELECT * FROM jobs WHERE synced = 3")
+    List<JobEntity> getRechazados();
+
+    @Query("UPDATE jobs SET synced = 0 WHERE id = :id AND synced = 3")
+    int reencolar(long id);
+
     @Query("SELECT COUNT(*) FROM jobs WHERE synced = 3")
     int countRechazados();
 

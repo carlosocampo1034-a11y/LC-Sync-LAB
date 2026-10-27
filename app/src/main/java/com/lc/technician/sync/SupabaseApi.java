@@ -66,6 +66,13 @@ public interface SupabaseApi {
             @Path("id") long id,
             @Body java.util.Map<String, Object> body);
 
+    /** Alta de una orden creada por el técnico (idempotente por request_id). */
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/orders")
+    Call<ResponseBody> createOrder(
+            @Header("Authorization") String authorization,
+            @Body java.util.Map<String, Object> body);
+
     /** Rol del usuario autenticado según profiles (lo decide el servidor, no la app). */
     @GET("functions/v1/lc-api/auth/me")
     Call<ResponseBody> me(@Header("Authorization") String authorization);
