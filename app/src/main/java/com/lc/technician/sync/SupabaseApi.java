@@ -84,6 +84,20 @@ public interface SupabaseApi {
     @GET("functions/v1/lc-api/proposals")
     Call<ResponseBody> proposals(@Header("Authorization") String authorization, @Query("since") long since);
 
+    /** Ofertas automáticas de trabajo abiertas para este técnico (el servidor también reofrece lo vencido). */
+    @GET("functions/v1/lc-api/offers")
+    Call<ResponseBody> offers(@Header("Authorization") String authorization);
+
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/offers/{id}/accept")
+    Call<ResponseBody> acceptOffer(@Header("Authorization") String authorization, @Path("id") long id,
+                                   @Body java.util.Map<String, Object> body);
+
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/offers/{id}/reject")
+    Call<ResponseBody> rejectOffer(@Header("Authorization") String authorization, @Path("id") long id,
+                                   @Body java.util.Map<String, Object> body);
+
     /** Rol del usuario autenticado según profiles (lo decide el servidor, no la app). */
     @GET("functions/v1/lc-api/auth/me")
     Call<ResponseBody> me(@Header("Authorization") String authorization);

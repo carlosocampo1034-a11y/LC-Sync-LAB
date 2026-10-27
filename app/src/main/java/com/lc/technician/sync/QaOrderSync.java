@@ -63,10 +63,20 @@ public final class QaOrderSync {
     }
 
     public static Resultado subir(Context c, LcDatabase db, SupabaseClient sb, List<JobEntity> lote) {
+        return subir(c, db, sb, lote, 0L);
+    }
+
+    /** {@code limiteMs}: instante (epoch ms) a partir del cual se deja de enviar y lo restante se reintenta; 0 = sin límite. */
+    public static Resultado subir(Context c, LcDatabase db, SupabaseClient sb, List<JobEntity> lote, long limiteMs) {
         Resultado res = new Resultado();
         String device = DeviceIdManager.getDeviceId(c);
         long now = System.currentTimeMillis();
         for (JobEntity j : lote) {
+            if (limiteMs > 0 && System.currentTimeMillis() > limiteMs) {
+                res.reintentar = true;   // lo no enviado vuelve a la cola
+                Log.w(TAG, "presupuesto de tiempo agotado; el resto se reintenta");
+                break;
+            }
             String raw = bases(c).getString(String.valueOf(j.id), null);
             if (raw == null) {
                 // Orden creada en el teléfono: se da de alta en lc-api (idempotente) y su id local pasa al del servidor.

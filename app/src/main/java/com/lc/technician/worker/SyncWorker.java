@@ -21,6 +21,7 @@ public class SyncWorker extends Worker {
     public static final String KEY_PUSHED_COUNT = "pushed_count";
 
     /** Una sola sincronización a la vez en el proceso (periódica, inmediata, manual o de seguimiento). */
+    private static final long PRESUPUESTO_MS = 60_000L;
     static final java.util.concurrent.locks.ReentrantLock EN_CURSO = new java.util.concurrent.locks.ReentrantLock();
 
     public SyncWorker(@NonNull Context context, @NonNull WorkerParameters params) {
@@ -74,6 +75,9 @@ public class SyncWorker extends Worker {
             LcDatabase db = LcDatabase.getInstance(getApplicationContext());
             dbRef = db;
             long now = System.currentTimeMillis();
+            // Presupuesto de la sincronización: pasado este tiempo se corta y se reintenta, para no tener ocupado
+            // el cerrojo EN_CURSO (que bloquea a las demás) cuando el servidor responde lento.
+            final long limiteSync = now + PRESUPUESTO_MS;
 
             // Recuperación: si un envío anterior se interrumpió, sus trabajos vuelven a pendiente
             db.jobDao().liberarEnTransito();
@@ -96,7 +100,7 @@ public class SyncWorker extends Worker {
             if (com.lc.technician.BuildConfig.CLOUD_LOGIN && !unsyncedJobs.isEmpty()) {
                 // QA: cada cambio va a lc-api con versión base (sin upsert directo, que RLS no permite)
                 com.lc.technician.sync.QaOrderSync.Resultado qr =
-                        com.lc.technician.sync.QaOrderSync.subir(getApplicationContext(), db, sb, unsyncedJobs);
+                        com.lc.technician.sync.QaOrderSync.subir(getApplicationContext(), db, sb, unsyncedJobs, limiteSync);
                 db.jobDao().liberarEnTransito();  // lo no confirmado vuelve a la cola
                 pushed = qr.aceptados;
                 pullCompleto = qr.pullCompleto;
@@ -138,6 +142,10 @@ public class SyncWorker extends Worker {
                 }
             }
 
+            if (System.currentTimeMillis() > limiteSync) {
+                android.util.Log.w(TAG, "sync: presupuesto de tiempo agotado antes del pull; se reintenta");
+                return Result.retry();
+            }
             // ── PULL: Supabase → Room (last-write-wins) ────────────────────────
             SyncStateEntity pullState = db.syncStateDao().getByType("PULL_JOB");
             long since = (pullState != null && pullState.lastSyncAt > 0) ? pullState.lastSyncAt - 60_000L : 0;
@@ -160,7 +168,10 @@ public class SyncWorker extends Worker {
             }
 
             // QA: propuestas Good/Better/Best (envío y decisión del cliente) una vez confirmadas las órdenes
-            if (com.lc.technician.BuildConfig.CLOUD_LOGIN) QaProposalSync.sincronizar(getApplicationContext(), db, sb);
+            if (com.lc.technician.BuildConfig.CLOUD_LOGIN && System.currentTimeMillis() > limiteSync) {
+                reintentar = true;
+                android.util.Log.w(TAG, "sync: presupuesto agotado antes de las propuestas; se reintenta");
+            } else if (com.lc.technician.BuildConfig.CLOUD_LOGIN) QaProposalSync.sincronizar(getApplicationContext(), db, sb);
 
             getApplicationContext().getSharedPreferences("lc_prefs", android.content.Context.MODE_PRIVATE)
                     .edit().putLong("last_sync_time", now).apply();

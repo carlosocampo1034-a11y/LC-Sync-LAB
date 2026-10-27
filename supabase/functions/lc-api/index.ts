@@ -86,7 +86,7 @@ async function miCliente(u: Actor): Promise<number | null> {
 
 async function listarTecnicos() {
   const { data, error } = await db.from("profiles")
-    .select("id,display_name,technician_code,email,active,specialties,must_change_password")
+    .select("id,display_name,technician_code,email,active,available,specialties,must_change_password")
     .eq("role", "TECHNICIAN").order("active", { ascending: false }).order("technician_code");
   if (error) return null;
   const { data: abiertas } = await db.from("jobs").select("technician_id")
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-5" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-6" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
@@ -383,6 +383,64 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "create_failed" }) : fromRpc(data, out);
     }
 
+    // ── Ofertas automáticas de trabajo (auto-dispatch) ───────────────────────────────────────
+    // Una orden nueva sin técnico se ofrece (trigger SQL) a los técnicos disponibles con la especialidad; el primero
+    // que acepta se queda con ella. Estas rutas son el lado del técnico. El despacho manual del Control sigue igual.
+    if (route === "/offers" && req.method === "GET") {
+      if (user.role !== "TECHNICIAN") return out(403, { error: "role_denied" });
+      await db.rpc("lc_dispatch_sweep");   // vence ofertas viejas y reofrece lo que sigue sin técnico
+      const ahora = Date.now();
+      const [{ data, error }, { data: me }] = await Promise.all([
+        db.from("job_offers").select("id,job_id,created_at,expires_at,jobs!inner(categoria,descripcion,direccion,ventana_preferida,programado_para,tipo_propiedad,equipo)")
+          .eq("technician_id", user.id).eq("estado", "OFRECIDA").gt("expires_at", ahora).order("created_at"),
+        db.from("profiles").select("available").eq("id", user.id).maybeSingle(),
+      ]);
+      if (error) return out(500, { error: "list_failed" });
+      return out(200, { serverNow: ahora, available: me?.available ?? true,
+        offers: (data || []).map((o) => ({ id: o.id, jobId: o.job_id, createdAt: o.created_at, expiresAt: o.expires_at, job: o.jobs })) });
+    }
+
+    const mo = route.match(/^\/offers\/(\d+)\/(accept|reject)$/);
+    if (mo && req.method === "POST") {
+      if (user.role !== "TECHNICIAN") return out(403, { error: "role_denied" });
+      const { data, error } = mo[2] === "accept"
+        ? await db.rpc("lc_offer_accept", { p_actor: user.id, p_offer: Number(mo[1]) })
+        : await db.rpc("lc_offer_reject", { p_actor: user.id, p_offer: Number(mo[1]), p_motivo: txt(body?.motivo, 200) || null });
+      return error ? out(500, { error: "offer_failed" }) : fromRpc(data, out);
+    }
+
+    if (route === "/me/availability" && (req.method === "POST" || req.method === "PATCH")) {
+      if (user.role !== "TECHNICIAN") return out(403, { error: "role_denied" });
+      if (typeof body?.available !== "boolean") return out(422, { error: "available_required" });
+      const { error } = await db.from("profiles").update({ available: body.available }).eq("id", user.id);
+      return error ? out(500, { error: "update_failed" }) : out(200, { available: body.available });
+    }
+
+    const mdp = route.match(/^\/orders\/(\d+)\/dispatch$/);
+    if (mdp && req.method === "POST") {   // el Control (re)lanza la oferta automática de una orden
+      if (!staff) return out(403, { error: "role_denied" });
+      const { data, error } = await db.rpc("lc_dispatch_job", { p_job: Number(mdp[1]) });
+      return error ? out(500, { error: "dispatch_failed" }) : out(200, { ofertasNuevas: data });
+    }
+
+    if (route === "/dispatch/config" && req.method === "GET") {
+      if (!staff) return out(403, { error: "role_denied" });
+      const { data } = await db.from("dispatch_config").select("enabled,fanout,offer_ttl_seconds").eq("id", 1).maybeSingle();
+      return out(200, data);
+    }
+    if (route === "/dispatch/config" && req.method === "PATCH") {
+      if (user.role !== "ADMIN") return out(403, { error: "Solo un administrador cambia el despacho automático." });
+      const c: Record<string, unknown> = {};
+      if (typeof body?.enabled === "boolean") c.enabled = body.enabled;
+      if (Number.isInteger(body?.fanout) && body.fanout >= 1 && body.fanout <= 10) c.fanout = body.fanout;
+      if (Number.isInteger(body?.offer_ttl_seconds) && body.offer_ttl_seconds >= 20 && body.offer_ttl_seconds <= 3600) {
+        c.offer_ttl_seconds = body.offer_ttl_seconds;
+      }
+      if (Object.keys(c).length === 0) return out(422, { error: "nothing_to_update" });
+      const { error } = await db.from("dispatch_config").update({ ...c, updated_at: Date.now() }).eq("id", 1);
+      return error ? out(500, { error: "update_failed" }) : out(200, c);
+    }
+
     // ── Propuestas ───────────────────────────────────────────────────────────────────────────
     if (route === "/proposals" && req.method === "POST") {
       if (user.role !== "TECHNICIAN" && !staff) return out(403, { error: "role_denied" });
@@ -446,12 +504,14 @@ Deno.serve(async (req) => {
       const id = Number(md[1]);
       const { data: j } = await db.from("jobs").select("*").eq("id", id).maybeSingle();
       if (!j) return out(404, { error: "not_found" });
+      const { data: ofs } = await db.from("job_offers").select("id,technician_id,estado,motivo,created_at,expires_at,responded_at")
+        .eq("job_id", id).order("id");
       const [{ data: hist }, { data: conf }, { data: desc }] = await Promise.all([
         db.from("job_history").select("version,field,old_value,new_value,actor,created_at").eq("job_id", id).order("id", { ascending: false }),
         db.from("job_conflicts").select("*").eq("job_id", id).eq("estado", "PENDIENTE").order("id"),
         db.from("job_discounts").select("id,monto,motivo,autorizado_por,created_at").eq("job_id", id).order("id"),
       ]);
-      const quien = await nombres([...(hist || []).map((h) => h.actor), ...(conf || []).map((c) => c.actor),
+      const quien = await nombres([...(ofs || []).map((o) => o.technician_id), ...(hist || []).map((h) => h.actor), ...(conf || []).map((c) => c.actor),
         ...(desc || []).map((d) => d.autorizado_por)]);
       let propiedad = null, cliente = null;
       if (j.property_id) propiedad = (await db.from("customer_properties").select("*").eq("id", j.property_id).maybeSingle()).data;
@@ -459,6 +519,7 @@ Deno.serve(async (req) => {
       return out(200, { job: j, propiedad, cliente,
         historial: (hist || []).map((h) => ({ ...h, actor_nombre: quien[h.actor] || "sistema" })),
         conflictos: (conf || []).map((c) => ({ ...c, actor_nombre: quien[c.actor] || "—" })),
+        ofertas: (ofs || []).map((o) => ({ ...o, tecnico_nombre: quien[o.technician_id] || "—" })),
         descuentos: (desc || []).map((d) => ({ ...d, autorizado_nombre: quien[d.autorizado_por] || "—" })) });
     }
 

@@ -234,6 +234,7 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         JobRepository.get().setOyenteCache(null);
         SupabaseSyncBridge.get(this).stopRealtime();
+        if (ofertas != null) ofertas.detener();
     }
 
     @Override
@@ -257,8 +258,13 @@ public class MainActivity extends AppCompatActivity {
             long ultima = getSharedPreferences("lc_prefs", MODE_PRIVATE).getLong("last_sync_time", 0);
             if (System.currentTimeMillis() - ultima > 30_000L) JobRepository.get().solicitarSyncInmediata();
             SupabaseSyncBridge.get(this).startRealtime(com.lc.technician.sync.SupabaseClient.get(this).accessToken());
+            // Oferta automática de trabajo: alerta con ACEPTAR / RECHAZAR mientras esta pantalla está abierta
+            if (ofertas == null) ofertas = new com.lc.technician.sync.OfertasPoller(this);
+            ofertas.iniciar();
         }
     }
+
+    private com.lc.technician.sync.OfertasPoller ofertas;
 
     private void recargarJobs() {
         allJobs.clear();
