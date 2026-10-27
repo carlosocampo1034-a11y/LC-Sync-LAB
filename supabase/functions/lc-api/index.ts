@@ -96,6 +96,86 @@ async function listarTecnicos() {
   return (data || []).map((t) => ({ ...t, abiertas: n[t.id] || 0 }));
 }
 
+
+// ── Propuestas Good/Better/Best (mismo contrato que lab/backend/lc_lab/proposals.py) ─────────────
+const NIVELES = ["GOOD", "BETTER", "BEST"];
+const COSTOS = ["costoEquipo", "costoManoObra", "costoMateriales", "costoPermiso", "costoRemocion", "costoAccesorios"];
+const DETALLES = ["equipoPropuesto", "especificaciones", "garantia"];
+const redondeo = (x: number) => Math.floor(x + 0.5 + 1e-9);   // mitad hacia arriba, al centavo
+const num = (v: unknown) => (typeof v === "number" && isFinite(v) ? v : 0);
+
+/** Misma fórmula que la app (ProposalOptionEntity.calcularTotal) y que el Control: en centavos enteros. */
+function totalOpcion(o: Record<string, unknown>): number {
+  const duros = COSTOS.reduce((a, k) => a + redondeo(num(o[k]) * 100), 0);
+  const conMarkup = redondeo(duros * (1 + num(o.markupPorcentaje) / 100));
+  const conDesc = conMarkup - redondeo(num(o.descuentoMonto) * 100);
+  return Math.max(0, redondeo(conDesc * (1 + num(o.impuestoPorcentaje) / 100))) / 100;
+}
+
+function validarOpciones(opciones: unknown): { ok: Record<string, unknown>[] } | { error: string } {
+  if (!Array.isArray(opciones) || opciones.length === 0) return { error: "la propuesta no tiene opciones" };
+  const limpias: Record<string, unknown>[] = [];
+  for (const raw of opciones) {
+    const o = raw as Record<string, unknown>;
+    if (!o || typeof o !== "object" || !NIVELES.includes(o.nivel as string)) return { error: "nivel de opción inválido" };
+    for (const k of [...COSTOS, "descuentoMonto"]) {
+      const v = o[k] ?? 0;
+      if (typeof v !== "number" || v < 0 || v > 1_000_000) return { error: `${k} inválido en ${o.nivel}` };
+    }
+    for (const [k, tope] of [["markupPorcentaje", 300], ["impuestoPorcentaje", 30]] as const) {
+      const v = o[k] ?? 0;
+      if (typeof v !== "number" || v < 0 || v > tope) return { error: `${k} fuera de rango en ${o.nivel}` };
+    }
+    const total = totalOpcion(o);
+    if (total > 0 && !txt(o.titulo, 200)) return { error: `la opción ${o.nivel} necesita título` };
+    for (const k of DETALLES) {
+      const v = o[k];
+      if (v !== undefined && v !== null && (typeof v !== "string" || v.trim().length > 300)) {
+        return { error: `${k} inválido en ${o.nivel} (texto de hasta 300 caracteres)` };
+      }
+    }
+    // tolerancia de 1 centavo: Java y TypeScript pueden redondear distinto un medio centavo; el servidor guarda el suyo
+    if (typeof o.totalCalculado === "number" && Math.abs(Math.round(o.totalCalculado * 100) / 100 - total) > 0.0151) {
+      return { error: `el total de ${o.nivel} no coincide con el cálculo del servidor` };
+    }
+    if (total <= 0) continue;   // opción vacía: no se ofrece al cliente
+    const l: Record<string, unknown> = {};
+    for (const k of [...COSTOS, "markupPorcentaje", "descuentoMonto", "impuestoPorcentaje"]) l[k] = o[k] ?? 0;
+    Object.assign(l, { nivel: o.nivel, titulo: txt(o.titulo, 200), descripcion: txt(o.descripcion, 1000), total,
+      recomendada: o.recomendada === true });
+    for (const k of DETALLES) if (typeof o[k] === "string" && (o[k] as string).trim()) l[k] = (o[k] as string).trim();
+    limpias.push(l);
+  }
+  if (limpias.length === 0) return { error: "ninguna opción tiene importe" };
+  limpias.sort((a, b) => NIVELES.indexOf(a.nivel as string) - NIVELES.indexOf(b.nivel as string));
+  return { ok: limpias };
+}
+
+function estable(v: unknown): string {
+  if (Array.isArray(v)) return "[" + v.map(estable).join(",") + "]";
+  if (v && typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    return "{" + Object.keys(o).sort().map((k) => JSON.stringify(k) + ":" + estable(o[k])).join(",") + "}";
+  }
+  return JSON.stringify(v);
+}
+
+async function sha256Hex(data: Uint8Array | string): Promise<string> {
+  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return Array.from(h).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+const forma = (p: Record<string, unknown>, tecnico: boolean) => {
+  const vencida = p.estado === "PENDIENTE" && Date.now() > Number(p.expires_at);
+  const o: Record<string, unknown> = { id: p.id, jobId: p.job_id, revision: p.revision, estado: vencida ? "VENCIDA" : p.estado,
+    contenidoSha256: p.contenido_sha256, opcionElegida: p.opcion_elegida, totalAceptado: p.total_aceptado,
+    firmante: p.firmante, decidedAt: p.decided_at, expiresAt: p.expires_at, createdAt: p.created_at, firmaSha256: p.firma_sha256 };
+  if (tecnico) o.localId = p.local_id; else o.opciones = p.opciones;
+  return o;
+};
+const COLS_PROP = "id,job_id,local_id,revision,opciones,contenido_sha256,estado,opcion_elegida,total_aceptado,firmante,firma_sha256,decided_at,expires_at,created_at";
+
 Deno.serve(async (req) => {
   const { H, out } = salida(req);
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: H });
@@ -103,7 +183,7 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-4" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-5" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
@@ -303,11 +383,62 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "create_failed" }) : fromRpc(data, out);
     }
 
+    // ── Propuestas ───────────────────────────────────────────────────────────────────────────
+    if (route === "/proposals" && req.method === "POST") {
+      if (user.role !== "TECHNICIAN" && !staff) return out(403, { error: "role_denied" });
+      if (!body || typeof body !== "object") return out(422, { error: "json_required" });
+      const v = validarOpciones(body.opciones);
+      if ("error" in v) return out(422, { status: "REJECTED", reason: v.error });
+      const device = typeof body.device === "string" ? body.device : "";
+      const { data, error } = await db.rpc("lc_proposal_save", {
+        p_actor: user.id, p_job: Number(body.jobId), p_device: device, p_local: Number(body.localId),
+        p_opciones: v.ok, p_sha: await sha256Hex(estable(v.ok)),
+      });
+      return error ? out(500, { error: "proposal_failed" }) : fromRpc(data, out);
+    }
+
+    // Estado de las propuestas (el técnico recibe la decisión del cliente). ?since=<epoch ms>
+    if (route === "/proposals" && req.method === "GET") {
+      const since = url.searchParams.get("since");
+      if (since !== null && !/^\d{1,15}$/.test(since)) return out(422, { error: "invalid_since" });
+      let q = db.from("job_proposals").select(COLS_PROP + ",jobs!inner(technician_id,customer_id)");
+      if (user.role === "TECHNICIAN") q = q.eq("jobs.technician_id", user.id);
+      else if (user.role === "CUSTOMER") q = q.eq("jobs.customer_id", user.id);
+      if (since !== null) q = q.gte("updated_at", Number(since));
+      const { data, error } = await q.order("id", { ascending: true }).limit(500);
+      return error ? out(500, { error: "list_failed" })
+        : out(200, (data || []).map((p) => forma(p as Record<string, unknown>, user.role === "TECHNICIAN")));
+    }
+
+    const mdec = route.match(/^\/customer\/proposals\/(\d+)\/decide$/);
+    if (mdec && req.method === "POST") {
+      if (user.role !== "CUSTOMER") return out(403, { error: "role_denied" });
+      if (!body || typeof body !== "object") return out(422, { error: "json_required" });
+      let firmaSha: string | null = null, firmaPng: string | null = null;
+      if (body.decision === "APROBADA") {
+        const b64 = typeof body.firmaPngBase64 === "string" ? body.firmaPngBase64 : "";
+        let bytes: Uint8Array;
+        try { bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)); } catch { return out(400, { error: "firma inválida" }); }
+        const magic = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+        if (bytes.length < 8 || bytes.length > 2 * 1024 * 1024 || !magic.every((b, i) => bytes[i] === b)) {
+          return out(400, { error: "la firma debe ser una imagen PNG" });
+        }
+        firmaSha = await sha256Hex(bytes); firmaPng = b64;
+      }
+      const { data, error } = await db.rpc("lc_proposal_decide", {
+        p_actor: user.id, p_pid: Number(mdec[1]), p_decision: txt(body.decision, 20), p_opcion: txt(body.opcion, 10) || null,
+        p_firmante: txt(body.firmante, 200) || null, p_sha: txt(body.contenidoSha256, 100),
+        p_firma_sha: firmaSha, p_firma_png: firmaPng,
+      });
+      return error ? out(500, { error: "decide_failed" }) : fromRpc(data, out);
+    }
+
     if (m && req.method === "GET") {
       const { data, error } = await db.from("jobs").select("*").eq("id", Number(m[1])).maybeSingle();
       if (error) return out(500, { error: "read_failed" });
       if (!data || !hasAccess(user, data)) return out(404, { error: "not_found" });
-      return out(200, data);
+      const { data: props } = await db.from("job_proposals").select(COLS_PROP).eq("job_id", data.id).order("id");
+      return out(200, { ...data, propuestas: (props || []).map((p) => forma(p as Record<string, unknown>, false)) });
     }
 
     if (md && md[2] === "detail" && req.method === "GET") {

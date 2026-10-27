@@ -73,6 +73,17 @@ public interface SupabaseApi {
             @Header("Authorization") String authorization,
             @Body java.util.Map<String, Object> body);
 
+    /** Propuesta Good/Better/Best del técnico (idempotente por dispositivo + localId + contenido). */
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/proposals")
+    Call<ResponseBody> postProposal(
+            @Header("Authorization") String authorization,
+            @Body java.util.Map<String, Object> body);
+
+    /** Estado de las propuestas del técnico (decisión del cliente) cambiadas desde {@code since} (epoch ms). */
+    @GET("functions/v1/lc-api/proposals")
+    Call<ResponseBody> proposals(@Header("Authorization") String authorization, @Query("since") long since);
+
     /** Rol del usuario autenticado según profiles (lo decide el servidor, no la app). */
     @GET("functions/v1/lc-api/auth/me")
     Call<ResponseBody> me(@Header("Authorization") String authorization);

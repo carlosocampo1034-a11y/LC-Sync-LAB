@@ -54,6 +54,8 @@ final class CloudApi {
                 return r.ok() ? new Api.Respuesta(200, aContrato(r.cuerpo)) : r;
             }
             if ("POST".equals(metodo) && "/customer/requests".equals(ruta)) return crearSolicitud(c, body);
+            // La propuesta del técnico se decide (aprobar con firma o rechazar) en lc-api; el servidor valida todo
+            if ("POST".equals(metodo) && ruta.matches("/customer/proposals/\\d+/decide")) return lcApi(c, "POST", ruta, body);
         } catch (Exception e) {
             return new Api.Respuesta(-1, null);
         }
@@ -164,6 +166,7 @@ final class CloudApi {
         o.put("tecnicoNombre", j.isNull("technician_code") ? "" : j.optString("technician_code"));
         if (!j.isNull("programado_para")) o.put("programadoPara", j.optLong("programado_para"));
         o.put("updatedAt", j.optLong("updated_at"));
+        if (j.optJSONArray("propuestas") != null) o.put("propuestas", j.optJSONArray("propuestas"));   // Good/Better/Best
         return o;
     }
 

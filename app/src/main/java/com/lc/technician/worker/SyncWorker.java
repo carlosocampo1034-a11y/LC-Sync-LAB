@@ -159,6 +159,9 @@ public class SyncWorker extends Worker {
                 android.util.Log.w(TAG, "pull error: " + e.getMessage());
             }
 
+            // QA: propuestas Good/Better/Best (envío y decisión del cliente) una vez confirmadas las órdenes
+            if (com.lc.technician.BuildConfig.CLOUD_LOGIN) QaProposalSync.sincronizar(getApplicationContext(), db, sb);
+
             getApplicationContext().getSharedPreferences("lc_prefs", android.content.Context.MODE_PRIVATE)
                     .edit().putLong("last_sync_time", now).apply();
 
