@@ -67,7 +67,8 @@ public class MainActivity extends AppCompatActivity {
 
         // FASE 48: Onboarding check — first run redirect
         SharedPreferences onboardingPrefs = getSharedPreferences("lc_prefs", MODE_PRIVATE);
-        if (!onboardingPrefs.getBoolean("onboarding_done", false)) {
+        // La configuración inicial (PIN y URL de servidor) es del modo laboratorio: con cuenta en la nube no aplica
+        if (!BuildConfig.CLOUD_LOGIN && !onboardingPrefs.getBoolean("onboarding_done", false)) {
             startActivity(new Intent(this, OnboardingActivity.class));
             finish();
             return;
