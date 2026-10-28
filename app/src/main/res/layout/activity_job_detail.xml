@@ -303,7 +303,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Dirección"
+                android:text="Dirección · toca para abrir el mapa"
                 android:textColor="@color/lc_text_secondary"
                 android:textSize="13sp" />
             <TextView
@@ -667,7 +667,7 @@
                     android:id="@+id/btnAgregarFoto"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="+ Foto"
+                    android:text="Tomar foto"
                     android:textColor="@color/lc_primary"
                     android:textSize="14sp"
                     android:textStyle="bold"

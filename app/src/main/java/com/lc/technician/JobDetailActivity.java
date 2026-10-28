@@ -253,19 +253,7 @@ public class JobDetailActivity extends AppCompatActivity {
             tvDireccion.setFocusable(true);
             tvDireccion.setTextColor(0xFF171717);
             tvDireccion.setPaintFlags(tvDireccion.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            tvDireccion.setOnClickListener(v -> {
-                try {
-                    Intent mapIntent = new Intent(Intent.ACTION_VIEW,
-                            Uri.parse("geo:0,0?q=" + Uri.encode(job.direccion)));
-                    if (mapIntent.resolveActivity(getPackageManager()) != null) {
-                        startActivity(mapIntent);
-                    } else {
-                        Toast.makeText(this, "No hay app de mapas instalada", Toast.LENGTH_SHORT).show();
-                    }
-                } catch (Exception e) {
-                    Toast.makeText(this, "No hay app de mapas instalada", Toast.LENGTH_SHORT).show();
-                }
-            });
+            tvDireccion.setOnClickListener(v -> abrirMapa(job.direccion));
         }
 
         TextView tvTelefono = findViewById(R.id.detalleTelefono);
@@ -415,7 +403,9 @@ public class JobDetailActivity extends AppCompatActivity {
         botonSecundario2.setVisibility(View.GONE);
 
         ((ImageView) findViewById(R.id.btnAtras)).setOnClickListener(v -> finish());
-        findViewById(R.id.btnAgregarFoto).setOnClickListener(v -> mostrarOpcionesFoto());
+        findViewById(R.id.btnAgregarFoto).setOnClickListener(v -> tomarFotoDirecto());
+        // pulsación larga: el menú de antes (categoría y galería) para quien la necesite
+        findViewById(R.id.btnAgregarFoto).setOnLongClickListener(v -> { mostrarOpcionesFoto(); return true; });
         findViewById(R.id.btnAgregarContacto).setOnClickListener(v -> mostrarDialogoNuevoContacto());
         btnAvisarCliente.setOnClickListener(v -> mostrarOpcionesAvisarCliente());
         btnTimeOnMyWay.setOnClickListener(v -> confirmarTimeEvent("ON_MY_WAY"));
@@ -909,6 +899,27 @@ public class JobDetailActivity extends AppCompatActivity {
             tvSinFotos.setVisibility(hayFotos ? View.GONE : View.VISIBLE);
             layoutFotoSecciones.setVisibility(hayFotos ? View.VISIBLE : View.GONE);
         });
+    }
+
+    /** Abre la app de mapas del teléfono (la predeterminada) con la dirección; sin ninguna, abre Google Maps en el navegador. */
+    private void abrirMapa(String direccion) {
+        String q = Uri.encode(direccion);
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + q)));
+        } catch (Exception e) {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=" + q)));
+            } catch (Exception e2) {
+                Toast.makeText(this, "No se pudo abrir el mapa", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /** «Tomar foto»: abre la cámara de una vez. La categoría sale del estado de la orden (antes / después). */
+    private void tomarFotoDirecto() {
+        String e = job.estado == null ? "" : job.estado.toUpperCase(Locale.ROOT);
+        pendingCategoria = (e.contains("REPARACI") || e.contains("COMPLET")) ? "DESPUÉS" : "ANTES";
+        launcherPermisoCamara.launch(Manifest.permission.CAMERA);
     }
 
     private void mostrarOpcionesFoto() {
