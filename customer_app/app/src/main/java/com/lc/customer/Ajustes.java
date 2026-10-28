@@ -111,9 +111,9 @@ final class Ajustes {
     }
 
     // ── Respaldos = valores iniciales de la tabla settings (deben coincidir; ver supabase/migrations/20261028160000_settings.sql) ──
-    static final String[][] CATEGORIAS = {
-            {"ELECTRODOMESTICOS", "Electrodomésticos", "", "general"}, {"HVAC", "A/C y Calefacción", "", "hvac"},
-            {"PLOMERIA", "Plomería", "", "plumbing"}, {"ELECTRICIDAD", "Electricidad", "", "electricity"}, {"OTRO", "Otro", "", "general"}};
+    static final String[][] CATEGORIAS = {   // las 4 categorías oficiales del negocio, en este orden
+            {"PLOMERIA", "Plomería", "", "plumbing"}, {"ELECTRICIDAD", "Electricidad básica", "", "electricity"},
+            {"HVAC", "Aire Acondicionado (A/C)", "", "hvac"}, {"ELECTRODOMESTICOS", "Appliances / Electrodomésticos", "", "general"}};
     static final String[][] TIPOS_PROPIEDAD = {{"Casa", "Casa"}, {"Apartamento", "Apartamento"}, {"Oficina", "Oficina"}, {"Hotel", "Hotel"}, {"Otro", "Otro"}};
     static final String[][] ACCESOS = {{"Ninguno", "Ninguno"}, {"Código puerta", "Código puerta"}, {"Garaje", "Garaje"},
             {"Lockbox", "Lockbox"}, {"Vecino", "Vecino"}, {"Llave escondida", "Llave escondida"}};

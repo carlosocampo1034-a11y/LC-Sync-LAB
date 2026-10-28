@@ -634,7 +634,7 @@
     cabecera("Listas editables", "Los cambios aparecen en las apps sin recompilar", "listas");
     const r = await api("GET", "/settings");
     if (r.status !== 200) return errorVista(r);
-    const listas = r.body.settings.filter((s) => s.key.endsWith(".list"));
+    const listas = r.body.settings.filter((s) => s.key.endsWith(".list") && s.key !== "proposal_templates.list");
     const s = listas.find((x) => x.key === clave) || listas.find((x) => x.key === "categories.list") || listas[0];
     if (!s) { $("lcBody").innerHTML = `<div class="empty-state">Sin listas</div>`; return; }
     const fijo = !!s.constraints?.fixedIds, puede = ES_ROL_EDITA(s);
@@ -681,6 +681,64 @@
         leer(); e.target.disabled = true;
         const rr = await api("PUT", "/settings/" + s.key, { value: opciones, expectedVersion: s.version, reason: "Listas editables (Control Web)" });
         if (rr.status === 200) vistaListas(s.key, `Lista guardada (versión ${rr.body.version}). Las apps la mostrarán en menos de un minuto.`);
+        else { e.target.disabled = false; pintar(rr.body?.mensaje || rr.body?.error || `No se guardó (${rr.status})`); }
+      });
+    };
+    pintar();
+  }
+
+
+  // ── PLANTILLAS DE PROPUESTA (settings proposal_templates.list) ────────────────────────────────────
+  // Cada plantilla trae 3 opciones (Good/Better/Best): título, descripción, horas y materiales. En el Técnico, la mano de obra
+  // = horas × tarifa por hora del grupo de precios de la orden (pricing.<grupo>.hourly). Las plantillas no se borran: se desactivan.
+  async function vistaPlantillas(mensaje) {
+    cabecera("Plantillas de propuesta", "Los cambios llegan a los técnicos en menos de un minuto", "plantillas");
+    const r = await api("GET", "/settings/proposal_templates.list");
+    if (r.status !== 200 || !r.body?.settings?.[0]) return errorVista(r);
+    const s = r.body.settings[0], puede = ES_ROL_EDITA(s);
+    let plant = JSON.parse(JSON.stringify(s.value));
+    const NIV = ["Opción 1 (Good)", "Opción 2 (Better)", "Opción 3 (Best)"];
+    const pintar = (err) => {
+      $("lcBody").innerHTML = `
+        ${mensaje ? `<div class="alert alert-success mb-3">${esc(mensaje)}</div>` : ""}
+        <div class="alert alert-light border mb-3" style="font-size:.85rem"><i class="bi bi-info-circle me-1"></i>
+          Mano de obra = <b>horas × precio por hora</b> del grupo de la orden (Precios). Los materiales van en dólares. Versión ${s.version}.</div>
+        ${plant.map((t, ti) => `<div class="lc-card mb-3 p-3" data-t="${ti}">
+          <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+            <input class="form-control tp-label" style="max-width:340px" maxlength="80" value="${esc(t.label)}" ${puede ? "" : "disabled"} aria-label="Nombre de la plantilla">
+            <div class="form-check form-switch"><input class="form-check-input tp-act" type="checkbox" ${t.active === false ? "" : "checked"} ${puede ? "" : "disabled"} aria-label="Activa"><label class="form-check-label" style="font-size:.8rem">Activa</label></div>
+            <span class="text-muted" style="font-size:.72rem">id ${esc(t.id)}</span></div>
+          <div class="table-responsive"><table class="lc-table w-100"><thead><tr><th>Opción</th><th>Título</th><th>Descripción</th><th>Horas</th><th>Materiales $</th></tr></thead><tbody>
+          ${t.options.map((o, oi) => `<tr data-o="${oi}"><td style="white-space:nowrap">${NIV[oi]}</td>
+            <td><input class="form-control form-control-sm op-t" maxlength="80" value="${esc(o.title)}" ${puede ? "" : "disabled"}></td>
+            <td><input class="form-control form-control-sm op-d" maxlength="300" value="${esc(o.description)}" ${puede ? "" : "disabled"}></td>
+            <td style="width:90px"><input class="form-control form-control-sm op-h" type="number" min="0" max="200" step="0.5" value="${esc(o.hours)}" ${puede ? "" : "disabled"}></td>
+            <td style="width:110px"><input class="form-control form-control-sm op-m" type="number" min="0" max="100000" step="1" value="${esc(o.materials)}" ${puede ? "" : "disabled"}></td></tr>`).join("")}
+          </tbody></table></div></div>`).join("")}
+        ${puede ? `<div class="lc-card p-3 mb-3" style="max-width:640px"><div class="fw-bold mb-2">Agregar plantilla</div>
+          <div class="row g-2"><div class="col-sm-7"><input id="nuevaPlantilla" class="form-control" maxlength="80" placeholder="Ej: Diagnóstico de fuga" aria-label="Nombre de la nueva plantilla"></div>
+          <div class="col-sm-5"><button id="btnAddPlantilla" class="btn btn-outline-secondary w-100">+ Agregar</button></div></div></div>` : ""}
+        ${err ? `<div class="alert alert-danger">${esc(err)}</div>` : ""}
+        ${puede ? `<button id="btnGuardarPlantillas" class="btn btn-accent"><i class="bi bi-check2 me-1"></i> Guardar plantillas</button>` : `<div class="text-muted"><i class="bi bi-lock"></i> Solo un administrador edita las plantillas.</div>`}`;
+      const leer = () => $("lcBody").querySelectorAll("[data-t]").forEach((card) => {
+        const t = plant[+card.dataset.t];
+        t.label = card.querySelector(".tp-label").value.trim(); t.active = card.querySelector(".tp-act").checked;
+        card.querySelectorAll("tr[data-o]").forEach((tr) => { const o = t.options[+tr.dataset.o];
+          o.title = tr.querySelector(".op-t").value.trim(); o.description = tr.querySelector(".op-d").value.trim();
+          o.hours = Number(tr.querySelector(".op-h").value); o.materials = Number(tr.querySelector(".op-m").value); });
+      });
+      $("btnAddPlantilla")?.addEventListener("click", () => {
+        leer(); const n = $("nuevaPlantilla").value.trim();
+        if (!n) return pintar("Escribe el nombre de la plantilla");
+        const id = n.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+        if (!id || plant.some((t) => t.id === id)) return pintar("Ya existe una plantilla con ese nombre");
+        plant.push({ id, label: n, active: true, options: ["Good", "Better", "Best"].map((nv) => ({ title: `${n} - ${nv}`, description: "", hours: 1, materials: 0 })) });
+        pintar();
+      });
+      $("btnGuardarPlantillas")?.addEventListener("click", async (e) => {
+        leer(); e.target.disabled = true;
+        const rr = await api("PUT", "/settings/proposal_templates.list", { value: plant, expectedVersion: s.version, reason: "Plantillas de propuesta (Control Web)" });
+        if (rr.status === 200) vistaPlantillas(`Plantillas guardadas (versión ${rr.body.version}).`);
         else { e.target.disabled = false; pintar(rr.body?.mensaje || rr.body?.error || `No se guardó (${rr.status})`); }
       });
     };
@@ -791,6 +849,7 @@
     // pantallas de edición: sin repintado en tiempo real (borraría lo que se está escribiendo)
     else if (h === "/config") { cargando(); vistaActual = null; return vistaConfig(); }
     else if (h === "/listas") { cargando(); vistaActual = null; return vistaListas(); }
+    else if (h === "/plantillas") { cargando(); vistaActual = null; return vistaPlantillas(); }
     else { cargando(); vistaActual = () => vistaTablero(); }
     vistaActual();
   }

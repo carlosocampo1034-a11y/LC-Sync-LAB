@@ -484,53 +484,22 @@ public class ProposalActivity extends AppCompatActivity {
         etImpuesto[i].setEnabled(enabled);
     }
 
+    /** Plantillas desde settings (proposal_templates.list, editable en Control → Plantillas de propuesta). */
     private void mostrarDialogoPlantillas() {
-        String[] nombres = {
-            "Mantenimiento Preventivo",
-            "Reemplazo de Compresor",
-            "Limpieza de Ductos"
-        };
+        final java.util.List<org.json.JSONObject> plantillas = com.lc.technician.sync.Listas.activos(this, "proposal_templates.list");
+        if (plantillas.isEmpty()) {
+            Toast.makeText(this, "Las plantillas aún no se han descargado. Conéctate y vuelve a intentarlo.", Toast.LENGTH_LONG).show();
+            com.lc.technician.sync.Listas.refrescar(this, true, null);
+            return;
+        }
+        String[] nombres = new String[plantillas.size()];
+        for (int k = 0; k < nombres.length; k++) nombres[k] = plantillas.get(k).optString("label");
         new AlertDialog.Builder(this)
                 .setTitle("Seleccionar plantilla")
-                .setItems(nombres, (d, which) -> aplicarPlantilla(which))
+                .setItems(nombres, (d, which) -> aplicarPlantilla(plantillas.get(which)))
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
-
-    private static final String[][] TMPL_TITULO = {
-        {"Mantenimiento Preventivo - Good", "Mantenimiento Preventivo - Better", "Mantenimiento Preventivo - Best"},
-        {"Reemplazo de Compresor - Good",   "Reemplazo de Compresor - Better",   "Reemplazo de Compresor - Best"},
-        {"Limpieza de Ductos - Good",        "Limpieza de Ductos - Better",        "Limpieza de Ductos - Best"}
-    };
-    private static final String[][] TMPL_DESC = {
-        {
-            "Revisión básica de filtros y limpieza superficial de unidad",
-            "Inspección completa + limpieza profunda + ajuste de refrigerante",
-            "Mantenimiento total + limpieza de bobinas + revisión eléctrica completa"
-        },
-        {
-            "Reemplazo de compresor estándar con garantía básica",
-            "Reemplazo de compresor eficiencia media + mano de obra premium",
-            "Reemplazo de compresor alta eficiencia + garantía extendida 2 años"
-        },
-        {
-            "Limpieza básica de ductos principales",
-            "Limpieza completa de ductos + tratamiento antimicrobial",
-            "Limpieza profunda + sellado + tratamiento antimicrobial + certificación"
-        }
-    };
-    // [plantilla][opcion] = horas de mano de obra; el importe = horas × pricing.<grupo>.hourly (settings).
-    // Equivalen a los montos antiguos (150/200/250, 800/1200/1800, 200/300/450) a $50 por hora.
-    private static final double[][] TMPL_HORAS = {
-        {3, 4, 5},
-        {16, 24, 36},
-        {4, 6, 9}
-    };
-    private static final double[][] TMPL_MAT = {
-        {50, 100, 150},
-        {200, 300, 400},
-        {0, 50, 100}
-    };
 
     /** Grupo de precios de la orden (por su categoría) y su tarifa por hora, de settings. */
     private String grupoPrecio() {
@@ -557,12 +526,16 @@ public class ProposalActivity extends AppCompatActivity {
         }
     }
 
-    private void aplicarPlantilla(int tipo) {
+    /** Aplica una plantilla: mano de obra = horas × pricing.<grupo>.hourly; margen e impuesto de settings. */
+    private void aplicarPlantilla(org.json.JSONObject plantilla) {
+        org.json.JSONArray ops = plantilla.optJSONArray("options");
+        if (ops == null || ops.length() < 3) return;
         for (int i = 0; i < 3; i++) {
-            etTitulo[i].setText(TMPL_TITULO[tipo][i]);
-            etDescripcion[i].setText(TMPL_DESC[tipo][i]);
-            etManoObra[i].setText(fmt(TMPL_HORAS[tipo][i] * tarifaHora()));
-            etMateriales[i].setText(fmt(TMPL_MAT[tipo][i]));
+            org.json.JSONObject o = ops.optJSONObject(i);
+            etTitulo[i].setText(o.optString("title"));
+            etDescripcion[i].setText(o.optString("description"));
+            etManoObra[i].setText(fmt(o.optDouble("hours", 0) * tarifaHora()));
+            etMateriales[i].setText(fmt(o.optDouble("materials", 0)));
             etEquipo[i].setText("0");
             etPermiso[i].setText("0");
             etRemocion[i].setText("0");

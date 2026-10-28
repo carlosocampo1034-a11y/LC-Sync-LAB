@@ -94,6 +94,17 @@ public final class Listas {
         return new Lista(ids, labels);
     }
 
+    /** Opciones activas de una lista con todos sus campos (p. ej. plantillas con sus 3 opciones). */
+    public static List<JSONObject> activos(Context c, String key) {
+        List<JSONObject> out = new ArrayList<>();
+        JSONArray a = datos(c).optJSONArray(key);
+        for (int i = 0; a != null && i < a.length(); i++) {
+            JSONObject o = a.optJSONObject(i);
+            if (o != null && o.optBoolean("active", true)) out.add(o);
+        }
+        return out;
+    }
+
     /** Valor numérico de una setting (precios, márgenes); respaldo si aún no se descargó. */
     public static double numero(Context c, String key, double respaldo) {
         JSONObject d = datos(c);
