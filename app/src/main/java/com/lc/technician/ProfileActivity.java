@@ -174,14 +174,28 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void cerrarSesion() {
-        getSharedPreferences(LoginActivity.PREFS, MODE_PRIVATE).edit()
-                .remove(LoginActivity.KEY_SESSION)
-                .remove(LoginActivity.KEY_ROLE)
-                .remove(LoginActivity.KEY_NAME)
-                .apply();
-        Intent i = new Intent(this, LoginActivity.class);
-        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(i);
+        // Nada se pierde: si hay cambios o fotos sin subir, no se cierra sesión (se borrarían datos aún no enviados)
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+            int pendientes = PrivacidadLocal.pendientesSinSubir(this);
+            if (pendientes > 0) {
+                runOnUiThread(() -> new android.app.AlertDialog.Builder(this)
+                        .setTitle("Hay cambios sin subir")
+                        .setMessage("Conéctate a internet y sincroniza antes de cerrar sesión, para no perder tu trabajo.")
+                        .setPositiveButton("Entendido", null).show());
+                return;
+            }
+            PrivacidadLocal.purgarAlCerrarSesion(this);   // sin datos del cliente en el teléfono
+            runOnUiThread(() -> {
+                getSharedPreferences(LoginActivity.PREFS, MODE_PRIVATE).edit()
+                        .remove(LoginActivity.KEY_SESSION)
+                        .remove(LoginActivity.KEY_ROLE)
+                        .remove(LoginActivity.KEY_NAME)
+                        .apply();
+                Intent i = new Intent(this, LoginActivity.class);
+                i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(i);
+            });
+        });
     }
 
     private static String labelForRole(String rol) {

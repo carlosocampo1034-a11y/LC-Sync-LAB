@@ -67,7 +67,8 @@ public class CierreActivity extends AppCompatActivity {
         sv.setFillViewport(true);
         sv.setBackgroundColor(0xFFFFFFFF);
         LinearLayout raiz = col();
-        raiz.setPadding(dp(20), dp(20), dp(20), dp(28));
+        int barra = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        raiz.setPadding(dp(20), dp(20) + (barra > 0 ? getResources().getDimensionPixelSize(barra) : dp(24)), dp(20), dp(28));
         sv.addView(raiz);
         setContentView(sv);
 
@@ -183,9 +184,9 @@ public class CierreActivity extends AppCompatActivity {
         resumenCierre = "FIRMA".equals(o.optString("kind"))
                 ? "Firmó " + o.optString("firmante")
                 : "El cliente no quiso firmar · " + o.optString("negativaAt", "").replace('T', ' ').replaceAll("\\..*$", "");
-        String correo = o.optString("correo", "");
-        if (!correo.isEmpty()) aviso.setText("Correo al cliente: " + textoCorreo(correo));
         pintar();
+        String correo = o.optString("correo", "");
+        if (!correo.isEmpty()) aviso.setText("Correo al cliente: " + textoCorreo(correo));   // después de pintar(), que limpia el aviso
     }
 
     private static String textoCorreo(String c) {

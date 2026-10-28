@@ -243,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
         // lo que traiga la sincronización (órdenes nuevas o cambiadas) aparece sin salir y volver a entrar
         JobRepository.get().setOyenteCache(this::recargarJobs);
         recargarJobs();
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> PrivacidadLocal.purgarCerradas(this));
         // Sync v2: al volver a la app se pide lo nuevo (p. ej. órdenes asignadas por despacho), con límite de 30 s
         if (com.lc.technician.sync.LabSession.activa(this)) {
             long ultima = getSharedPreferences("lc_prefs", MODE_PRIVATE).getLong("last_sync_time", 0);

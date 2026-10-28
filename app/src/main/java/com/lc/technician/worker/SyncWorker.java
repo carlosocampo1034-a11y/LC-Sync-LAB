@@ -200,6 +200,7 @@ public class SyncWorker extends Worker {
                     .putInt(KEY_PULLED_JOBS, pulledJobs)
                     .putBoolean("silent", isSilent)
                     .build();
+            com.lc.technician.PrivacidadLocal.purgarCerradas(getApplicationContext());   // cerradas y confirmadas: sin datos del cliente
             if (reintentar) return Result.retry();  // cambios en cola: WorkManager reintenta con backoff
             return Result.success(out);
 
