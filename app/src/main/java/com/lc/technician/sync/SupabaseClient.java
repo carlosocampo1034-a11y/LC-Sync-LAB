@@ -56,10 +56,10 @@ public class SupabaseClient {
                     Request req = chain.request().newBuilder()
                             .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
                             .build();
-        com.lc.technician.Red.alCambiar(() -> http.connectionPool().evictAll());   // las conexiones de la red anterior ya no sirven
                     return chain.proceed(req);
                 })
                 .build();
+        com.lc.technician.Red.alCambiar(() -> http.connectionPool().evictAll());   // las conexiones de la red anterior ya no sirven
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BuildConfig.SUPABASE_URL + "/")
