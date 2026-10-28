@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">L&amp;C</string>
+    <string name="app_name">L&amp;C Técnico</string>
     <string name="favoritos">Favoritos</string>
     <string name="mis_favoritos">Mis clientes favoritos</string>
     <string name="sin_favoritos">Sin favoritos aún</string>
