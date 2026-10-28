@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Marca / Acciones primarias -->
-    <color name="lc_primary">#EB1700</color>
-    <color name="lc_primary_dark">#B01429</color>
+    <color name="lc_primary">#E91605</color>
+    <color name="lc_primary_dark">#E91605</color>
 
     <!-- Fondos y superficies -->
     <color name="lc_bg">#FFFFFF</color>
@@ -20,19 +20,19 @@
 
     <!-- Estados de trabajo — paleta coherente -->
     <!-- PENDIENTE: Amarillo oscuro / Naranja suave -->
-    <color name="status_pending">#E07A00</color>
-    <color name="status_pending_bg">#FFF8EE</color>
+    <color name="status_pending">#62666A</color>
+    <color name="status_pending_bg">#F1F2F3</color>
 
     <!-- EN RUTA: Azul claro -->
-    <color name="status_en_route">#1565C0</color>
-    <color name="status_en_route_bg">#E3F2FD</color>
+    <color name="status_en_route">#171717</color>
+    <color name="status_en_route_bg">#F1F2F3</color>
 
     <!-- LLEGUÉ / EN EL SITIO: Azul oscuro -->
-    <color name="status_arrived">#0D47A1</color>
+    <color name="status_arrived">#171717</color>
     <color name="status_arrived_bg">#E8EAF6</color>
 
     <!-- EN REPARACIÓN: Naranja -->
-    <color name="status_en_reparacion">#E65100</color>
+    <color name="status_en_reparacion">#E91605</color>
     <color name="status_en_reparacion_bg">#FBE9E7</color>
 
     <!-- COMPLETADO: Verde -->
@@ -40,11 +40,11 @@
     <color name="status_done_bg">#E6F4EA</color>
 
     <!-- EN ESPERA DE APROBACIÓN -->
-    <color name="status_awaiting">#0D47A1</color>
+    <color name="status_awaiting">#171717</color>
 
     <!-- PAUSADO / FALTA REPUESTO -->
-    <color name="status_on_hold">#B25E00</color>
+    <color name="status_on_hold">#62666A</color>
 
     <!-- Texto de advertencia (acceso, mascotas, etc.) -->
-    <color name="warning_text">#B25E00</color>
+    <color name="warning_text">#62666A</color>
 </resources>

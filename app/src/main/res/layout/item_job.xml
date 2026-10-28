@@ -83,7 +83,7 @@
             android:paddingEnd="8dp"
             android:paddingTop="3dp"
             android:paddingBottom="3dp"
-            android:background="#FF8F00"
+            android:background="#62666A"
             android:visibility="gone" />
 
     </LinearLayout>

@@ -212,7 +212,7 @@ public class PartsActivity extends AppCompatActivity {
 
             // BUG-003 FIX: only highlight red when stockMinimo is set and stock is below it
             boolean stockBajo = p.stockMinimo > 0 && p.stockActual < p.stockMinimo;
-            h.tvStock.setTextColor(stockBajo ? 0xFFEB1700 : 0xFF137333);
+            h.tvStock.setTextColor(stockBajo ? 0xFFE91605 : 0xFF171717);
 
             h.itemView.setOnClickListener(v -> onEdit.onClick(p));
             h.tvMovimientos.setOnClickListener(v -> onMovements.onClick(p));

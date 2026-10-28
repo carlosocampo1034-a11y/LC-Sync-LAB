@@ -99,8 +99,8 @@ public class EstadisticasActivity extends AppCompatActivity {
             "Reparación", "Part Hold", "Pausado", "Completado"
         };
         d.coloresEstados = new int[]{
-            0xFFE07A00, 0xFF1565C0, 0xFF0D47A1, 0xFF0D47A1,
-            0xFFE65100, 0xFFB25E00, 0xFFB25E00, 0xFF137333
+            0xFF62666A, 0xFF171717, 0xFF171717, 0xFF171717,
+            0xFFE91605, 0xFF62666A, 0xFF62666A, 0xFF137333
         };
         for (Job j : jobs) {
             for (int i = 0; i < estados.length; i++) {
@@ -281,19 +281,19 @@ public class EstadisticasActivity extends AppCompatActivity {
         if (kpiTasaExitoTv != null) {
             kpiTasaExitoTv.setText(d.kpiTasaExito + "%");
             kpiTasaExitoChip.setText(d.kpiTasaExito >= 80 ? "Alta" : d.kpiTasaExito >= 50 ? "Media" : "Baja");
-            kpiTasaExitoChip.setBackgroundColor(d.kpiTasaExito >= 80 ? 0xFF137333 : d.kpiTasaExito >= 50 ? 0xFFE07A00 : 0xFFE07A00);
+            kpiTasaExitoChip.setBackgroundColor(d.kpiTasaExito >= 80 ? 0xFF171717 : d.kpiTasaExito >= 50 ? 0xFF62666A : 0xFF62666A);
 
             kpiTiempoTv.setText(d.kpiTiempo > 0 ? d.kpiTiempo + "m" : "—");
             kpiTiempoChip.setText(d.kpiTiempo > 0 && d.kpiTiempo <= 60 ? "Óptimo" : "Revisar");
-            kpiTiempoChip.setBackgroundColor(d.kpiTiempo > 0 && d.kpiTiempo <= 60 ? 0xFF137333 : 0xFFF57C00);
+            kpiTiempoChip.setBackgroundColor(d.kpiTiempo > 0 && d.kpiTiempo <= 60 ? 0xFF171717 : 0xFF62666A);
 
             kpiRecurrentesTv.setText(String.valueOf(d.kpiRecurrentes));
             kpiRecurrentesChip.setText(d.kpiRecurrentes >= 5 ? "Alta" : d.kpiRecurrentes >= 2 ? "Media" : "Baja");
-            kpiRecurrentesChip.setBackgroundColor(d.kpiRecurrentes >= 5 ? 0xFF137333 : d.kpiRecurrentes >= 2 ? 0xFFE07A00 : 0xFFE07A00);
+            kpiRecurrentesChip.setBackgroundColor(d.kpiRecurrentes >= 5 ? 0xFF171717 : d.kpiRecurrentes >= 2 ? 0xFF62666A : 0xFF62666A);
 
             kpiFacturacionTv.setText(String.format(java.util.Locale.US, "$%,.0f", d.kpiFacturacionMes));
             kpiFacturacionChip.setText(d.kpiFacturacionMes > 0 ? "Activo" : "Sin datos");
-            kpiFacturacionChip.setBackgroundColor(d.kpiFacturacionMes > 0 ? 0xFF137333 : 0xFF9A9A9A);
+            kpiFacturacionChip.setBackgroundColor(d.kpiFacturacionMes > 0 ? 0xFF171717 : 0xFF9A9A9A);
         }
 
         // SECCIÓN 1
@@ -454,7 +454,7 @@ public class EstadisticasActivity extends AppCompatActivity {
 
                 TextView tvM = new TextView(this);
                 tvM.setText(String.format(Locale.US, "$%,.0f", d.topClientesMontos[i]));
-                tvM.setTextColor(0xFF137333); tvM.setTextSize(15f);
+                tvM.setTextColor(0xFF171717); tvM.setTextSize(15f);
                 tvM.setTypeface(null, android.graphics.Typeface.BOLD);
 
                 top.addView(tvN); top.addView(tvM);
@@ -507,7 +507,7 @@ public class EstadisticasActivity extends AppCompatActivity {
 
                 View bar = new View(this);
                 GradientDrawable bd = new GradientDrawable();
-                bd.setColor(0xFF1565C0); bd.setCornerRadius(dp(4));
+                bd.setColor(0xFFE91605); bd.setCornerRadius(dp(4));
                 bar.setBackground(bd);
                 int barW = d.semanasIngresos[i] > 0 ? (int)((d.semanasIngresos[i] / maxSem) * dp(160)) : 0;
                 LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(Math.max(barW, dp(4)), dp(18));
@@ -555,7 +555,7 @@ public class EstadisticasActivity extends AppCompatActivity {
 
                 View barE = new View(this);
                 GradientDrawable bde = new GradientDrawable();
-                bde.setColor(0xFF1565C0); bde.setCornerRadius(dp(3));
+                bde.setColor(0xFF171717); bde.setCornerRadius(dp(3));
                 barE.setBackground(bde);
                 int barEW = (int)((d.topEquiposCounts[i] / (float) maxEq) * dp(80));
                 LinearLayout.LayoutParams bep = new LinearLayout.LayoutParams(Math.max(barEW, dp(4)), dp(14));

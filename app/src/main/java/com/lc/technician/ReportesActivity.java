@@ -148,7 +148,7 @@ public class ReportesActivity extends AppCompatActivity {
 
         TextView tvTotal = new TextView(this);
         tvTotal.setText(mc.total + (mc.total == 1 ? " equipo" : " equipos"));
-        tvTotal.setTextColor(0xFFEB1700);
+        tvTotal.setTextColor(0xFFE91605);
         tvTotal.setTextSize(13);
         tvTotal.setTypeface(null, android.graphics.Typeface.BOLD);
 

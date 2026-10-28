@@ -389,10 +389,10 @@ public class ConfiguracionActivity extends AppCompatActivity {
                         if (info.getState() == androidx.work.WorkInfo.State.SUCCEEDED) {
                             int pushed = info.getOutputData().getInt(SyncWorker.KEY_PUSHED_COUNT, 0);
                             int pulled = info.getOutputData().getInt(SyncWorker.KEY_PULLED_JOBS, 0);
-                            String msg = "✅ Subidos: " + pushed + "  |  Bajados: " + pulled + " jobs";
+                            String msg = "✓ Subidos: " + pushed + "  |  Bajados: " + pulled + " jobs";
                             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
                         } else {
-                            Toast.makeText(this, "⚠️ Sincronización con errores", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "! Sincronización con errores", Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
@@ -608,7 +608,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
                     Toast.makeText(this, "Error al vaciar: " + e.getMessage(),
                             Toast.LENGTH_LONG).show();
                     if (tvEstadoVaciar != null) {
-                        tvEstadoVaciar.setText("❌ Error: " + e.getMessage());
+                        tvEstadoVaciar.setText("✕ Error: " + e.getMessage());
                         tvEstadoVaciar.setVisibility(View.VISIBLE);
                     }
                 });
@@ -670,7 +670,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     btnHacerBackup.setEnabled(true);
-                    tvEstadoBackup.setText("❌ Error: " + e.getMessage());
+                    tvEstadoBackup.setText("✕ Error: " + e.getMessage());
                 });
             }
         }).start();
@@ -738,7 +738,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     btnExportarBackup.setEnabled(true);
-                    tvEstadoBackupDB.setText("❌ " + e.getMessage());
+                    tvEstadoBackupDB.setText("✕ " + e.getMessage());
                     tvEstadoBackupDB.setVisibility(View.VISIBLE);
                 });
             }
@@ -799,7 +799,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     btnRestaurarBackup.setEnabled(true);
-                    tvEstadoBackupDB.setText("❌ " + e.getMessage());
+                    tvEstadoBackupDB.setText("✕ " + e.getMessage());
                     tvEstadoBackupDB.setVisibility(View.VISIBLE);
                 });
             }
@@ -1011,7 +1011,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
                     btnPdf.setText("PDF");
                     btnPdf.setTextColor(android.graphics.Color.WHITE);
                     btnPdf.setBackgroundTintList(
-                            android.content.res.ColorStateList.valueOf(0xFFEB1700));
+                            android.content.res.ColorStateList.valueOf(0xFFE91605));
                     btnPdf.setTextSize(11);
                     btnPdf.setPadding(16, 4, 16, 4);
                     final MembershipCardEntity cardFinal = card;
@@ -1021,7 +1021,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
                     btnHist.setText("HIST");
                     btnHist.setTextColor(android.graphics.Color.WHITE);
                     btnHist.setBackgroundTintList(
-                            android.content.res.ColorStateList.valueOf(0xFF1B71C9));
+                            android.content.res.ColorStateList.valueOf(0xFFE91605));
                     btnHist.setTextSize(11);
                     btnHist.setPadding(16, 4, 16, 4);
                     final MembershipCardEntity cardFinalH = card;

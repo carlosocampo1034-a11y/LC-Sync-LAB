@@ -43,7 +43,7 @@ public class TechnicianRosterAdapter extends RecyclerView.Adapter<TechnicianRost
         switch (status) {
             case TechnicianEntity.STATUS_ON_ROUTE:
                 h.tvEstado.setText("En ruta");
-                h.tvEstado.setBackgroundColor(0xFF1565C0);
+                h.tvEstado.setBackgroundColor(0xFF171717);
                 break;
             case TechnicianEntity.STATUS_INACTIVE:
                 h.tvEstado.setText("Inactivo");
@@ -51,7 +51,7 @@ public class TechnicianRosterAdapter extends RecyclerView.Adapter<TechnicianRost
                 break;
             default:
                 h.tvEstado.setText("Activo");
-                h.tvEstado.setBackgroundColor(0xFF137333);
+                h.tvEstado.setBackgroundColor(0xFF171717);
         }
         String meta = String.format(java.util.Locale.US, "%d trabajos · %.1f★",
                 (int) tech.jobsCompleted, tech.rating == 0 ? 5.0 : tech.rating);

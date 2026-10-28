@@ -144,11 +144,22 @@ final class Ui {
         return c;
     }
 
-    static TextView badge(Activity a, String estado) {
-        TextView b = texto(a, estado, 12, android.R.color.white, true);
+    /**
+     * Insignia de estado con la paleta oficial: gris (pendiente, pausado, repuesto, cancelado), negro (en ruta, llegué,
+     * esperando aprobación), rojo (en reparación) y verde SOLO para completado. Se decide por el id del estado.
+     */
+    static TextView badgeEstado(Activity a, String idEstado, String texto) {
+        TextView b = texto(a, texto, 12, android.R.color.white, true);
         b.setTextColor(0xFFFFFFFF);
-        b.setBackground(ContextCompat.getDrawable(a, R.drawable.bg_badge));
-        if ("COMPLETADO".equals(estado)) b.getBackground().setTint(ContextCompat.getColor(a, R.color.lc_ok));
+        b.setBackground(ContextCompat.getDrawable(a, R.drawable.bg_badge).mutate());
+        int color;
+        switch (idEstado == null ? "" : idEstado) {
+            case "COMPLETADO": color = R.color.lc_ok; break;
+            case "EN REPARACIÓN": color = R.color.lc_rojo; break;
+            case "EN RUTA": case "LLEGUÉ": case "ESPERANDO APROBACIÓN": color = R.color.lc_texto; break;
+            default: color = R.color.lc_sec;          // pendiente, pausado, falta repuesto, cancelado
+        }
+        b.getBackground().setTint(ContextCompat.getColor(a, color));
         b.setPadding(dp(a, 8), dp(a, 3), dp(a, 8), dp(a, 3));
         return b;
     }

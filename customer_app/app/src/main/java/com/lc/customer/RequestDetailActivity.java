@@ -229,7 +229,7 @@ public class RequestDetailActivity extends AppCompatActivity {
         c.removeAllViews();
         if (!r.ok()) { c.addView(Ui.texto(this, r.error(), 15, R.color.lc_rojo, false)); return; }
         JSONObject j = r.cuerpo;
-        TextView est = Ui.badge(this, Ui.estadoCliente(this, j.optString("estado")).toUpperCase());
+        TextView est = Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado")).toUpperCase());
         c.addView(est);
         LinearLayout card = Ui.tarjeta(this, c);
         fila(card, "Problema", j.optString("descripcion"));
@@ -388,7 +388,7 @@ public class RequestDetailActivity extends AppCompatActivity {
                             });
                         })).show());
             } else if ("PAGADA".equals(f.optString("estado"))) {
-                fc.addView(Ui.texto(this, "✓ Pagada", 16, R.color.lc_ok, true));
+                fc.addView(Ui.texto(this, "✓ Pagada", 16, R.color.lc_texto, true));   // verde solo para «Completado»
             }
             if (f.optBoolean("tienePdf")) {
                 final long jid = j.optLong("id");

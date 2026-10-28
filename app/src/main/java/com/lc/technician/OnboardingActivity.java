@@ -68,7 +68,7 @@ public class OnboardingActivity extends AppCompatActivity {
                 dpToPx(size), dpToPx(size));
             lp.setMargins(dpToPx(4), 0, dpToPx(4), 0);
             dot.setLayoutParams(lp);
-            dot.setBackgroundColor(i == 0 ? Color.parseColor("#3b82f6") : Color.parseColor("#374151"));
+            dot.setBackgroundColor(i == 0 ? Color.parseColor("#E91605") : Color.parseColor("#62666A"));
             dot.setTag(i);
             dot.setClipToOutline(true);
             progressDots.addView(dot);
@@ -78,7 +78,7 @@ public class OnboardingActivity extends AppCompatActivity {
     private void updateDots() {
         for (int i = 0; i < progressDots.getChildCount(); i++) {
             View dot = progressDots.getChildAt(i);
-            dot.setBackgroundColor(i == currentPage ? Color.parseColor("#3b82f6") : Color.parseColor("#374151"));
+            dot.setBackgroundColor(i == currentPage ? Color.parseColor("#E91605") : Color.parseColor("#62666A"));
         }
     }
 
@@ -131,7 +131,7 @@ public class OnboardingActivity extends AppCompatActivity {
 
         TextView sub = new TextView(this);
         sub.setText("Sistema de gesti\u00f3n de servicios t\u00e9cnicos\n\nBienvenido al asistente de configuraci\u00f3n inicial.");
-        sub.setTextColor(Color.parseColor("#9ca3af"));
+        sub.setTextColor(Color.parseColor("#9A9A9A"));
         sub.setTextSize(15);
         sub.setGravity(Gravity.CENTER);
         sub.setPadding(0, dpToPx(16), 0, 0);
@@ -153,13 +153,13 @@ public class OnboardingActivity extends AppCompatActivity {
 
         TextView sub = new TextView(this);
         sub.setText("Tu administrador te ha asignado un PIN de acceso. Ingr\u00e9salo a continuaci\u00f3n para verificar tu rol.");
-        sub.setTextColor(Color.parseColor("#9ca3af"));
+        sub.setTextColor(Color.parseColor("#9A9A9A"));
         sub.setTextSize(14);
         sub.setPadding(0, dpToPx(12), 0, dpToPx(20));
 
         TextView note = new TextView(this);
         note.setText("\u2139\ufe0f  El PIN fue configurado por tu empresa. Si no lo tienes, contacta a tu supervisor.");
-        note.setTextColor(Color.parseColor("#6b7280"));
+        note.setTextColor(Color.parseColor("#808080"));
         note.setTextSize(12);
         note.setPadding(0, dpToPx(16), 0, 0);
 
@@ -179,7 +179,7 @@ public class OnboardingActivity extends AppCompatActivity {
 
         TextView sub = new TextView(this);
         sub.setText("Ingresa la direcci\u00f3n del servidor Flask. Tu administrador te la proporcionar\u00e1.");
-        sub.setTextColor(Color.parseColor("#9ca3af"));
+        sub.setTextColor(Color.parseColor("#9A9A9A"));
         sub.setTextSize(14);
         sub.setPadding(0, dpToPx(12), 0, dpToPx(16));
 
@@ -187,13 +187,13 @@ public class OnboardingActivity extends AppCompatActivity {
         String savedUrl = prefs.getString("server_url", "http://127.0.0.1:5000/api/");
         etServerUrl.setText(savedUrl);
         etServerUrl.setTextColor(Color.WHITE);
-        etServerUrl.setHintTextColor(Color.parseColor("#6b7280"));
-        etServerUrl.setBackgroundColor(Color.parseColor("#1f2937"));
+        etServerUrl.setHintTextColor(Color.parseColor("#808080"));
+        etServerUrl.setBackgroundColor(Color.parseColor("#2B2B2B"));
         etServerUrl.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
 
         TextView hint = new TextView(this);
         hint.setText("Ejemplo:\nhttp://192.168.1.100:5000/api/\nhttps://mi-servidor.tailscale.net/api/");
-        hint.setTextColor(Color.parseColor("#6b7280"));
+        hint.setTextColor(Color.parseColor("#808080"));
         hint.setTextSize(12);
         hint.setPadding(0, dpToPx(8), 0, 0);
 
@@ -214,7 +214,7 @@ public class OnboardingActivity extends AppCompatActivity {
 
         TextView sub = new TextView(this);
         sub.setText("La app necesita los siguientes permisos para funcionar correctamente:");
-        sub.setTextColor(Color.parseColor("#9ca3af"));
+        sub.setTextColor(Color.parseColor("#9A9A9A"));
         sub.setTextSize(14);
         sub.setPadding(0, dpToPx(12), 0, dpToPx(16));
 
@@ -237,7 +237,7 @@ public class OnboardingActivity extends AppCompatActivity {
 
         TextView note = new TextView(this);
         note.setText("\nAndroid solicitar\u00e1 los permisos cuando los necesite por primera vez.");
-        note.setTextColor(Color.parseColor("#6b7280"));
+        note.setTextColor(Color.parseColor("#808080"));
         note.setTextSize(12);
         ll.addView(note);
 
@@ -254,7 +254,7 @@ public class OnboardingActivity extends AppCompatActivity {
 
         TextView status = new TextView(this);
         status.setText("\uD83D\uDD04 Probando conexi\u00f3n al servidor...");
-        status.setTextColor(Color.parseColor("#9ca3af"));
+        status.setTextColor(Color.parseColor("#9A9A9A"));
         status.setTextSize(14);
         status.setPadding(0, dpToPx(16), 0, 0);
         status.setTag("statusText");
@@ -270,10 +270,10 @@ public class OnboardingActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (ok) {
                     status.setText("\u2705 Conexi\u00f3n exitosa al servidor\n\nTodo est\u00e1 listo. Pulsa COMENZAR para iniciar la app.");
-                    status.setTextColor(Color.parseColor("#10b981"));
+                    status.setTextColor(Color.parseColor("#FFFFFF"));
                 } else {
                     status.setText("\u26a0\ufe0f No se pudo conectar al servidor\n\nVerifica la URL o la conexi\u00f3n de red. Puedes continuar y configurar m\u00e1s tarde en Ajustes.");
-                    status.setTextColor(Color.parseColor("#f59e0b"));
+                    status.setTextColor(Color.parseColor("#E91605"));
                 }
             });
         }).start();

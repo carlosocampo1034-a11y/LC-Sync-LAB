@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
  * On CONFIRM: writes non-null fields to Equipment and sets scanStatus=CONFIRMED.
  * On CANCEL: no changes to Equipment.
  *
- * L&C visual style: white background, red #EB1700 primary action.
+ * L&C visual style: white background, red #E91605 primary action.
  */
 public class NameplateReviewActivity extends AppCompatActivity {
 

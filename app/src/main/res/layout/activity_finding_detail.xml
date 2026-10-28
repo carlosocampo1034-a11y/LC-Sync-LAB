@@ -238,7 +238,7 @@
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:gravity="center"
-                    android:text="🔴 CRÍTICO"
+                    android:text="● CRÍTICO"
                     android:textSize="12sp"
                     android:textColor="@color/lc_text"
                     android:background="@drawable/bg_chip_unselected" />
@@ -251,7 +251,7 @@
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:gravity="center"
-                    android:text="🟠 ALTO"
+                    android:text="▲ ALTO"
                     android:textSize="12sp"
                     android:textColor="@color/lc_text"
                     android:background="@drawable/bg_chip_unselected" />
@@ -264,7 +264,7 @@
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:gravity="center"
-                    android:text="🟡 MEDIO"
+                    android:text="■ MEDIO"
                     android:textSize="12sp"
                     android:textColor="@color/lc_text"
                     android:background="@drawable/bg_chip_selected" />
@@ -276,7 +276,7 @@
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:gravity="center"
-                    android:text="🟢 BAJO"
+                    android:text="▽ BAJO"
                     android:textSize="12sp"
                     android:textColor="@color/lc_text"
                     android:background="@drawable/bg_chip_unselected" />

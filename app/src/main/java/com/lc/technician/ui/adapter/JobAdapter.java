@@ -47,13 +47,13 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         int color;
         switch (job.estado != null ? job.estado : "") {
             case Job.STATUS_DONE:               color = 0xFF137333; break;  // Verde
-            case Job.STATUS_ARRIVED:            color = 0xFF0D47A1; break;  // Azul oscuro
-            case Job.STATUS_EN_ROUTE:           color = 0xFF1565C0; break;  // Azul claro
-            case Job.STATUS_EN_REPARACION:      color = 0xFFE65100; break;  // Naranja
-            case Job.STATUS_PART_HOLD:          color = 0xFFB25E00; break;  // Ámbar
-            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF0D47A1; break;  // Azul oscuro
-            case Job.STATUS_ON_HOLD:            color = 0xFFB25E00; break;  // Ámbar
-            default:                            color = 0xFFE07A00; break;  // Naranja suave (PENDIENTE)
+            case Job.STATUS_ARRIVED:            color = 0xFF171717; break;  // Azul oscuro
+            case Job.STATUS_EN_ROUTE:           color = 0xFF171717; break;  // Azul claro
+            case Job.STATUS_EN_REPARACION:      color = 0xFFE91605; break;  // Naranja
+            case Job.STATUS_PART_HOLD:          color = 0xFF62666A; break;  // Ámbar
+            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF171717; break;  // Azul oscuro
+            case Job.STATUS_ON_HOLD:            color = 0xFF62666A; break;  // Ámbar
+            default:                            color = 0xFF62666A; break;  // Naranja suave (PENDIENTE)
         }
 
         GradientDrawable bg = new GradientDrawable();

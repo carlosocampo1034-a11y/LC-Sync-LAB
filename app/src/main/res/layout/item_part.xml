@@ -58,7 +58,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="Movimientos →"
-            android:textColor="#EB1700"
+            android:textColor="#E91605"
             android:textSize="11sp"
             android:textStyle="bold"
             android:paddingTop="4dp"

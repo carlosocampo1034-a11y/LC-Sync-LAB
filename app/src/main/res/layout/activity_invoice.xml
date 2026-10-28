@@ -101,7 +101,7 @@
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/bg_btn_secondary"
                 android:text="GENERAR PDF"
-                android:textColor="#1B71C9"
+                android:textColor="#171717"
                 android:textStyle="bold"
                 android:textSize="13sp"
                 android:letterSpacing="0.02"

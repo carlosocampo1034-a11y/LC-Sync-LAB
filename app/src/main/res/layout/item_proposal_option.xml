@@ -209,26 +209,26 @@
         android:paddingBottom="4dp"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:background="#FFF3E0"
+        android:background="#F1F2F3"
         android:visibility="gone">
 
         <TextView android:id="@+id/tvCovTotalTrabajo"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:textColor="#795548" android:textSize="13sp" />
+            android:textColor="#62666A" android:textSize="13sp" />
 
         <TextView android:id="@+id/tvCovDeducible"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textColor="#795548" android:textSize="13sp" />
+            android:textColor="#62666A" android:textSize="13sp" />
 
         <TextView android:id="@+id/tvCovInsurer"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textColor="#795548" android:textSize="13sp" />
+            android:textColor="#62666A" android:textSize="13sp" />
 
         <TextView android:id="@+id/tvCovClientePaga"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:textColor="#2E7D32" android:textSize="15sp" android:textStyle="bold" />
+            android:textColor="#171717" android:textSize="15sp" android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>

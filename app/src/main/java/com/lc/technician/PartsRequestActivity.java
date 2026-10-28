@@ -176,11 +176,11 @@ public class PartsRequestActivity extends AppCompatActivity {
             h.tvStatus.setText(r.status);
             int color;
             switch (r.status) {
-                case PartsRequestEntity.STATUS_APPROVED: color = 0xFF4CAF50; break;
-                case PartsRequestEntity.STATUS_REJECTED: color = 0xFFF44336; break;
-                case PartsRequestEntity.STATUS_FULFILLED: color = 0xFF2196F3; break;
+                case PartsRequestEntity.STATUS_APPROVED: color = 0xFF171717; break;
+                case PartsRequestEntity.STATUS_REJECTED: color = 0xFFE91605; break;
+                case PartsRequestEntity.STATUS_FULFILLED: color = 0xFF62666A; break;
                 case PartsRequestEntity.STATUS_CANCELLED: color = 0xFF9E9E9E; break;
-                default: color = 0xFFFF9800;
+                default: color = 0xFF62666A;
             }
             h.tvStatus.setBackgroundColor(color);
             h.itemView.setOnClickListener(v -> mostrarDialogoAprobacion(r));

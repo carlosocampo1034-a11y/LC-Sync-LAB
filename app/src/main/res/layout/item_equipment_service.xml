@@ -12,7 +12,7 @@
         <TextView android:id="@+id/tvServTipo"
             android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="13sp" android:textStyle="bold" android:textColor="#1B71C9"
+            android:textSize="13sp" android:textStyle="bold" android:textColor="#171717"
             android:text="TIPO"/>
         <TextView android:id="@+id/tvServFecha"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -21,7 +21,7 @@
         <TextView android:id="@+id/tvServCosto"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginLeft="8dp"
-            android:textSize="12sp" android:textColor="#2E7D32"
+            android:textSize="12sp" android:textColor="#171717"
             android:text=""/>
     </LinearLayout>
     <TextView android:id="@+id/tvServDesc"

@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#111827">
+    android:background="#171717">
 
     <!-- Progress dots -->
     <LinearLayout
@@ -24,7 +24,7 @@
         android:layout_gravity="top|end"
         android:layout_margin="16dp"
         android:text="SALTAR"
-        android:textColor="#6b7280"
+        android:textColor="#808080"
         android:textSize="13sp"
         android:padding="8dp"
         android:clickable="true"
@@ -55,7 +55,7 @@
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:text="ATRÁS"
-            android:backgroundTint="#374151"
+            android:backgroundTint="#62666A"
             android:textColor="#d1d5db"
             android:visibility="gone" />
 
@@ -69,7 +69,7 @@
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:text="SIGUIENTE"
-            android:backgroundTint="#1d4ed8"
+            android:backgroundTint="#E91605"
             android:textColor="#ffffff"
             android:minWidth="120dp" />
     </LinearLayout>

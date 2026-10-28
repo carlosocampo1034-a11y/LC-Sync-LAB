@@ -180,7 +180,7 @@
             android:layout_height="wrap_content"
             android:text="▶ Ver texto OCR completo"
             android:textSize="13sp"
-            android:textColor="#EB1700"
+            android:textColor="#E91605"
             android:padding="4dp"
             android:layout_marginBottom="4dp" />
 
@@ -235,7 +235,7 @@
                 android:layout_weight="1"
                 android:text="CONFIRMAR"
                 android:textColor="#FFFFFF"
-                android:backgroundTint="#EB1700" />
+                android:backgroundTint="#E91605" />
         </LinearLayout>
 
     </LinearLayout>

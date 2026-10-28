@@ -253,8 +253,8 @@ public class InspectionActivity extends AppCompatActivity {
     }
 
     private void applyChipState(TextView btnPass, TextView btnIssue, TextView btnNa, String estado) {
-        styleChip(btnPass, "PASS".equals(estado), 0xFF137333, 0xFF137333);
-        styleChip(btnIssue, "ISSUE".equals(estado), 0xFFEB1700, 0xFFEB1700);
+        styleChip(btnPass, "PASS".equals(estado), 0xFF171717, 0xFF171717);
+        styleChip(btnIssue, "ISSUE".equals(estado), 0xFFE91605, 0xFFE91605);
         styleChip(btnNa, "NA".equals(estado), 0xFF767676, 0xFF767676);
     }
 
@@ -429,7 +429,7 @@ public class InspectionActivity extends AppCompatActivity {
                 TextView btnDel = new TextView(row.getContext());
                 btnDel.setText("\u2715");
                 btnDel.setTextSize(16f);
-                btnDel.setTextColor(0xFFEB1700);
+                btnDel.setTextColor(0xFFE91605);
                 btnDel.setPadding(dpToPx(row.getContext(), 12), 0, 0, 0);
                 btnDel.setOnClickListener(v -> onDelete.onDelete(m.id));
                 row.addView(btnDel);
@@ -490,10 +490,10 @@ public class InspectionActivity extends AppCompatActivity {
             String sev = f.severity != null ? f.severity : "MEDIUM";
             String sevLabel;
             switch (sev) {
-                case "CRITICAL": sevLabel = "🔴 CRÍTICO"; break;
-                case "HIGH":     sevLabel = "🟠 ALTO"; break;
-                case "LOW":      sevLabel = "🟢 BAJO"; break;
-                default:         sevLabel = "🟡 MEDIO"; break;
+                case "CRITICAL": sevLabel = "● CRÍTICO"; break;
+                case "HIGH":     sevLabel = "▲ ALTO"; break;
+                case "LOW":      sevLabel = "▽ BAJO"; break;
+                default:         sevLabel = "■ MEDIO"; break;
             }
             tvSeverity.setText(sevLabel);
 

@@ -182,10 +182,10 @@ public class StockMovementActivity extends AppCompatActivity {
             h.tvType.setText(m.movementType);
             int color;
             switch (m.movementType) {
-                case StockMovementEntity.TYPE_IN: color = 0xFF4CAF50; break;
-                case StockMovementEntity.TYPE_OUT: color = 0xFFF44336; break;
-                case StockMovementEntity.TYPE_TRANSFER: color = 0xFF2196F3; break;
-                default: color = 0xFFFF9800;
+                case StockMovementEntity.TYPE_IN: color = 0xFF171717; break;
+                case StockMovementEntity.TYPE_OUT: color = 0xFFE91605; break;
+                case StockMovementEntity.TYPE_TRANSFER: color = 0xFF62666A; break;
+                default: color = 0xFF62666A;
             }
             h.tvType.setBackgroundColor(color);
             h.tvQuantity.setText((m.quantity >= 0 ? "+" : "") + m.quantity);

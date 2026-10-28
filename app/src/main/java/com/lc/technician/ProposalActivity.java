@@ -38,7 +38,7 @@ public class ProposalActivity extends AppCompatActivity {
         ConfigManager.DEFAULT_MARKUP_BEST
     };
     private double defTax = ConfigManager.DEFAULT_TAX_RATE;
-    private static final int[] CHIP_COLORS = {0xFF137333, 0xFF1B71C9, 0xFFFF8F00};
+    private static final int[] CHIP_COLORS = {0xFF171717, 0xFFE91605, 0xFF62666A};
 
     // FASE 16: Coverage breakdown views and loaded coverage type
     private final android.widget.LinearLayout[] layoutCoverageBreakdown = new android.widget.LinearLayout[3];
@@ -121,7 +121,7 @@ public class ProposalActivity extends AppCompatActivity {
 
             android.graphics.drawable.GradientDrawable abg = new android.graphics.drawable.GradientDrawable();
             abg.setCornerRadius(dpToPx(10));
-            abg.setColor(0xFF137333);
+            abg.setColor(0xFF171717);
             tvAceptadaChip[i].setBackground(abg);
 
             final int idx = i;
@@ -294,8 +294,8 @@ public class ProposalActivity extends AppCompatActivity {
             if (p == null || tvEstadoServidor == null) return;
             proposal.syncState = p.syncState;
             tvEstadoServidor.setText(textoEstado(p));
-            tvEstadoServidor.setTextColor("APROBADA".equals(p.serverEstado) && p.syncState == 1 ? 0xFF137333
-                    : p.syncState == 3 || "RECHAZADA".equals(p.serverEstado) ? 0xFFC62828 : 0xFF9E9E9E);
+            tvEstadoServidor.setTextColor("APROBADA".equals(p.serverEstado) && p.syncState == 1 ? 0xFF171717
+                    : p.syncState == 3 || "RECHAZADA".equals(p.serverEstado) ? 0xFFE91605 : 0xFF9E9E9E);
             if (p.isLocked && btnEnviarCliente != null) btnEnviarCliente.setVisibility(View.GONE);
         });
     }

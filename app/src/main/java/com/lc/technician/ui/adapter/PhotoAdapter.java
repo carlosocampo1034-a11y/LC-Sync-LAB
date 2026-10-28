@@ -69,9 +69,9 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.VH> {
     private static int colorForCategoria(String cat) {
         if (cat == null) return 0xFF767676;
         switch (cat) {
-            case "ANTES":     return 0xFFEB1700;
-            case "DESPUÉS":   return 0xFF137333;
-            case "EQUIPO":    return 0xFF1B71C9;
+            case "ANTES":     return 0xFFE91605;
+            case "DESPUÉS":   return 0xFF171717;
+            case "EQUIPO":    return 0xFF62666A;
             case "NAMEPLATE": return 0xFF767676;
             default:          return 0xFF767676;
         }

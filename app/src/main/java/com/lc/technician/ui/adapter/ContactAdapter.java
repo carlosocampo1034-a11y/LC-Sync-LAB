@@ -85,10 +85,10 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.VH> {
     private static int colorForRol(String rol) {
         if (rol == null) return 0xFF767676;
         switch (rol) {
-            case "DUEÑO":     return 0xFF1B71C9;
-            case "INQUILINO": return 0xFFF57C00;
-            case "PAGADOR":   return 0xFF137333;
-            case "FIRMANTE":  return 0xFFEB1700;
+            case "DUEÑO":     return 0xFF171717;
+            case "INQUILINO": return 0xFF62666A;
+            case "PAGADOR":   return 0xFF171717;
+            case "FIRMANTE":  return 0xFFE91605;
             default:          return 0xFF767676;
         }
     }

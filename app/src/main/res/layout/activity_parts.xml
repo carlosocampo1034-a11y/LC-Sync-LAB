@@ -64,7 +64,7 @@
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
         android:background="#FFFDE7"
-        android:textColor="#E65100"
+        android:textColor="#E91605"
         android:textSize="13sp"
         android:textStyle="bold"
         android:visibility="gone" />

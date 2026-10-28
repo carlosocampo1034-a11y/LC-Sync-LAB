@@ -104,7 +104,7 @@
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_btn_secondary"
             android:text="COMPARTIR REPORTE"
-            android:textColor="#1B71C9"
+            android:textColor="#171717"
             android:textStyle="bold"
             android:textSize="14sp"
             android:letterSpacing="0.03"
@@ -118,7 +118,7 @@
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_btn_secondary"
             android:text="FACTURA"
-            android:textColor="#137333"
+            android:textColor="#171717"
             android:textStyle="bold"
             android:textSize="14sp"
             android:letterSpacing="0.03"
@@ -153,7 +153,7 @@
                 android:layout_marginEnd="6dp"
                 android:background="@drawable/bg_btn_secondary"
                 android:text="RECORDATORIO"
-                android:textColor="#F57C00"
+                android:textColor="#62666A"
                 android:textStyle="bold"
                 android:textSize="13sp"
                 android:letterSpacing="0.02"
@@ -168,7 +168,7 @@
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_btn_secondary"
                 android:text="VER COMO CLIENTE"
-                android:textColor="#1B71C9"
+                android:textColor="#171717"
                 android:textStyle="bold"
                 android:textSize="13sp"
                 android:letterSpacing="0.02"
@@ -760,7 +760,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🔴 0"
+                        android:text="● 0"
                         android:textSize="13sp"
                         android:textColor="@color/lc_text"
                         android:gravity="center" />
@@ -770,7 +770,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🟠 0"
+                        android:text="▲ 0"
                         android:textSize="13sp"
                         android:textColor="@color/lc_text"
                         android:gravity="center" />
@@ -780,7 +780,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🟡 0"
+                        android:text="■ 0"
                         android:textSize="13sp"
                         android:textColor="@color/lc_text"
                         android:gravity="center" />
@@ -790,7 +790,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🟢 0"
+                        android:text="▽ 0"
                         android:textSize="13sp"
                         android:textColor="@color/lc_text"
                         android:gravity="center" />
@@ -844,7 +844,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:textColor="#137333"
+                android:textColor="#171717"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
@@ -874,7 +874,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
-                    android:textColor="#137333"
+                    android:textColor="#171717"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:visibility="gone" />
@@ -887,7 +887,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="&#x1F527; FIRMA TÉCNICO"
-                android:textColor="#34d399"
+                android:textColor="#171717"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:padding="4dp"
@@ -947,7 +947,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="+ Asignar cobertura"
-                    android:textColor="#EB1700"
+                    android:textColor="#E91605"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:padding="4dp" />
@@ -958,7 +958,7 @@
                     android:layout_height="wrap_content"
                     android:text="+ ESCANEAR MEMBRESÍA"
                     android:textColor="#FFFFFF"
-                    android:backgroundTint="#1B71C9"
+                    android:backgroundTint="#E91605"
                     android:layout_marginTop="8dp" />
             </LinearLayout>
 

@@ -6,27 +6,27 @@
     android:padding="16dp">
 
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Tipo" android:textColor="#9CA3AF" android:textSize="12sp" android:layout_marginBottom="4dp" />
+        android:text="Tipo" android:textColor="#62666A" android:textSize="12sp" android:layout_marginBottom="4dp" />
     <Spinner android:id="@+id/spTipo" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginBottom="12dp" />
 
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Ubicación" android:textColor="#9CA3AF" android:textSize="12sp" android:layout_marginBottom="4dp" />
+        android:text="Ubicación" android:textColor="#62666A" android:textSize="12sp" android:layout_marginBottom="4dp" />
     <EditText android:id="@+id/etUbicacion" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:hint="ej. Condenser - L1" android:inputType="text" android:layout_marginBottom="12dp" />
 
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Valor" android:textColor="#9CA3AF" android:textSize="12sp" android:layout_marginBottom="4dp" />
+        android:text="Valor" android:textColor="#62666A" android:textSize="12sp" android:layout_marginBottom="4dp" />
     <EditText android:id="@+id/etValor" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:hint="0.0" android:inputType="numberDecimal" android:layout_marginBottom="12dp" />
 
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Unidad" android:textColor="#9CA3AF" android:textSize="12sp" android:layout_marginBottom="4dp" />
+        android:text="Unidad" android:textColor="#62666A" android:textSize="12sp" android:layout_marginBottom="4dp" />
     <Spinner android:id="@+id/spUnidad" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginBottom="12dp" />
 
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Nota (opcional)" android:textColor="#9CA3AF" android:textSize="12sp" android:layout_marginBottom="4dp" />
+        android:text="Nota (opcional)" android:textColor="#62666A" android:textSize="12sp" android:layout_marginBottom="4dp" />
     <EditText android:id="@+id/etNota" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:hint="opcional" android:inputType="text" />
 

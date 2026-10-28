@@ -111,7 +111,7 @@ public class ProfileActivity extends AppCompatActivity {
         ((ImageView) cerrar.findViewById(R.id.menuIcon)).setImageResource(R.drawable.ic_menu_logout);
         TextView tvCerrar = cerrar.findViewById(R.id.menuLabel);
         tvCerrar.setText("Cerrar sesión");
-        tvCerrar.setTextColor(0xFFEB1700);
+        tvCerrar.setTextColor(0xFFE91605);
         cerrar.setOnClickListener(v -> cerrarSesion());
     }
 

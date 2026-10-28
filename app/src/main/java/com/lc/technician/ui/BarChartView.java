@@ -23,7 +23,7 @@ public class BarChartView extends View {
 
     private void init() {
         float density = getResources().getDisplayMetrics().density;
-        pBar.setColor(Color.parseColor("#EB1700"));
+        pBar.setColor(Color.parseColor("#E91605"));
         pCount.setColor(Color.rgb(25, 25, 25));
         pCount.setTextSize(11f * density);
         pCount.setFakeBoldText(true);

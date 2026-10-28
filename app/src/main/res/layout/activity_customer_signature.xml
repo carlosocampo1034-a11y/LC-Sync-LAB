@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#111827"
+    android:background="#171717"
     android:padding="16dp">
 
     <TextView
@@ -22,8 +22,8 @@
         android:layout_height="wrap_content"
         android:hint="Nombre del firmante"
         android:textColor="#ffffff"
-        android:textColorHint="#6b7280"
-        android:background="#1f2937"
+        android:textColorHint="#808080"
+        android:background="#2B2B2B"
         android:padding="12dp"
         android:layout_marginBottom="12dp"
         android:inputType="textPersonName" />
@@ -64,7 +64,7 @@
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:text="LIMPIAR"
-            android:backgroundTint="#374151"
+            android:backgroundTint="#62666A"
             android:textColor="#d1d5db"
             android:layout_marginEnd="16dp" />
 
@@ -74,7 +74,7 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:text="GUARDAR FIRMA"
-            android:backgroundTint="#1d4ed8"
+            android:backgroundTint="#E91605"
             android:textColor="#ffffff" />
     </LinearLayout>
 

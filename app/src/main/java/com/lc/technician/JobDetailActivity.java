@@ -230,7 +230,7 @@ public class JobDetailActivity extends AppCompatActivity {
         if (job.direccion != null && !job.direccion.isEmpty()) {
             tvDireccion.setClickable(true);
             tvDireccion.setFocusable(true);
-            tvDireccion.setTextColor(0xFF1565C0);
+            tvDireccion.setTextColor(0xFF171717);
             tvDireccion.setPaintFlags(tvDireccion.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             tvDireccion.setOnClickListener(v -> {
                 try {
@@ -252,7 +252,7 @@ public class JobDetailActivity extends AppCompatActivity {
         if (job.telefono != null && !job.telefono.isEmpty()) {
             tvTelefono.setClickable(true);
             tvTelefono.setFocusable(true);
-            tvTelefono.setTextColor(0xFF137333);
+            tvTelefono.setTextColor(0xFF171717);
             tvTelefono.setPaintFlags(tvTelefono.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             tvTelefono.setOnClickListener(v -> {
                 Intent dialIntent = new Intent(Intent.ACTION_DIAL,
@@ -267,7 +267,7 @@ public class JobDetailActivity extends AppCompatActivity {
         tvEquipo.setText(job.equipo);
         // 27C: Tap equipo → EquipmentDetailActivity
         if (job.equipmentId != null && job.equipmentId > 0) {
-            tvEquipo.setTextColor(0xFF1B71C9);
+            tvEquipo.setTextColor(0xFF171717);
             final long eqId = job.equipmentId;
             tvEquipo.setOnClickListener(v -> {
                 Intent ei = new Intent(this, EquipmentDetailActivity.class);
@@ -285,10 +285,10 @@ public class JobDetailActivity extends AppCompatActivity {
 
         if (job.clientePresente) {
             clientePresente.setText("Cliente estará en casa");
-            clientePresente.setTextColor(0xFF137333);
+            clientePresente.setTextColor(0xFF171717);
         } else {
             clientePresente.setText("Cliente NO estará · Entrar con autorización");
-            clientePresente.setTextColor(0xFFEB1700);
+            clientePresente.setTextColor(0xFFE91605);
         }
 
         // Fix P0: never show "Entrada: null" — hide row when tipoAcceso is absent
@@ -338,8 +338,8 @@ public class JobDetailActivity extends AppCompatActivity {
         TextView tvPrioridad = findViewById(R.id.tvPrioridad);
         if (tvPrioridad != null && job.prioridad != null) {
             switch (job.prioridad) {
-                case "URGENTE": tvPrioridad.setText("🔴 URGENTE"); tvPrioridad.setTextColor(0xFFB71C1C); tvPrioridad.setVisibility(android.view.View.VISIBLE); break;
-                case "ALTA":    tvPrioridad.setText("🟠 ALTA");    tvPrioridad.setTextColor(0xFFE65100); tvPrioridad.setVisibility(android.view.View.VISIBLE); break;
+                case "URGENTE": tvPrioridad.setText("● URGENTE"); tvPrioridad.setTextColor(0xFFE91605); tvPrioridad.setVisibility(android.view.View.VISIBLE); break;
+                case "ALTA":    tvPrioridad.setText("▲ ALTA");    tvPrioridad.setTextColor(0xFF171717); tvPrioridad.setVisibility(android.view.View.VISIBLE); break;
                 default:        tvPrioridad.setVisibility(android.view.View.GONE); break;
             }
         }
@@ -499,7 +499,7 @@ public class JobDetailActivity extends AppCompatActivity {
             if (hay) {
                 estadoPropuestaServidor.setText("Propuesta: " + ProposalActivity.textoEstado(p));
                 estadoPropuestaServidor.setTextColor("APROBADA".equals(p.serverEstado) && p.syncState == 1
-                        ? 0xFF2E7D32 : 0xFF90A4AE);
+                        ? 0xFF171717 : 0xFF62666A);
             }
         });
     }
@@ -520,7 +520,7 @@ public class JobDetailActivity extends AppCompatActivity {
             android.view.ViewGroup padre = (android.view.ViewGroup) estadoView.getParent();
             avisoConflicto = new TextView(this);
             avisoConflicto.setId(View.generateViewId());
-            avisoConflicto.setTextColor(0xFFFFB74D);
+            avisoConflicto.setTextColor(0xFFE91605);
             avisoConflicto.setTextSize(14);
             int pad = (int) (8 * getResources().getDisplayMetrics().density);
             avisoConflicto.setPadding(0, pad, 0, pad);
@@ -799,13 +799,13 @@ public class JobDetailActivity extends AppCompatActivity {
         int color;
         switch (job.estado != null ? job.estado : "") {
             case Job.STATUS_DONE:               color = 0xFF137333; break;  // Verde
-            case Job.STATUS_ARRIVED:            color = 0xFF0D47A1; break;  // Azul oscuro
-            case Job.STATUS_EN_ROUTE:           color = 0xFF1565C0; break;  // Azul claro
-            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF0D47A1; break;  // Azul oscuro
-            case Job.STATUS_EN_REPARACION:      color = 0xFFE65100; break;  // Naranja
-            case Job.STATUS_PART_HOLD:          color = 0xFFB25E00; break;  // Ámbar oscuro
-            case Job.STATUS_ON_HOLD:            color = 0xFFB25E00; break;  // Ámbar oscuro
-            default:                            color = 0xFFE07A00; break;  // PENDIENTE: naranja suave
+            case Job.STATUS_ARRIVED:            color = 0xFF171717; break;  // Azul oscuro
+            case Job.STATUS_EN_ROUTE:           color = 0xFF171717; break;  // Azul claro
+            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF171717; break;  // Azul oscuro
+            case Job.STATUS_EN_REPARACION:      color = 0xFFE91605; break;  // Naranja
+            case Job.STATUS_PART_HOLD:          color = 0xFF62666A; break;  // Ámbar oscuro
+            case Job.STATUS_ON_HOLD:            color = 0xFF62666A; break;  // Ámbar oscuro
+            default:                            color = 0xFF62666A; break;  // PENDIENTE: naranja suave
         }
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
@@ -827,33 +827,33 @@ public class JobDetailActivity extends AppCompatActivity {
 
         switch (job.estado != null ? job.estado : "") {
             case Job.STATUS_PENDING:
-                setBotonPrincipal(bg, acc("GO_ENROUTE"), 0xFFEB1700, true);  // Rojo primario
+                setBotonPrincipal(bg, acc("GO_ENROUTE"), 0xFFE91605, true);  // Rojo primario
                 if (btnRecordatorio != null) btnRecordatorio.setVisibility(View.VISIBLE);
                 if (btnVerComoCliente != null) btnVerComoCliente.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_EN_ROUTE:
-                setBotonPrincipal(bg, acc("ARRIVED"), 0xFF1565C0, true);  // Azul claro
+                setBotonPrincipal(bg, acc("ARRIVED"), 0xFFE91605, true);  // Azul claro
                 break;
             case Job.STATUS_ARRIVED:
-                setBotonPrincipal(bg, acc("ASK_APPROVAL"), 0xFF0D47A1, true);  // Azul oscuro
+                setBotonPrincipal(bg, acc("ASK_APPROVAL"), 0xFFE91605, true);  // Azul oscuro
                 botonSecundario.setText(acc("START_DIRECT"));
                 botonSecundario.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_AWAITING_APPROVAL:
-                setBotonPrincipal(bg, acc("CLIENT_APPROVED"), 0xFF137333, true);  // Verde
+                setBotonPrincipal(bg, acc("CLIENT_APPROVED"), 0xFFE91605, true);  // Verde
                 break;
             case Job.STATUS_EN_REPARACION:
-                setBotonPrincipal(bg, acc("COMPLETE"), 0xFF137333, true);  // Verde
+                setBotonPrincipal(bg, acc("COMPLETE"), 0xFFE91605, true);  // Verde
                 botonSecundario.setText(acc("PART_HOLD"));
                 botonSecundario.setVisibility(View.VISIBLE);
                 botonSecundario2.setText(acc("PAUSE"));
                 botonSecundario2.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_PART_HOLD:
-                setBotonPrincipal(bg, acc("RESUME"), 0xFFB25E00, true);  // Ámbar
+                setBotonPrincipal(bg, acc("RESUME"), 0xFFE91605, true);  // Ámbar
                 break;
             case Job.STATUS_ON_HOLD:
-                setBotonPrincipal(bg, acc("RESUME"), 0xFFB25E00, true);  // Ámbar
+                setBotonPrincipal(bg, acc("RESUME"), 0xFFE91605, true);  // Ámbar
                 break;
             default:
                 setBotonPrincipal(bg, com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", Job.STATUS_DONE, "Completado").toUpperCase(java.util.Locale.ROOT), 0xFF767676, false);
@@ -896,7 +896,7 @@ public class JobDetailActivity extends AppCompatActivity {
             layoutFotoSecciones.removeAllViews();
 
             String[] cats   = {"ANTES",   "DESPUÉS", "EQUIPO",   "NAMEPLATE", null};
-            int[]    colors = {0xFFEB1700, 0xFF137333, 0xFF1B71C9, 0xFF767676, 0xFF999999};
+            int[]    colors = {0xFFE91605, 0xFF171717, 0xFF62666A, 0xFF767676, 0xFF999999};
             String[] labels = {"ANTES",   "DESPUÉS", "EQUIPO",   "NAMEPLATE", "SIN CATEGORÍA"};
 
             float density = getResources().getDisplayMetrics().density;
@@ -983,7 +983,7 @@ public class JobDetailActivity extends AppCompatActivity {
                     android.graphics.Bitmap.Config.ARGB_8888);
             android.graphics.Canvas cv = new android.graphics.Canvas(bmp);
             String cat = pendingCategoria != null ? pendingCategoria : "PRUEBA";
-            cv.drawColor("ANTES".equals(cat) ? 0xFF37474F : "DESPUÉS".equals(cat) ? 0xFF1B5E20 : 0xFF4A148C);
+            cv.drawColor("ANTES".equals(cat) ? 0xFF171717 : "DESPUÉS".equals(cat) ? 0xFF62666A : 0xFF171717);
             android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
             p.setColor(0xFFFFFFFF);
             p.setTextSize(72f);
@@ -1345,10 +1345,10 @@ public class JobDetailActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (total > 0) {
                     cardHallazgosSummary.setVisibility(android.view.View.VISIBLE);
-                    tvFindingCritical.setText("🔴 " + critical);
-                    tvFindingHigh.setText("🟠 " + high);
-                    tvFindingMedium.setText("🟡 " + medium);
-                    tvFindingLow.setText("🟢 " + low);
+                    tvFindingCritical.setText("● " + critical);
+                    tvFindingHigh.setText("▲ " + high);
+                    tvFindingMedium.setText("■ " + medium);
+                    tvFindingLow.setText("▽ " + low);
                 } else {
                     cardHallazgosSummary.setVisibility(android.view.View.GONE);
                 }
@@ -1417,7 +1417,7 @@ public class JobDetailActivity extends AppCompatActivity {
                     String firmaNombre = firma != null ? firma.nombreFirmante : "cliente";
                     tvFirma.setText("FIRMADA \u2713  " + firmaNombre);
                     tvFirma.setTextColor(0xFFFFFFFF);
-                    tvFirma.setBackgroundColor(0xFF4CAF50);
+                    tvFirma.setBackgroundColor(0xFF171717);
                     tvFirma.setPadding(16, 8, 16, 8);
                     tvFirma.setVisibility(View.VISIBLE);
                 } else {
@@ -1511,11 +1511,11 @@ public class JobDetailActivity extends AppCompatActivity {
                 tvChip.setVisibility(View.GONE);
             } else if (vencida) {
                 tvChip.setText("WARRANTY VENCIDA");
-                tvChip.setBackgroundColor(0xFFEB1700);
+                tvChip.setBackgroundColor(0xFFE91605);
                 tvChip.setVisibility(View.VISIBLE);
             } else {
                 tvChip.setText(mem);
-                tvChip.setBackgroundColor("PREMIUM".equals(mem) ? 0xFF1565C0 : 0xFF137333);
+                tvChip.setBackgroundColor("PREMIUM".equals(mem) ? 0xFF171717 : 0xFF62666A);
                 tvChip.setVisibility(View.VISIBLE);
             }
             tvChip.setOnClickListener(vv -> mostrarDialogoMembership(c.id));
@@ -1740,16 +1740,16 @@ public class JobDetailActivity extends AppCompatActivity {
     }
 
     private int estadoColor(String estado) {
-        if (estado == null) return 0xFFEB1700;
+        if (estado == null) return 0xFFE91605;
         switch (estado) {
             case Job.STATUS_DONE:               return 0xFF137333;
-            case Job.STATUS_EN_ROUTE:           return 0xFF9C27B0;
-            case Job.STATUS_ARRIVED:            return 0xFF1B71C9;
-            case Job.STATUS_AWAITING_APPROVAL:  return 0xFF1B71C9;
-            case Job.STATUS_EN_REPARACION:      return 0xFFF57C00;
-            case Job.STATUS_PART_HOLD:          return 0xFFB25E00;
-            case Job.STATUS_ON_HOLD:            return 0xFFF57C00;
-            default:                            return 0xFFEB1700;
+            case Job.STATUS_EN_ROUTE:           return 0xFF171717;
+            case Job.STATUS_ARRIVED:            return 0xFF171717;
+            case Job.STATUS_AWAITING_APPROVAL:  return 0xFF171717;
+            case Job.STATUS_EN_REPARACION:      return 0xFFE91605;
+            case Job.STATUS_PART_HOLD:          return 0xFF62666A;
+            case Job.STATUS_ON_HOLD:            return 0xFF62666A;
+            default:                            return 0xFF62666A;
         }
     }
 
@@ -1910,11 +1910,11 @@ public class JobDetailActivity extends AppCompatActivity {
                 chipBg.setCornerRadius(4f * density);
                 int chipColor;
                 switch (w.tipo != null ? w.tipo : "") {
-                    case WorkItemEntity.TYPE_LABOR:   chipColor = 0xFF9C27B0; break;
-                    case WorkItemEntity.TYPE_PART:    chipColor = 0xFF0277BD; break;
-                    case WorkItemEntity.TYPE_SERVICE: chipColor = 0xFF00695C; break;
-                    case WorkItemEntity.TYPE_FEE:     chipColor = 0xFFC62828; break;
-                    default:                          chipColor = 0xFFF57C00; break;
+                    case WorkItemEntity.TYPE_LABOR:   chipColor = 0xFFE91605; break;
+                    case WorkItemEntity.TYPE_PART:    chipColor = 0xFF171717; break;
+                    case WorkItemEntity.TYPE_SERVICE: chipColor = 0xFF62666A; break;
+                    case WorkItemEntity.TYPE_FEE:     chipColor = 0xFFE91605; break;
+                    default:                          chipColor = 0xFF171717; break;
                 }
                 chipBg.setColor(chipColor);
                 chip.setBackground(chipBg);
@@ -2010,7 +2010,7 @@ public class JobDetailActivity extends AppCompatActivity {
         container.addView(etPrecio);
 
         TextView tvSubtotal = new TextView(this);
-        tvSubtotal.setTextColor(0xFF1B71C9);
+        tvSubtotal.setTextColor(0xFF171717);
         tvSubtotal.setTextSize(13f);
         tvSubtotal.setText("Subtotal: $0.00");
         container.addView(tvSubtotal);
@@ -2198,9 +2198,9 @@ public class JobDetailActivity extends AppCompatActivity {
 
     private void cargarTiempos() {
         JobRepository.get().calcularTiemposAsync(job.id, stats -> {
-            updateTimeButton(btnTimeOnMyWay, stats.onMyWay, "EN CAMINO", 0xFFF57C00);
-            updateTimeButton(btnTimeArrived, stats.arrived, "LLEGUÉ",    0xFF137333);
-            updateTimeButton(btnTimeOffSite, stats.offSite, "ME VOY",    0xFFEB1700);
+            updateTimeButton(btnTimeOnMyWay, stats.onMyWay, "EN CAMINO", 0xFF171717);
+            updateTimeButton(btnTimeArrived, stats.arrived, "LLEGUÉ",    0xFF171717);
+            updateTimeButton(btnTimeOffSite, stats.offSite, "ME VOY",    0xFFE91605);
 
             boolean hayAlguno = stats.onMyWay != null || stats.arrived != null || stats.offSite != null;
             if (!hayAlguno) {
@@ -2433,7 +2433,7 @@ public class JobDetailActivity extends AppCompatActivity {
         btnEntendido.setTypeface(null, Typeface.BOLD);
         btnEntendido.setPadding(0, px16, 0, px16);
         GradientDrawable btnBg = new GradientDrawable();
-        btnBg.setColor(0xFFEB1700);
+        btnBg.setColor(0xFFE91605);
         btnBg.setCornerRadius(56f * getResources().getDisplayMetrics().density);
         btnEntendido.setBackground(btnBg);
         btnEntendido.setLayoutParams(new LinearLayout.LayoutParams(
@@ -2679,8 +2679,8 @@ public class JobDetailActivity extends AppCompatActivity {
                     row.setPadding(0, 10, 0, 10);
 
                     android.widget.TextView badge = new android.widget.TextView(this);
-                    int badgeColor = PartsRequestEntity.STATUS_APPROVED.equals(req.status) ? 0xFF137333 :
-                                     PartsRequestEntity.STATUS_REJECTED.equals(req.status) ? 0xFFEB1700 : 0xFFF57C00;
+                    int badgeColor = PartsRequestEntity.STATUS_APPROVED.equals(req.status) ? 0xFF171717 :
+                                     PartsRequestEntity.STATUS_REJECTED.equals(req.status) ? 0xFFE91605 : 0xFF62666A;
                     badge.setBackgroundColor(badgeColor);
                     badge.setTextColor(0xFFFFFFFF);
                     badge.setText(req.status);
@@ -2856,10 +2856,10 @@ public class JobDetailActivity extends AppCompatActivity {
 
         boolean vencida = card.expiryDate < System.currentTimeMillis();
 
-        String estadoColor = MembershipCardEntity.STATUS_ACTIVE.equals(card.status) ? "✅" :
-                MembershipCardEntity.STATUS_SUSPENDED.equals(card.status) ? "⚠️" : "❌";
-        String pagoColor = MembershipCardEntity.PAYMENT_PAID.equals(card.paymentStatus) ? "✅" :
-                MembershipCardEntity.PAYMENT_OVERDUE.equals(card.paymentStatus) ? "❌" : "⚠️";
+        String estadoColor = MembershipCardEntity.STATUS_ACTIVE.equals(card.status) ? "✓" :
+                MembershipCardEntity.STATUS_SUSPENDED.equals(card.status) ? "!" : "✕";
+        String pagoColor = MembershipCardEntity.PAYMENT_PAID.equals(card.paymentStatus) ? "✓" :
+                MembershipCardEntity.PAYMENT_OVERDUE.equals(card.paymentStatus) ? "✕" : "!";
 
         StringBuilder sb = new StringBuilder();
         sb.append("📋 Tarjeta: ").append(card.cardNumber).append("\n\n");
@@ -2871,7 +2871,7 @@ public class JobDetailActivity extends AppCompatActivity {
             sb.append("📊 Cobertura: ").append(String.format("%.0f", coveragePct)).append("%\n");
         }
         sb.append("\n📅 Vence: ").append(sdf.format(new java.util.Date(card.expiryDate)));
-        if (vencida) sb.append(" ❌ VENCIDA");
+        if (vencida) sb.append(" ✕ VENCIDA");
         sb.append("\n");
         if (card.lastServiceDate != null) {
             sb.append("🔧 Último servicio: ").append(

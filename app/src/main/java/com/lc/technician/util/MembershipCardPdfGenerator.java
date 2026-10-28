@@ -146,7 +146,7 @@ public class MembershipCardPdfGenerator {
         int cy = (PAGE_H - CARD_H * 2 - 30) / 2 + CARD_H + 30;
 
         Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bg.setColor(0xFF1A1A2E);
+        bg.setColor(0xFF171717);
         c.drawRoundRect(new RectF(cx, cy, cx + CARD_W, cy + CARD_H), 16, 16, bg);
 
         // Magnetic strip area
@@ -180,13 +180,13 @@ public class MembershipCardPdfGenerator {
     }
 
     private static int[] membershipColor(CoverageTypeEntity cov) {
-        if (cov == null) return new int[]{0xFF4A4A8A, 0xFF6A6AAA};
+        if (cov == null) return new int[]{0xFF171717, 0xFF62666A};
         switch (cov.code) {
-            case "GOLD":          return new int[]{0xFFB8860B, 0xFFFFD700};
-            case "SILVER":        return new int[]{0xFF708090, 0xFFC0C0C0};
-            case "BRONZE":        return new int[]{0xFF8B4513, 0xFFCD7F32};
-            case "HOME_WARRANTY": return new int[]{0xFF006400, 0xFF228B22};
-            default:              return new int[]{0xFF1A3A5C, 0xFF2E6DA4};
+            case "GOLD":          return new int[]{0xFF171717, 0xFF62666A};
+            case "SILVER":        return new int[]{0xFF62666A, 0xFF9A9A9A};
+            case "BRONZE":        return new int[]{0xFF9A9A9A, 0xFFD0D0D0};
+            case "HOME_WARRANTY": return new int[]{0xFFE91605, 0xFFE91605};
+            default:              return new int[]{0xFF171717, 0xFF62666A};
         }
     }
 

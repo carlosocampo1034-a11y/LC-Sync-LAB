@@ -212,7 +212,7 @@
                     android:layout_height="48dp"
                     android:layout_marginTop="8dp"
                     android:text="ACTIVAR PIN DEL SERVIDOR"
-                    android:textColor="#b45309"
+                    android:textColor="#62666A"
                     android:background="@drawable/bg_btn_secondary"
                     android:stateListAnimator="@null" />
 
@@ -753,7 +753,7 @@
                     android:text="ABRIR DASHBOARD WEB"
                     android:textSize="12sp"
                     android:textColor="#FFFFFF"
-                    android:backgroundTint="#1565C0"
+                    android:backgroundTint="#E91605"
                     android:stateListAnimator="@null" />
 
                 <!-- COMPARTIR URL — outline -->

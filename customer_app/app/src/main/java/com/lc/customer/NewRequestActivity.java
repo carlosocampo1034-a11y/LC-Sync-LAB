@@ -395,7 +395,7 @@ public class NewRequestActivity extends AppCompatActivity {
         if (fotosPrueba.size() >= 5) { tvFotoPrueba.setText("Máximo 5 fotos de prueba"); return; }
         android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(960, 720, android.graphics.Bitmap.Config.ARGB_8888);
         android.graphics.Canvas cv = new android.graphics.Canvas(bmp);
-        cv.drawColor(fotosPrueba.size() % 2 == 0 ? 0xFF0D47A1 : 0xFF00695C);
+        cv.drawColor(fotosPrueba.size() % 2 == 0 ? 0xFF171717 : 0xFF62666A);
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         p.setColor(0xFFFFFFFF);
         p.setTextSize(56f);

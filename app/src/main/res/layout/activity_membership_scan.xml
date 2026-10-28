@@ -47,7 +47,7 @@
         android:layout_height="wrap_content"
         android:text="INGRESAR MANUALMENTE"
         android:textColor="#FFFFFF"
-        android:backgroundTint="#EB1700"
+        android:backgroundTint="#E91605"
         android:layout_marginBottom="40dp"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true" />

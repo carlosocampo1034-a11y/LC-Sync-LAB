@@ -224,7 +224,7 @@ public class InvoiceActivity extends AppCompatActivity {
         if (t == null) return;
         franjaAviso.setText(t);
         boolean ok = "APROBADA".equals(estadoVar) || (emitida && conAprob) || ("MENOR".equals(tipo) && emitida);
-        franjaAviso.setBackgroundColor(ok ? 0xFF2E7D32 : "MENOR".equals(tipo) ? 0xFFEF6C00 : 0xFFB71C1C);
+        franjaAviso.setBackgroundColor(ok ? 0xFF171717 : "MENOR".equals(tipo) ? 0xFF62666A : 0xFFE91605);
     }
 
     private void confirmarMenor(double aprobado, double total) {
@@ -256,24 +256,24 @@ public class InvoiceActivity extends AppCompatActivity {
                 detalle.append("Aún no emitida en el servidor.");
                 if (desc > 0) detalle.append(String.format(Locale.US, "\nDescuento autorizado por despacho: −$%.2f", desc));
             } else if (f.syncState == 0 || f.syncState == 2) {
-                estado = "PENDIENTE"; color = 0xFFF57C00;
+                estado = "PENDIENTE"; color = 0xFF62666A;
                 detalle.append("Guardada en el teléfono · pendiente de confirmación del servidor.");
             } else if (f.syncState == 3 && "REQUIERE_APROBACION_CLIENTE".equals(f.codigoRechazo)) {
                 // no es un error: la regla exige la aprobación adicional del cliente antes de emitir
-                estado = "APROBACIÓN CLIENTE"; color = 0xFFEF6C00;
+                estado = "APROBACIÓN CLIENTE"; color = 0xFF62666A;
                 detalle.append("Sin emitir: ").append(f.motivo);
             } else if (f.syncState == 3 && "CONFIRMAR_MENOR".equals(f.codigoRechazo)) {
-                estado = "POR CONFIRMAR"; color = 0xFFEF6C00;
+                estado = "POR CONFIRMAR"; color = 0xFF62666A;
                 detalle.append("Sin emitir: ").append(f.motivo);
             } else if (f.syncState == 3 && "CLIENTE_RECHAZO".equals(f.codigoRechazo)) {
-                estado = "DIFERENCIA RECHAZADA"; color = 0xFFC62828;
+                estado = "DIFERENCIA RECHAZADA"; color = 0xFFE91605;
                 detalle.append("Sin emitir: ").append(f.motivo);
             } else if (f.syncState == 3) {
-                estado = "RECHAZADA"; color = 0xFFC62828;
+                estado = "RECHAZADA"; color = 0xFFE91605;
                 detalle.append("El servidor no la emitió: ").append(f.motivo);
             } else {
                 estado = f.estadoServidor != null ? f.estadoServidor : "EMITIDA";
-                color = "PAGADA".equals(estado) ? 0xFF137333 : 0xFF1565C0;
+                color = "PAGADA".equals(estado) ? 0xFF171717 : 0xFF62666A;
                 double local = totalLocal();
                 boolean igual = f.total != null && Math.abs(f.total - local) < 0.01;
                 detalle.append("Emitida en el servidor · Nº ").append(f.numero).append("\n")
@@ -414,7 +414,7 @@ public class InvoiceActivity extends AppCompatActivity {
 
                 TextView tvTipo = line.findViewById(R.id.tvLineTipo);
                 tvTipo.setText(w.tipo != null ? w.tipo : "?");
-                tvTipo.setBackgroundColor("LABOR".equals(w.tipo) ? 0xFF1565C0 : 0xFF2E7D32);
+                tvTipo.setBackgroundColor("LABOR".equals(w.tipo) ? 0xFFE91605 : 0xFF171717);
 
                 ((TextView) line.findViewById(R.id.tvLineDesc)).setText(
                         w.descripcion != null ? w.descripcion : "");
@@ -467,7 +467,7 @@ public class InvoiceActivity extends AppCompatActivity {
                     mostrarEstadoPagado(metodo, fecha);
                 } else {
                     tvInvoiceStatus.setText("PENDIENTE");
-                    tvInvoiceStatus.setBackgroundColor(0xFFEB1700);
+                    tvInvoiceStatus.setBackgroundColor(0xFFE91605);
                     btnMarcarPagado.setText("MARCAR COMO PAGADO");
                     btnMarcarPagado.setEnabled(true);
                     btnMarcarPagado.setAlpha(1f);
@@ -479,7 +479,7 @@ public class InvoiceActivity extends AppCompatActivity {
 
     private void mostrarEstadoPagado(String metodo, long fecha) {
         tvInvoiceStatus.setText("PAGADO");
-        tvInvoiceStatus.setBackgroundColor(0xFF137333);
+        tvInvoiceStatus.setBackgroundColor(0xFF171717);
         btnMarcarPagado.setText("✓ PAGADO");
         btnMarcarPagado.setEnabled(false);
         btnMarcarPagado.setAlpha(0.6f);

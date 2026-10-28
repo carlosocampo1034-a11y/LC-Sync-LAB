@@ -68,7 +68,7 @@
                 android:background="#E0E0E0" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
             <TextView android:id="@+id/tvProxMantenimiento"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:textSize="13sp" android:textColor="#1565C0"
+                android:textSize="13sp" android:textColor="#171717"
                 android:text="Próximo mantenimiento: No programado"/>
         </LinearLayout>
 
@@ -80,7 +80,7 @@
             android:layout_marginLeft="12dp"
             android:layout_marginRight="12dp"
             android:layout_marginBottom="12dp"
-            android:background="#1B71C9"
+            android:background="#E91605"
             android:text="+ REGISTRAR SERVICIO"
             android:textColor="#FFFFFF"
             android:textStyle="bold"/>

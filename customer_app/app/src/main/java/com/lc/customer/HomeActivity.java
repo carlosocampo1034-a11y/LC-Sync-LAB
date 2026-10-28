@@ -227,7 +227,7 @@ public class HomeActivity extends AppCompatActivity {
             cab.setOrientation(LinearLayout.HORIZONTAL);
             cab.addView(Ui.texto(this, "Nº " + j.optLong("id"), 16, R.color.lc_texto, true),
                     new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-            cab.addView(Ui.badge(this, Ui.estadoCliente(this, j.optString("estado")).toUpperCase()));
+            cab.addView(Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado")).toUpperCase()));
             card.addView(cab);
             TextView d = Ui.texto(this, limpiarDescripcion(j.optString("descripcion")), 15, R.color.lc_texto, false);
             d.setPadding(0, Ui.dp(this, 6), 0, 0);

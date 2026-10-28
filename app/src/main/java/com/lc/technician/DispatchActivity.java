@@ -180,7 +180,7 @@ public class DispatchActivity extends AppCompatActivity {
 
             if (job.technicianId != null && !job.technicianId.isEmpty()) {
                 h.tvTecnico.setText("Técnico: " + job.technicianId);
-                h.tvTecnico.setTextColor(0xFF1B71C9);
+                h.tvTecnico.setTextColor(0xFF171717);
                 h.btnAsignar.setText("Reasignar");
             } else {
                 h.tvTecnico.setText("Sin asignar");
@@ -198,8 +198,8 @@ public class DispatchActivity extends AppCompatActivity {
             if (estado == null) return;
             int color;
             switch (estado) {
-                case "PENDIENTE":   color = 0xFFE65100; break;
-                case "EN RUTA":     color = 0xFF1565C0; break;
+                case "PENDIENTE":   color = 0xFF62666A; break;
+                case "EN RUTA":     color = 0xFF171717; break;
                 default:            color = 0xFF757575; break;
             }
             tv.setTextColor(color);

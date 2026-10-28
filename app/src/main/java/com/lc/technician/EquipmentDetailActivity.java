@@ -73,10 +73,10 @@ public class EquipmentDetailActivity extends AppCompatActivity {
         tvEstado.setText(estado);
         int color;
         switch (estado) {
-            case "REPARACION": color = 0xFFE65100; break;
-            case "REEMPLAZO":  color = 0xFFB71C1C; break;
+            case "REPARACION": color = 0xFF62666A; break;
+            case "REEMPLAZO":  color = 0xFFE91605; break;
             case "INACTIVO":   color = 0xFF757575; break;
-            default:           color = 0xFF2E7D32; break;
+            default:           color = 0xFF171717; break;
         }
         tvEstado.setTextColor(color);
 

@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
         swipeRefresh = findViewById(R.id.swipeRefresh);
         if (swipeRefresh != null) {
-            swipeRefresh.setColorSchemeColors(0xFFEB1700);
+            swipeRefresh.setColorSchemeColors(0xFFE91605);
             swipeRefresh.setOnRefreshListener(this::sincronizarConSwipe);
         }
 
@@ -513,7 +513,7 @@ public class MainActivity extends AppCompatActivity {
     private void actualizarChipMisJobs(TextView chip, boolean activo) {
         // Use a distinct color for the mis-jobs toggle
         chip.setBackground(getDrawable(activo ? R.drawable.bg_chip_active : R.drawable.bg_chip_inactive));
-        chip.setTextColor(activo ? 0xFF1B71C9 : 0xFF767676);
+        chip.setTextColor(activo ? 0xFFE91605 : 0xFF767676);
         chip.setTypeface(null, activo ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
     }
 

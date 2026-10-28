@@ -60,9 +60,9 @@ public class AuditLogAdapter extends RecyclerView.Adapter<AuditLogAdapter.VH> {
             // Action chip color
             int chipColor;
             switch (e.action != null ? e.action : "") {
-                case "CREATE": chipColor = 0xFF137333; break;
-                case "DELETE": chipColor = 0xFFEB1700; break;
-                default:       chipColor = 0xFF1B71C9; break; // UPDATE
+                case "CREATE": chipColor = 0xFF171717; break;
+                case "DELETE": chipColor = 0xFFE91605; break;
+                default:       chipColor = 0xFF62666A; break; // UPDATE
             }
             GradientDrawable bg = new GradientDrawable();
             bg.setCornerRadius(12f);

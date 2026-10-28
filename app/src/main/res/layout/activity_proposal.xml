@@ -76,7 +76,7 @@
                 android:gravity="center"
                 android:padding="12dp"
                 android:text="&#x2713; Propuesta aceptada — solo lectura"
-                android:textColor="#137333"
+                android:textColor="#171717"
                 android:textSize="13sp" android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -87,7 +87,7 @@
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_btn_secondary"
                 android:text="&#x2713; Aceptar Good"
-                android:textColor="#137333"
+                android:textColor="#171717"
                 android:textStyle="bold" android:textSize="13sp"
                 android:stateListAnimator="@null" />
             <!-- BETTER card -->
@@ -98,7 +98,7 @@
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_btn_secondary"
                 android:text="&#x2713; Aceptar Better"
-                android:textColor="#1B71C9"
+                android:textColor="#171717"
                 android:textStyle="bold" android:textSize="13sp"
                 android:stateListAnimator="@null" />
             <!-- BEST card -->
@@ -109,7 +109,7 @@
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_btn_secondary"
                 android:text="&#x2713; Aceptar Best"
-                android:textColor="#F57C00"
+                android:textColor="#62666A"
                 android:textStyle="bold" android:textSize="13sp"
                 android:stateListAnimator="@null" />
 

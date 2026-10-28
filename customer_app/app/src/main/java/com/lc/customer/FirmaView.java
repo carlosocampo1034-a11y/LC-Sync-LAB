@@ -24,7 +24,7 @@ public class FirmaView extends View {
         tinta.setStyle(Paint.Style.STROKE);
         tinta.setStrokeWidth(6f);
         tinta.setStrokeCap(Paint.Cap.ROUND);
-        setBackgroundColor(0xFFF6F6F6);
+        setBackgroundColor(0xFFF1F2F3);
     }
 
     @Override protected void onDraw(Canvas c) { c.drawPath(trazo, tinta); }

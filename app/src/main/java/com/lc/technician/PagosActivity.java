@@ -179,7 +179,7 @@ public class PagosActivity extends AppCompatActivity {
             h.tvHora.setText(p.fecha > 0 ? FMT.format(new Date(p.fecha)) : "—");
             h.tvDireccion.setText("Método: " + p.metodo);
             h.tvEstado.setText(String.format(Locale.US, "$%.2f", p.total));
-            h.tvEstado.setTextColor(0xFF137333);
+            h.tvEstado.setTextColor(0xFF171717);
             h.itemView.setOnClickListener(v -> {
                 Intent i = new Intent(PagosActivity.this, InvoiceActivity.class);
                 i.putExtra(InvoiceActivity.EXTRA_JOB_ID, p.jobId);
