@@ -153,9 +153,9 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(this, ProfileActivity.class)));
 
         adapter = new JobAdapter(displayedJobs, job -> {
-            Intent i = new Intent(MainActivity.this, JobDetailActivity.class);
-            i.putExtra("job_id", job.id);
-            startActivity(i);
+            Job anterior = ordenAnteriorPendiente(job);
+            if (anterior != null) { avisarOrdenAnterior(anterior, job); return; }
+            abrirOrden(job);
         });
         lista.setAdapter(adapter);
 
@@ -382,9 +382,80 @@ public class MainActivity extends AppCompatActivity {
             case SORT_ESTADO:
                 Collections.sort(list, (a, b) -> estadoOrder(a.estado) - estadoOrder(b.estado));
                 break;
-            default: // SORT_HORA
-                Collections.sort(list, (a, b) -> horaAMinutos(a.hora) - horaAMinutos(b.hora));
+            default: // SORT_HORA: pendientes por hora programada; las completadas/canceladas al final; empate por número de orden
+                Collections.sort(list, comparadorHora());
         }
+    }
+
+    private java.util.Comparator<Job> comparadorHora() {
+        return (a, b) -> {
+            boolean ca = cerrada(a), cb = cerrada(b);
+            if (ca != cb) return ca ? 1 : -1;
+            int c = Long.compare(claveHora(a), claveHora(b));
+            return c != 0 ? c : Long.compare(a.id, b.id);
+        };
+    }
+
+    private static boolean cerrada(Job j) { return Job.STATUS_DONE.equals(j.estado) || "CANCELADO".equals(j.estado); }
+
+    /** Instante programado: fecha y hora si existen; si solo hay hora (texto), esa hora de hoy; sin hora, al final. */
+    private long claveHora(Job j) {
+        if (j.programadoPara != null && j.programadoPara > 0) return j.programadoPara;
+        int min = horaAMinutos(j.hora);
+        if (min == Integer.MAX_VALUE) return Long.MAX_VALUE;
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        c.set(java.util.Calendar.HOUR_OF_DAY, 0); c.set(java.util.Calendar.MINUTE, 0);
+        c.set(java.util.Calendar.SECOND, 0); c.set(java.util.Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis() + min * 60_000L;
+    }
+
+    // ── Orden de trabajo: no se salta una orden anterior sin «Saltar temporalmente» ───────────────────────────────
+    // Solo se guarda el NÚMERO de las órdenes saltadas (ningún dato del cliente).
+
+    private java.util.Set<String> saltadas() {
+        return new java.util.HashSet<>(getSharedPreferences("lc_prefs", MODE_PRIVATE).getStringSet("ordenes_saltadas", new java.util.HashSet<>()));
+    }
+
+    private void guardarSaltada(long id) {
+        java.util.Set<String> s = saltadas();
+        s.add(String.valueOf(id));
+        getSharedPreferences("lc_prefs", MODE_PRIVATE).edit().putStringSet("ordenes_saltadas", s).apply();
+    }
+
+    /** La primera orden de mi lista (por hora) sin empezar que no se haya saltado, si es anterior a la que se quiere abrir. */
+    private Job ordenAnteriorPendiente(Job elegida) {
+        if (!Job.STATUS_PENDING.equals(elegida.estado)) return null;   // lo ya empezado, terminado o cancelado se abre libremente
+        // Se evalúa toda MI lista, no solo lo que el filtro o la búsqueda dejen visible
+        String miId = SessionManager.get(this).getTechnicianName();
+        List<Job> mias = new ArrayList<>();
+        for (Job j : allJobs) {
+            if (j.technicianId != null && !j.technicianId.isEmpty() && pasaFiltroMisJobs(j, miId)) mias.add(j);
+        }
+        Collections.sort(mias, comparadorHora());
+        java.util.Set<String> sal = saltadas();
+        for (Job j : mias) {
+            if (j.id == elegida.id) return null;                      // la elegida es la primera pendiente
+            if (Job.STATUS_PENDING.equals(j.estado) && !sal.contains(String.valueOf(j.id))) return j;
+        }
+        return null;
+    }
+
+    private void avisarOrdenAnterior(Job anterior, Job elegida) {
+        String quien = anterior.cliente != null && !anterior.cliente.isEmpty() ? anterior.cliente : "Orden Nº " + anterior.id;
+        String hora = anterior.hora != null && !anterior.hora.isEmpty() ? " · " + anterior.hora : "";
+        new AlertDialog.Builder(this)
+                .setTitle("Hay una orden antes")
+                .setMessage("Tu siguiente orden es " + quien + hora + ".\n\nPara abrir otra primero usa «Saltar temporalmente». "
+                        + "La orden saltada seguirá en tu lista.")
+                .setNegativeButton("Ir a la orden anterior", (d, w) -> abrirOrden(anterior))
+                .setPositiveButton("Saltar temporalmente", (d, w) -> { guardarSaltada(anterior.id); abrirOrden(elegida); })
+                .show();
+    }
+
+    private void abrirOrden(Job job) {
+        Intent i = new Intent(this, JobDetailActivity.class);
+        i.putExtra("job_id", job.id);
+        startActivity(i);
     }
 
     private int horaAMinutos(String hora) {

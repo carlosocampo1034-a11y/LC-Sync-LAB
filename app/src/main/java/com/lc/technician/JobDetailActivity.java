@@ -139,6 +139,15 @@ public class JobDetailActivity extends AppCompatActivity {
     private static final SimpleDateFormat FMT_HORA =
             new SimpleDateFormat("h:mm a", Locale.forLanguageTag("es"));
 
+
+    /** Resultado de la pantalla de cierre: solo vuelve con «COMPLETE» o «PART_HOLD» cuando hay diagnóstico, foto y firma/negativa. */
+    private final androidx.activity.result.ActivityResultLauncher<Intent> cierreLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), res -> {
+                if (res.getResultCode() != RESULT_OK || res.getData() == null || job == null) return;
+                String accion = res.getData().getStringExtra(CierreActivity.RESULT_ACCION);
+                if ("COMPLETE".equals(accion)) aplicarEstado(Job.STATUS_DONE, "Trabajo completado");
+                else if ("PART_HOLD".equals(accion)) aplicarEstado(Job.STATUS_PART_HOLD, "Part hold — esperando repuesto");
+            });
     private final ActivityResultLauncher<Uri> launcherCamara =
             registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
                 if (Boolean.TRUE.equals(success) && tempFotoFile != null && tempFotoFile.exists()) {
@@ -387,24 +396,11 @@ public class JobDetailActivity extends AppCompatActivity {
         }
 
         // ── Botón principal ───────────────────────────────────────────────────
-        botonPrincipal.setOnClickListener(v -> mostrarMenuEstado());
+        botonPrincipal.setOnClickListener(v -> accionPrincipal());
 
-        // ── Botón secundario (FALTA REPUESTO / INICIAR REPARACIÓN directo) ────
-        botonSecundario.setOnClickListener(v -> {
-            switch (job.estado != null ? job.estado : "") {
-                case Job.STATUS_ARRIVED:
-                    aplicarEstado(Job.STATUS_EN_REPARACION, "Reparación iniciada directamente"); break;
-                case Job.STATUS_EN_REPARACION:
-                    aplicarEstado(Job.STATUS_PART_HOLD, "Part hold — esperando repuesto"); break;
-            }
-        });
-
-        // ── Botón secundario 2 (PAUSAR) ───────────────────────────────────────
-        botonSecundario2.setOnClickListener(v -> {
-            if (Job.STATUS_EN_REPARACION.equals(job.estado)) {
-                aplicarEstado(Job.STATUS_ON_HOLD, "Trabajo pausado");
-            }
-        });
+        // ── «Más acciones»: acciones secundarias de cada estado (una sola acción principal por pantalla) ────
+        botonSecundario.setOnClickListener(v -> mostrarMasAcciones());
+        botonSecundario2.setVisibility(View.GONE);
 
         ((ImageView) findViewById(R.id.btnAtras)).setOnClickListener(v -> finish());
         findViewById(R.id.btnAgregarFoto).setOnClickListener(v -> mostrarOpcionesFoto());
@@ -643,70 +639,6 @@ public class JobDetailActivity extends AppCompatActivity {
             {"RESUME", "Reanudar reparación"}, {"CLIENT_CANCELLED", "Cliente canceló"}, {"NO_ACCESS", "Cliente no está en casa"},
             {"NEED_ORDER", "Necesito una orden"}};
 
-    private void mostrarMenuEstado() {
-        String estado = job.estado != null ? job.estado : "";
-        String[] opciones;
-        switch (estado) {
-            case Job.STATUS_PENDING:
-                opciones = new String[]{
-                    "GO_ENROUTE",
-                    "CLIENT_CANCELLED",
-                    "NEED_ORDER"
-                };
-                break;
-            case Job.STATUS_EN_ROUTE:
-                opciones = new String[]{
-                    "ARRIVED",
-                    "CLIENT_CANCELLED",
-                    "NEED_ORDER"
-                };
-                break;
-            case Job.STATUS_ARRIVED:
-                opciones = new String[]{
-                    "ASK_APPROVAL",
-                    "START_DIRECT",
-                    "NO_ACCESS",
-                    "NEED_ORDER"
-                };
-                break;
-            case Job.STATUS_AWAITING_APPROVAL:
-                opciones = new String[]{
-                    "CLIENT_APPROVED",
-                    "CLIENT_CANCELLED"
-                };
-                break;
-            case Job.STATUS_EN_REPARACION:
-                opciones = new String[]{
-                    "COMPLETE",
-                    "PART_HOLD",
-                    "PAUSE",
-                    "NEED_ORDER"
-                };
-                break;
-            case Job.STATUS_PART_HOLD:
-            case Job.STATUS_ON_HOLD:
-                opciones = new String[]{
-                    "RESUME",
-                    "CLIENT_CANCELLED"
-                };
-                break;
-            default:
-                return;
-        }
-
-        // los textos del menú son editables en Control (settings job_actions.list); la lógica usa los ids
-        final com.lc.technician.sync.Listas.Lista acc = com.lc.technician.sync.Listas.lista(this, "job_actions.list", ACCIONES_RESPALDO, null);
-        final String[] etiquetas = new String[opciones.length];
-        for (int q = 0; q < opciones.length; q++) {
-            int ix = acc.indexOf(opciones[q]);
-            etiquetas[q] = ix >= 0 ? acc.labels[ix] : opciones[q];
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("¿Qué quieres hacer?")
-                .setItems(etiquetas, (dialog, which) -> manejarOpcionMenu(estado, opciones[which]))
-                .show();
-    }
-
     private void manejarOpcionMenu(String estado, String opcion) {
         switch (opcion) {
             case "GO_ENROUTE":
@@ -742,9 +674,8 @@ public class JobDetailActivity extends AppCompatActivity {
                 }
                 aplicarEstado(Job.STATUS_EN_REPARACION, "Reparación iniciada"); break;
             case "COMPLETE":
-                intentarCompletar(); break;
             case "PART_HOLD":
-                aplicarEstado(Job.STATUS_PART_HOLD, "Part hold — esperando repuesto"); break;
+                abrirCierre(); break;   // candado: diagnóstico 50+ caracteres, 1 foto y firma o negativa
             case "PAUSE":
                 aplicarEstado(Job.STATUS_ON_HOLD, "Trabajo pausado"); break;
             case "RESUME":
@@ -775,37 +706,28 @@ public class JobDetailActivity extends AppCompatActivity {
         cargarHistorial();
     }
 
-    private void intentarCompletar() {
+    /** Abre la pantalla de cierre. Las notas se guardan localmente al salir de esta pantalla (onPause) y se sincronizan allí. */
+    private void abrirCierre() {
         EditText notasView = findViewById(R.id.detalleNotas);
-        String notasTexto = notasView != null ? notasView.getText().toString().trim() : "";
-        boolean tieneFotos = fotos != null && !fotos.isEmpty();
-        boolean tieneNotas = !notasTexto.isEmpty();
-        if (!tieneFotos || !tieneNotas) {
-            String mensaje;
-            if (!tieneFotos && !tieneNotas) {
-                mensaje = "Faltan dos cosas: evidencia fotográfica y notas del diagnóstico.";
-            } else if (!tieneFotos) {
-                mensaje = "Falta evidencia fotográfica. Agrega al menos una foto del trabajo.";
-            } else {
-                mensaje = "Faltan las notas del diagnóstico. Escribe qué encontraste y qué hiciste.";
-            }
-            mostrarDialogoBloqueoCierre(mensaje);
-            return;
-        }
-        aplicarEstado(Job.STATUS_DONE, "Trabajo completado");
+        String diag = notasView != null ? notasView.getText().toString().trim() : "";
+        Intent i = new Intent(this, CierreActivity.class);
+        i.putExtra(CierreActivity.EXTRA_JOB, job.id);
+        i.putExtra(CierreActivity.EXTRA_DIAG, diag.length());
+        i.putExtra(CierreActivity.EXTRA_FOTOS, fotos != null ? fotos.size() : 0);
+        cierreLauncher.launch(i);
     }
 
     private void pintarEstado() {
         int color;
         switch (job.estado != null ? job.estado : "") {
-            case Job.STATUS_DONE:               color = 0xFF137333; break;  // Verde
-            case Job.STATUS_ARRIVED:            color = 0xFF171717; break;  // Azul oscuro
-            case Job.STATUS_EN_ROUTE:           color = 0xFF171717; break;  // Azul claro
-            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF171717; break;  // Azul oscuro
-            case Job.STATUS_EN_REPARACION:      color = 0xFFE91605; break;  // Naranja
-            case Job.STATUS_PART_HOLD:          color = 0xFF62666A; break;  // Ámbar oscuro
-            case Job.STATUS_ON_HOLD:            color = 0xFF62666A; break;  // Ámbar oscuro
-            default:                            color = 0xFF62666A; break;  // PENDIENTE: naranja suave
+            case Job.STATUS_DONE:               color = 0xFF137333; break;
+            case Job.STATUS_ARRIVED:            color = 0xFF171717; break;
+            case Job.STATUS_EN_ROUTE:           color = 0xFF171717; break;
+            case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF171717; break;
+            case Job.STATUS_EN_REPARACION:      color = 0xFFE91605; break;
+            case Job.STATUS_PART_HOLD:          color = 0xFF62666A; break;
+            case Job.STATUS_ON_HOLD:            color = 0xFF62666A; break;
+            default:                            color = 0xFF62666A; break;
         }
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
@@ -814,10 +736,37 @@ public class JobDetailActivity extends AppCompatActivity {
         estadoView.setBackground(bg);
     }
 
+    /** Id de la acción principal de cada estado (una sola por pantalla); null si el estado no tiene acción de estado. */
+    private String idAccionPrincipal() {
+        switch (job.estado != null ? job.estado : "") {
+            case Job.STATUS_PENDING:            return "GO_ENROUTE";
+            case Job.STATUS_EN_ROUTE:           return "ARRIVED";
+            case Job.STATUS_ARRIVED:            return "START_DIRECT";
+            case Job.STATUS_AWAITING_APPROVAL:  return "CLIENT_APPROVED";
+            case Job.STATUS_EN_REPARACION:      return "COMPLETE";   // abre el cierre
+            case Job.STATUS_PART_HOLD:
+            case Job.STATUS_ON_HOLD:            return "RESUME";
+            default:                            return null;
+        }
+    }
+
+    /** Acciones secundarias del estado (ids de job_actions.list). Las utilidades de la orden se añaden aparte. */
+    private String[] idsSecundarios() {
+        switch (job.estado != null ? job.estado : "") {
+            case Job.STATUS_PENDING:            return new String[]{"CLIENT_CANCELLED", "NEED_ORDER"};
+            case Job.STATUS_EN_ROUTE:           return new String[]{"CLIENT_CANCELLED", "NEED_ORDER"};
+            case Job.STATUS_ARRIVED:            return new String[]{"ASK_APPROVAL", "NO_ACCESS", "NEED_ORDER"};
+            case Job.STATUS_AWAITING_APPROVAL:  return new String[]{"CLIENT_CANCELLED"};
+            case Job.STATUS_EN_REPARACION:      return new String[]{"PAUSE", "NEED_ORDER"};
+            case Job.STATUS_PART_HOLD:
+            case Job.STATUS_ON_HOLD:            return new String[]{"CLIENT_CANCELLED"};
+            default:                            return new String[]{};
+        }
+    }
+
     private void actualizarBoton() {
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(28f);
-        botonSecundario.setVisibility(View.GONE);
         botonSecundario2.setVisibility(View.GONE);
         btnCompartirReporte.setVisibility(View.GONE);
         if (btnFactura != null) btnFactura.setVisibility(View.GONE);
@@ -825,44 +774,51 @@ public class JobDetailActivity extends AppCompatActivity {
         if (btnRecordatorio != null) btnRecordatorio.setVisibility(View.GONE);
         if (btnVerComoCliente != null) btnVerComoCliente.setVisibility(View.GONE);
 
-        switch (job.estado != null ? job.estado : "") {
-            case Job.STATUS_PENDING:
-                setBotonPrincipal(bg, acc("GO_ENROUTE"), 0xFFE91605, true);  // Rojo primario
-                if (btnRecordatorio != null) btnRecordatorio.setVisibility(View.VISIBLE);
-                if (btnVerComoCliente != null) btnVerComoCliente.setVisibility(View.VISIBLE);
-                break;
-            case Job.STATUS_EN_ROUTE:
-                setBotonPrincipal(bg, acc("ARRIVED"), 0xFFE91605, true);  // Azul claro
-                break;
-            case Job.STATUS_ARRIVED:
-                setBotonPrincipal(bg, acc("ASK_APPROVAL"), 0xFFE91605, true);  // Azul oscuro
-                botonSecundario.setText(acc("START_DIRECT"));
-                botonSecundario.setVisibility(View.VISIBLE);
-                break;
-            case Job.STATUS_AWAITING_APPROVAL:
-                setBotonPrincipal(bg, acc("CLIENT_APPROVED"), 0xFFE91605, true);  // Verde
-                break;
-            case Job.STATUS_EN_REPARACION:
-                setBotonPrincipal(bg, acc("COMPLETE"), 0xFFE91605, true);  // Verde
-                botonSecundario.setText(acc("PART_HOLD"));
-                botonSecundario.setVisibility(View.VISIBLE);
-                botonSecundario2.setText(acc("PAUSE"));
-                botonSecundario2.setVisibility(View.VISIBLE);
-                break;
-            case Job.STATUS_PART_HOLD:
-                setBotonPrincipal(bg, acc("RESUME"), 0xFFE91605, true);  // Ámbar
-                break;
-            case Job.STATUS_ON_HOLD:
-                setBotonPrincipal(bg, acc("RESUME"), 0xFFE91605, true);  // Ámbar
-                break;
-            default:
-                setBotonPrincipal(bg, com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", Job.STATUS_DONE, "Completado").toUpperCase(java.util.Locale.ROOT), 0xFF767676, false);
-                btnCompartirReporte.setVisibility(View.VISIBLE);
-                if (btnFactura != null) btnFactura.setVisibility(View.VISIBLE);
-                if (btnCompartirCliente != null) btnCompartirCliente.setVisibility(View.VISIBLE);
-                if (btnVerComoCliente != null) btnVerComoCliente.setVisibility(View.VISIBLE);
-                break;
+        String id = idAccionPrincipal();
+        if (id != null) {
+            // En reparación el botón abre el cierre; en los demás estados ejecuta la acción de ese estado
+            String texto = "COMPLETE".equals(id) ? "CERRAR TRABAJO" : acc(id);
+            setBotonPrincipal(bg, texto, 0xFFE91605, true);
+        } else {
+            setBotonPrincipal(bg, "FACTURA", 0xFFE91605, btnFactura != null);   // trabajo completado: la factura es lo siguiente
         }
+        // «Más acciones» agrupa todo lo demás (acciones de excepción y utilidades) en un solo botón
+        botonSecundario.setText("MÁS ACCIONES");
+        botonSecundario.setVisibility(View.VISIBLE);
+    }
+
+    /** Un solo botón principal por estado: ejecuta la acción de ese estado, sin menú intermedio. */
+    private void accionPrincipal() {
+        String id = idAccionPrincipal();
+        String estado = job.estado != null ? job.estado : "";
+        if (id == null) { if (btnFactura != null) btnFactura.performClick(); return; }
+        manejarOpcionMenu(estado, id);
+    }
+
+    private void mostrarMasAcciones() {
+        String estado = job.estado != null ? job.estado : "";
+        final com.lc.technician.sync.Listas.Lista acc = com.lc.technician.sync.Listas.lista(this, "job_actions.list", ACCIONES_RESPALDO, null);
+        java.util.List<String> etiquetas = new java.util.ArrayList<>();
+        java.util.List<Runnable> hacer = new java.util.ArrayList<>();
+        for (String id : idsSecundarios()) {
+            int ix = acc.indexOf(id);
+            etiquetas.add(ix >= 0 ? acc.labels[ix] : id);
+            hacer.add(() -> manejarOpcionMenu(estado, id));
+        }
+        if (Job.STATUS_PENDING.equals(estado)) {
+            if (btnRecordatorio != null) { etiquetas.add("Recordatorio"); hacer.add(() -> btnRecordatorio.performClick()); }
+            if (btnVerComoCliente != null) { etiquetas.add("Ver como cliente"); hacer.add(() -> btnVerComoCliente.performClick()); }
+        }
+        if (idAccionPrincipal() == null) {   // completado
+            etiquetas.add("Compartir reporte"); hacer.add(() -> btnCompartirReporte.performClick());
+            if (btnCompartirCliente != null) { etiquetas.add("Compartir con cliente"); hacer.add(() -> btnCompartirCliente.performClick()); }
+            if (btnVerComoCliente != null) { etiquetas.add("Ver como cliente"); hacer.add(() -> btnVerComoCliente.performClick()); }
+        }
+        if (etiquetas.isEmpty()) return;
+        new AlertDialog.Builder(this)
+                .setTitle("Más acciones")
+                .setItems(etiquetas.toArray(new String[0]), (d, which) -> hacer.get(which).run())
+                .show();
     }
 
     /** Texto en mayúsculas de una acción del menú (editable en Control → Listas editables → Acciones del menú de estado). */

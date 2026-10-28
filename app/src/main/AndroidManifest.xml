@@ -46,6 +46,7 @@
         <activity android:name=".DispatchActivity" android:exported="false" />
 
         <activity android:name=".JobDetailActivity" android:exported="false" />
+        <activity android:name=".CierreActivity" android:exported="false" />
         <activity android:name=".RequestServiceActivity" android:exported="false" />
         <activity android:name=".PhotoViewActivity" android:exported="false" />
         <activity android:name=".ProfileActivity" android:exported="false" />

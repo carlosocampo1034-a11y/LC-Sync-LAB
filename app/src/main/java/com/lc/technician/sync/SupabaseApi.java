@@ -122,4 +122,13 @@ public interface SupabaseApi {
     /** Notificaciones del técnico (asignaciones) creadas después de {@code since} (epoch ms). */
     @GET("functions/v1/lc-api/notifications")
     Call<ResponseBody> notifications(@Header("Authorization") String authorization, @Query("since") long since);
+
+    /** Cierre del trabajo (lc-api qa-11): firma del cliente o negativa registrada. El servidor valida diagnóstico y fotos. */
+    @GET("functions/v1/lc-api/orders/{id}/closure")
+    Call<ResponseBody> closureGet(@Header("Authorization") String authorization, @Path("id") long id);
+
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/orders/{id}/closure")
+    Call<ResponseBody> closurePost(@Header("Authorization") String authorization, @Path("id") long id,
+                                   @Body Map<String, Object> body);
 }
