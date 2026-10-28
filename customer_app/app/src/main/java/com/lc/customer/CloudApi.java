@@ -76,6 +76,7 @@ final class CloudApi {
             // La propuesta del técnico se decide (aprobar con firma o rechazar) en lc-api; el servidor valida todo
             if ("POST".equals(metodo) && ruta.matches("/customer/proposals/\\d+/decide")) return lcApi(c, "POST", ruta, body);
         } catch (Exception e) {
+            android.util.Log.w("LcCloud", metodo + " " + ruta + " → " + e);   // diagnóstico: solo método, ruta y tipo de error
             return new Api.Respuesta(-1, null);
         }
         return noDisponible();
@@ -418,6 +419,7 @@ final class CloudApi {
             }
             return new Api.Respuesta(code, j);
         } catch (Exception e) {
+            android.util.Log.w("LcCloud", metodo + " " + url.replaceAll("https://[^/]+", "") + " → " + e);
             return new Api.Respuesta(-1, null);
         } finally {
             if (con != null) con.disconnect();
