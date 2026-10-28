@@ -113,9 +113,13 @@
   const cerrarMenu = () => { $("lcSidebar").classList.remove("open"); $("lcOverlay").classList.remove("open"); };
   $("btnMenu").addEventListener("click", abrirMenu);
   $("lcOverlay").addEventListener("click", cerrarMenu);
+  // Estados → color oficial: gris (pendiente, pausado, repuesto), negro (en ruta, llegué, esperando aprobación),
+  // rojo (en reparación), verde (solo completado). Solo cambia la clase CSS; la lógica de estados no se toca.
+  const GRIS_E = new Set(["PENDIENTE", "PAUSADO", "PART HOLD"]), NEGRO_E = new Set(["EN RUTA", "LLEGUÉ", "ESPERANDO APROBACIÓN"]);
   const badgeEstado = (e) => e === "COMPLETADO" ? "badge-completado" : e === "CANCELADO" ? "badge-cancelado"
-    : EN_CURSO.has(e) ? "badge-en-curso" : "badge-pendiente";
-  const cssEstado = (e) => e === "COMPLETADO" ? "completado" : e === "CANCELADO" ? "cancelado" : EN_CURSO.has(e) ? "en-curso" : "pendiente";
+    : e === "EN REPARACIÓN" ? "badge-rojo" : NEGRO_E.has(e) ? "badge-negro" : "badge-pendiente";
+  const cssEstado = (e) => e === "COMPLETADO" ? "completado" : e === "CANCELADO" ? "cancelado" : e === "EN REPARACIÓN" ? "rojo"
+    : NEGRO_E.has(e) ? "en-curso" : "pendiente";
   const cargando = () => { $("lcBody").innerHTML = `<div class="empty-state"><div class="spinner-border text-danger" role="status"></div><p>Cargando…</p></div>`; };
 
   // ── TABLERO (control_board.html) ──────────────────────────────────────────────────────────
@@ -141,7 +145,7 @@
           <span><i class="bi bi-person"></i> ${esc(o.cliente || "Sin cliente")}</span>
           <span><i class="bi bi-geo-alt"></i> ${esc((o.direccion || "Sin dirección").slice(0, 32))}</span>
           ${o.hora ? `<span><i class="bi bi-clock"></i> ${esc(o.hora)}</span>` : ""}
-          <span><i class="bi bi-wrench"></i> ${o.technician_code ? esc(o.technician_code) : '<em style="color:#f59e0b;">Sin asignar</em>'}</span>
+          <span><i class="bi bi-wrench"></i> ${o.technician_code ? esc(o.technician_code) : '<em style="color:#62666a;">Sin asignar</em>'}</span>
         </div>
         <div class="order-actions">
           <a href="#/jobs/${o.id}" class="btn-outline-sm btn-outline-primary-sm"><i class="bi bi-eye"></i> Ver</a>
@@ -152,8 +156,8 @@
     $("lcBody").innerHTML = `
       <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
-          <h2 class="fw-bold mb-1" style="font-size:1.35rem;color:#1a1d2e;">Agenda y Despacho</h2>
-          <p class="mb-0" style="font-size:.82rem;color:#7b8099;">Gestión de órdenes de servicio en tiempo real</p>
+          <h2 class="fw-bold mb-1" style="font-size:1.35rem;color:#171717;">Agenda y Despacho</h2>
+          <p class="mb-0" style="font-size:.82rem;color:#62666a;">Gestión de órdenes de servicio en tiempo real</p>
         </div>
         <a href="#/nueva" class="btn-accent"><i class="bi bi-plus-lg"></i> Nueva Orden</a>
       </div>
@@ -181,7 +185,7 @@
             ${recientes.map((o) => `<tr>
               <td><a href="#/jobs/${o.id}" style="text-decoration:none;"><span class="job-id">#${String(o.id % 100000).padStart(5, "0")}</span></a></td>
               <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(o.categoria || (o.descripcion ? o.descripcion.slice(0, 20) : "—"))}</td>
-              <td>${o.technician_code ? `<span class="tech-pill">${esc(o.technician_code)}</span>` : '<span style="color:#f59e0b;font-size:.72rem;">—</span>'}</td>
+              <td>${o.technician_code ? `<span class="tech-pill">${esc(o.technician_code)}</span>` : '<span style="color:#62666a;font-size:.72rem;">—</span>'}</td>
               <td><span class="badge-estado ${badgeEstado(o.estado)}">${esc(etiquetaEstado(o.estado || "PENDIENTE"))}</span></td></tr>`).join("")}
             </tbody></table>` : `<div class="empty-state"><i class="bi bi-clock-history"></i><p>Sin actividad reciente.</p></div>`}
         </div>
@@ -209,7 +213,7 @@
       </div>
       ${mensaje ? `<div class="alert ${mensaje.ok === false ? "alert-danger" : "alert-success"} d-flex align-items-center gap-2 mb-3">
         <i class="bi bi-${mensaje.ok === false ? "exclamation-triangle" : "check-circle"}-fill"></i> ${esc(mensaje.texto)}</div>` : ""}
-      ${conflictos.length ? `<div class="lc-card mb-4 p-3" style="border-left: 4px solid #dc2626;">
+      ${conflictos.length ? `<div class="lc-card mb-4 p-3" style="border-left: 4px solid #e91605;">
         <div class="d-flex align-items-center gap-2 mb-3"><i class="bi bi-exclamation-triangle-fill text-danger"></i>
           <span class="fw-bold text-danger">${conflictos.length} conflicto(s) pendiente(s) de resolución</span></div>
         ${conflictos.map((c) => `<div class="conflict-card" data-conflicto="${c.id}">
@@ -229,7 +233,7 @@
         <div>
           <div class="lc-card mb-4">
             <div class="section-title"><i class="bi bi-person-lines-fill me-1"></i> Información de la orden</div>
-            ${j.descripcion ? `<p class="mb-3" style="font-size:.92rem; color:var(--text-main); white-space:pre-line">${esc(j.descripcion)}</p><hr class="my-3" style="border-color:#f0f2f6">` : ""}
+            ${j.descripcion ? `<p class="mb-3" style="font-size:.92rem; color:var(--text-main); white-space:pre-line">${esc(j.descripcion)}</p><hr class="my-3" style="border-color:#e5e5e5">` : ""}
             ${info("Dirección", esc(j.direccion || "—"))}
             ${info("Teléfono", esc(j.telefono || cliente?.telefono || "—"))}
             ${info("Cita", esc(fecha(j.programado_para, j.zona_horaria)) + (j.ventana_preferida ? `<span class="text-muted ms-2" style="font-size:.82rem">· preferencia: ${esc(preferencia(j.ventana_preferida))}</span>` : ""))}
@@ -240,7 +244,7 @@
             ${j.mascota ? info("Mascotas", esc(j.mascota)) : ""}
             ${j.contacto_respaldo ? info("Respaldo", esc(j.contacto_respaldo)) : ""}
             ${cliente ? info("Cliente", `${esc(cliente.nombre)}${cliente.user_id ? ' <span class="badge bg-success-subtle text-success ms-1" style="font-size:.7rem">app</span>' : ""}`) : ""}
-            ${info("Técnico", j.technician_code ? `<span class="badge" style="background:#f0f2f8;color:var(--text-main);font-size:.82rem;font-weight:600"><i class="bi bi-person-badge me-1"></i>${esc(j.technician_code)}</span>` : '<span class="text-muted">sin asignar</span>')}
+            ${info("Técnico", j.technician_code ? `<span class="badge" style="background:#f1f2f3;color:var(--text-main);font-size:.82rem;font-weight:600"><i class="bi bi-person-badge me-1"></i>${esc(j.technician_code)}</span>` : '<span class="text-muted">sin asignar</span>')}
             ${j.notas ? info("Notas", `<span style="white-space:pre-line">${esc(j.notas)}</span>`) : ""}
           </div>
           <div class="lc-card mb-4">
@@ -256,7 +260,7 @@
                 Pago ${esc(p.method === "TEST" ? "de prueba" : p.method)} · ${money(p.amount)} · ${esc(p.status)} · ${esc(fecha(Number(p.created_at)))}</div>`).join("")}`
               : `<div class="text-center py-3 text-muted"><i class="bi bi-receipt" style="font-size:2rem;opacity:.3"></i>
               <p class="mt-2 mb-0" style="font-size:.88rem">Sin factura registrada</p></div>`}
-            <hr class="mt-3" style="border-color:#f0f2f6">
+            <hr class="mt-3" style="border-color:#e5e5e5">
             <div class="text-muted mb-2" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Autorizar descuento</div>
             <form id="fDescuento" class="d-flex gap-2 flex-wrap">
               <input type="number" step="0.01" min="0.01" name="monto" class="form-control form-control-sm" style="max-width:130px" placeholder="Monto $" required>
@@ -269,7 +273,7 @@
           <div class="lc-card mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3"><div class="section-title mb-0"><i class="bi bi-camera me-1"></i> Evidencias</div>
               <div class="text-muted" style="font-size:.82rem"><i class="bi bi-image me-1"></i>${fotos.length} foto(s) &nbsp;·&nbsp; <i class="bi bi-journal-text me-1"></i>${j.notas ? 1 : 0} nota(s)</div></div>
-            ${fotos.length || j.notas ? `${fotos.length ? `<div class="d-flex gap-2 flex-wrap mb-2">${fotos.map((f) => f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener"><img src="${esc(f.url)}" alt="Evidencia ${esc(f.categoria)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid #e3e5e7"></a>` : "").join("")}</div>` : ""}
+            ${fotos.length || j.notas ? `${fotos.length ? `<div class="d-flex gap-2 flex-wrap mb-2">${fotos.map((f) => f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener"><img src="${esc(f.url)}" alt="Evidencia ${esc(f.categoria)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid #e5e5e5"></a>` : "").join("")}</div>` : ""}
               ${j.notas ? `<div class="text-muted" style="font-size:.78rem;text-transform:uppercase;font-weight:600">Diagnóstico del técnico</div><div style="white-space:pre-line">${esc(j.notas)}</div>` : ""}`
               : `<div class="text-center py-2 text-muted" style="font-size:.85rem">Sin evidencias registradas.</div>`}
           </div>
@@ -280,7 +284,7 @@
             <div class="section-title"><i class="bi bi-clock-history me-1"></i> Historial de cambios</div>
             ${historial.length ? `<div class="table-responsive"><table class="lc-table hist-table w-100">
               <thead><tr><th>v</th><th>Campo</th><th>Nuevo valor</th><th>Actor</th><th>Cuándo</th></tr></thead><tbody>
-              ${historial.map((h) => `<tr><td><span class="badge" style="background:#f0f2f8;color:var(--text-muted);font-size:.72rem">v${h.version}</span></td>
+              ${historial.map((h) => `<tr><td><span class="badge" style="background:#f1f2f3;color:var(--text-muted);font-size:.72rem">v${h.version}</span></td>
                 <td class="fw-semibold">${esc(h.field)}</td><td class="text-muted">${esc(h.field === "technician_id" ? (tecnicos.find((t) => t.id === h.new_value)?.technician_code || h.new_value || "—") : (h.new_value || "—"))}</td>
                 <td>${esc(h.actor_nombre)}</td><td class="text-muted">${esc(fecha(Date.parse(h.created_at)))}</td></tr>`).join("")}
               </tbody></table></div>` : `<div class="text-center py-2 text-muted" style="font-size:.85rem">Sin historial registrado.</div>`}
@@ -313,7 +317,7 @@
               <button class="btn btn-accent w-100"><i class="bi bi-check2-circle me-1"></i> Cambiar estado</button>
             </form>
           </div>
-          <div class="lc-card" style="background:#fafbfd">
+          <div class="lc-card" style="background:#fafafa">
             <div class="section-title"><i class="bi bi-info-circle me-1"></i> Resumen</div>
             <div class="d-flex flex-column gap-2">
               <div class="d-flex justify-content-between" style="font-size:.85rem"><span class="text-muted">Estado actual</span>
@@ -429,14 +433,14 @@
           <td class="text-muted" style="font-size:.78rem">#${c.id}</td>
           <td><span class="fw-semibold">${esc(c.nombre)}</span>${c.cuenta_app ? ' <span class="badge bg-success-subtle text-success" style="font-size:.65rem">app</span>' : ""}</td>
           <td class="text-muted">${esc(c.telefono || "—")}</td><td class="text-muted">${esc(c.email || "—")}</td>
-          <td class="text-center"><span class="badge" style="background:#f0f2f8;color:var(--text-main);font-size:.78rem">${c.n_prop}</span></td>
-          <td class="text-center"><span class="badge" style="background:#f0f2f8;color:var(--text-main);font-size:.78rem">${c.n_jobs}</span></td>
+          <td class="text-center"><span class="badge" style="background:#f1f2f3;color:var(--text-main);font-size:.78rem">${c.n_prop}</span></td>
+          <td class="text-center"><span class="badge" style="background:#f1f2f3;color:var(--text-main);font-size:.78rem">${c.n_jobs}</span></td>
           <td class="text-muted" style="font-size:.82rem">${esc(fecha(c.created_at))}</td></tr>`).join("")
           : `<tr><td colspan="7" class="text-center py-4 text-muted"><i class="bi bi-people" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px"></i>Sin clientes registrados aún.</td></tr>`}
         </tbody></table></div></div>
       <div class="lc-card p-4" id="agregar" style="max-width: 560px">
         <div class="d-flex align-items-center gap-2 mb-4">
-          <div style="width:36px;height:36px;border-radius:10px;background:#fff0f1;display:flex;align-items:center;justify-content:center"><i class="bi bi-person-plus" style="color:var(--accent)"></i></div>
+          <div style="width:36px;height:36px;border-radius:10px;background:#fff0ee;display:flex;align-items:center;justify-content:center"><i class="bi bi-person-plus" style="color:var(--accent)"></i></div>
           <div><div class="fw-bold" style="font-size:.95rem">Agregar cliente</div><div class="text-muted" style="font-size:.78rem">Los campos de teléfono y email son opcionales</div></div>
         </div>
         <form id="fCliente" autocomplete="off">
@@ -477,49 +481,49 @@
     const esAdmin = yo.role === "ADMIN";
     $("lcBody").innerHTML = `
       <div class="d-flex justify-content-between align-items-center mb-4"><div>
-        <h2 class="fw-bold mb-1" style="font-size:1.35rem;color:#1a1d2e;">Técnicos</h2>
-        <p class="mb-0" style="font-size:.82rem;color:#7b8099;">Gestión de técnicos y acceso a la app</p></div></div>
+        <h2 class="fw-bold mb-1" style="font-size:1.35rem;color:#171717;">Técnicos</h2>
+        <p class="mb-0" style="font-size:.82rem;color:#62666a;">Gestión de técnicos y acceso a la app</p></div></div>
       ${mensaje ? `<div class="alert alert-success rounded-3 border-0 shadow-sm mb-3">${esc(mensaje)}</div>` : ""}
       ${error ? `<div class="alert alert-danger rounded-3 border-0 shadow-sm mb-3">${esc(error)}</div>` : ""}
-      ${clave ? `<div class="lc-card mb-4 p-4" style="border:2px solid #dc3545;background:#fff1f2;"><div class="d-flex align-items-start gap-3">
-        <div style="width:44px;height:44px;border-radius:12px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#dc3545;flex-shrink:0;"><i class="bi bi-key"></i></div>
-        <div class="flex-grow-1" style="min-width:0"><div class="fw-bold mb-1" style="color:#7f1d1d;">Contraseña inicial — ${esc(clave.usuario)}</div>
-          <div style="font-size:1.5rem;font-weight:700;font-family:monospace;letter-spacing:.08em;color:#1a1d2e;word-break:break-all">${esc(clave.valor)}</div>
-          <div class="mt-1" style="font-size:.78rem;color:#991b1b;">Se muestra <strong>solo esta vez</strong>. Entrégala al técnico en persona; deberá cambiarla al entrar.</div>
-          <div class="mt-2 d-flex align-items-center gap-2"><div style="width:100px;height:100px;border-radius:8px;border:1px solid #fecaca;background:#fff">${qrSvg(location.origin + "/")}</div>
-            <span style="font-size:.75rem;color:#991b1b;">Enlace del centro de control</span></div>
+      ${clave ? `<div class="lc-card mb-4 p-4" style="border:2px solid #e91605;background:#fff0ee;"><div class="d-flex align-items-start gap-3">
+        <div style="width:44px;height:44px;border-radius:12px;background:#fff0ee;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#e91605;flex-shrink:0;"><i class="bi bi-key"></i></div>
+        <div class="flex-grow-1" style="min-width:0"><div class="fw-bold mb-1" style="color:#171717;">Contraseña inicial — ${esc(clave.usuario)}</div>
+          <div style="font-size:1.5rem;font-weight:700;font-family:monospace;letter-spacing:.08em;color:#171717;word-break:break-all">${esc(clave.valor)}</div>
+          <div class="mt-1" style="font-size:.78rem;color:#171717;">Se muestra <strong>solo esta vez</strong>. Entrégala al técnico en persona; deberá cambiarla al entrar.</div>
+          <div class="mt-2 d-flex align-items-center gap-2"><div style="width:100px;height:100px;border-radius:8px;border:1px solid #f5b8b2;background:#fff">${qrSvg(location.origin + "/")}</div>
+            <span style="font-size:.75rem;color:#171717;">Enlace del centro de control</span></div>
         </div></div></div>` : ""}
       <div class="lc-card mb-4">
-        <div style="padding:18px 20px 14px;border-bottom:1px solid #f0f2f8;"><h3 class="section-title" style="font-size:.9rem;font-weight:700;color:#1a1d2e;margin:0;"><i class="bi bi-people me-2 text-muted"></i>Lista de técnicos</h3></div>
+        <div style="padding:18px 20px 14px;border-bottom:1px solid #f1f2f3;"><h3 class="section-title" style="font-size:.9rem;font-weight:700;color:#171717;margin:0;"><i class="bi bi-people me-2 text-muted"></i>Lista de técnicos</h3></div>
         <div style="overflow-x:auto;"><table class="lc-table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Código</th><th>Especialidades</th><th>Estado</th><th>Abiertas</th>${esAdmin ? "<th>Acciones</th>" : ""}</tr></thead>
           <tbody>${tecnicos.length ? tecnicos.map((t) => `<tr>
             <td class="fw-semibold">${esc(t.display_name || "—")}</td><td>${esc(t.email || "—")}</td>
-            <td><code style="background:#f0f2f8;padding:2px 6px;border-radius:4px;font-size:.8rem;">${esc(t.technician_code)}</code></td>
-            <td style="color:#7b8099;font-size:.82rem;">${esc(t.specialties || "—")}</td>
+            <td><code style="background:#f1f2f3;padding:2px 6px;border-radius:4px;font-size:.8rem;">${esc(t.technician_code)}</code></td>
+            <td style="color:#62666a;font-size:.82rem;">${esc(t.specialties || "—")}</td>
             <td>${t.active ? '<span class="badge-estado badge-completado"><i class="bi bi-circle-fill" style="font-size:.45rem;"></i> ACTIVO</span>'
                            : '<span class="badge-estado badge-cancelado"><i class="bi bi-circle-fill" style="font-size:.45rem;"></i> INACTIVO</span>'}
-              ${t.must_change_password ? '<br><span style="font-size:.7rem;color:#f59e0b;">debe cambiar contraseña</span>' : ""}</td>
+              ${t.must_change_password ? '<br><span style="font-size:.7rem;color:#62666a;">debe cambiar contraseña</span>' : ""}</td>
             <td><span style="font-size:.85rem;">${t.abiertas}</span></td>
             ${esAdmin ? `<td><div class="d-flex flex-wrap gap-2 align-items-center" data-tec="${esc(t.id)}" data-nombre="${esc(t.email || t.technician_code)}">
               <button class="btn-outline-sm ${t.active ? "btn-outline-secondary-sm" : "btn-outline-primary-sm"}" data-accion="${t.active ? "desactivar" : "activar"}">
                 <i class="bi bi-${t.active ? "toggle-off" : "toggle-on"}"></i> ${t.active ? "Desactivar" : "Activar"}</button>
               <button class="btn-outline-sm btn-outline-secondary-sm" data-accion="clave"><i class="bi bi-key"></i> Resetear contraseña</button>
-              <button class="btn-outline-sm" style="border-color:#f59e0b;color:#b45309;" data-accion="pin"><i class="bi bi-shield-lock"></i> Restablecer PIN</button>
+              <button class="btn-outline-sm" style="border-color:#62666a;color:#62666a;" data-accion="pin"><i class="bi bi-shield-lock"></i> Restablecer PIN</button>
             </div></td>` : ""}</tr>`).join("")
-            : `<tr><td colspan="7" style="text-align:center;padding:32px;color:#7b8099;"><i class="bi bi-person-x" style="font-size:2rem;opacity:.4;"></i><p class="mt-2 mb-0">No hay técnicos registrados</p></td></tr>`}
+            : `<tr><td colspan="7" style="text-align:center;padding:32px;color:#62666a;"><i class="bi bi-person-x" style="font-size:2rem;opacity:.4;"></i><p class="mt-2 mb-0">No hay técnicos registrados</p></td></tr>`}
           </tbody></table></div></div>
-      ${esAdmin ? `<div class="lc-card p-4"><h3 style="font-size:.9rem;font-weight:700;color:#1a1d2e;margin:0 0 16px;"><i class="bi bi-person-plus me-2 text-muted"></i>Agregar técnico</h3>
+      ${esAdmin ? `<div class="lc-card p-4"><h3 style="font-size:.9rem;font-weight:700;color:#171717;margin:0 0 16px;"><i class="bi bi-person-plus me-2 text-muted"></i>Agregar técnico</h3>
         <form id="fTecnico" autocomplete="off"><div class="row g-3">
           ${[["email", "Usuario (correo)", "email", "tecnico@empresa.com", 'required maxlength="120"'], ["display_name", "Nombre visible", "text", "Juan Pérez", 'required minlength="3" maxlength="80"'],
              ["technician_code", "Código técnico", "text", "QA-T03", 'required pattern="[A-Za-z0-9][A-Za-z0-9-]{2,29}" autocapitalize="characters"'],
              ["password", "Contraseña inicial", "password", "Vacío = se genera segura", 'minlength="10" autocomplete="new-password"']]
-            .map(([n, l, ty, ph, at]) => `<div class="col-md-6"><label style="font-size:.8rem;font-weight:600;color:#7b8099;text-transform:uppercase;letter-spacing:.04em;">${l}</label>
+            .map(([n, l, ty, ph, at]) => `<div class="col-md-6"><label style="font-size:.8rem;font-weight:600;color:#62666a;text-transform:uppercase;letter-spacing:.04em;">${l}</label>
               <input class="form-control form-control-sm mt-1" name="${n}" type="${ty}" placeholder="${ph}" ${at} value="${n === "password" ? "" : esc(f[n])}"></div>`).join("")}
-          <div class="col-12"><label style="font-size:.8rem;font-weight:600;color:#7b8099;text-transform:uppercase;letter-spacing:.04em;">Especialidades (opcional)</label>
+          <div class="col-12"><label style="font-size:.8rem;font-weight:600;color:#62666a;text-transform:uppercase;letter-spacing:.04em;">Especialidades (opcional)</label>
             <input class="form-control form-control-sm mt-1" name="specialties" maxlength="200" value="${esc(f.specialties)}" placeholder="HVAC, Lavadoras, Refrigeración"></div>
           <div class="col-12"><button type="submit" class="btn-accent"><i class="bi bi-person-plus-fill"></i> Guardar técnico</button></div>
         </div></form></div>`
-      : `<div class="lc-card p-4 text-center" style="color:#7b8099;font-size:.85rem;"><i class="bi bi-lock" style="font-size:1.5rem;opacity:.4;"></i>
+      : `<div class="lc-card p-4 text-center" style="color:#62666a;font-size:.85rem;"><i class="bi bi-lock" style="font-size:1.5rem;opacity:.4;"></i>
           <p class="mt-2 mb-0">Solo un administrador puede dar de alta o desactivar técnicos.</p></div>`}`;
     if (!esAdmin) return;
     document.querySelectorAll("[data-tec] [data-accion]").forEach((b) => b.addEventListener("click", async () => {
