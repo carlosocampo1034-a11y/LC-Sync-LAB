@@ -100,6 +100,11 @@ android {
             signingConfig signingConfigs.release
         }
     }
+    // La variante internal usa el código y los recursos de QA (SeedData vacío, solo HTTPS, sin CA ni IPs de laboratorio).
+    // NO usa src/release: ahí hay una importación de datos históricos reales que no debe viajar en una app publicada.
+    sourceSets {
+        internal { setRoot('src/qa') }
+    }
     buildFeatures {
         buildConfig true
     }
