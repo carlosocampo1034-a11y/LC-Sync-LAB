@@ -65,6 +65,6 @@ dependencies {
 // applicationId propio para QA (los build types solo admiten sufijo y daría com.lc.customer.lab.qa)
 androidComponents {
     onVariants(selector().withBuildType('qa')) { variant ->
-        variant.applicationId.set('com.lc.customer.qa')
+        variant.applicationId.set('com.lc.cliente.qa')
     }
 }

@@ -81,7 +81,7 @@ jobs:
       - name: Technician QA (applicationId com.lc.technician.qa)
         if: steps.qa.outputs.enabled == '1'
         run: ./gradlew --no-daemon --stacktrace assembleQa
-      - name: Customer QA (applicationId com.lc.customer.qa)
+      - name: Customer QA (applicationId com.lc.cliente.qa)
         if: steps.qa.outputs.enabled == '1'
         working-directory: customer_app
         run: ./gradlew --no-daemon --stacktrace assembleQa
@@ -89,7 +89,7 @@ jobs:
         if: steps.qa.outputs.enabled == '1'
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          for spec in "app/build/outputs/apk/qa:com.lc.technician.qa" "customer_app/app/build/outputs/apk/qa:com.lc.customer.qa"; do
+          for spec in "app/build/outputs/apk/qa:com.lc.technician.qa" "customer_app/app/build/outputs/apk/qa:com.lc.cliente.qa"; do
             dir=${spec%%:*}; want=${spec##*:}; apk=$(ls "$dir"/*.apk | head -1)
             got=$("$BT/aapt2" dump packagename "$apk")
             echo "$apk -> $got"; [ "$got" = "$want" ] || { echo "::error::applicationId $got != $want"; exit 1; }
