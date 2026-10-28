@@ -42,6 +42,12 @@ public class LoginActivity extends AppCompatActivity {
         InsetsHelper.padSystemBarsAndIme(findViewById(android.R.id.content));
 
         EditText etPin = findViewById(R.id.etPin);
+        if (BuildConfig.CLOUD_LOGIN) {
+            // Con cuenta en la nube no hay PIN: se entra con correo y contraseña (cuadro al pulsar el botón)
+            etPin.setVisibility(android.view.View.GONE);
+            ((android.widget.TextView) findViewById(R.id.tvLoginEtiqueta)).setText("Inicia sesión con tu cuenta");
+            ((android.widget.TextView) findViewById(R.id.btnIngresar)).setText("Iniciar sesión");
+        }
 
         findViewById(R.id.btnIngresar).setOnClickListener(v -> {
             if (BuildConfig.CLOUD_LOGIN) { loginCloud(prefs); return; }
@@ -78,7 +84,7 @@ public class LoginActivity extends AppCompatActivity {
         box.addView(email);
         box.addView(clave);
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Iniciar sesión · L&C QA")
+                .setTitle("Iniciar sesión · L&C")
                 .setView(box)
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Entrar", (d, w) -> {
