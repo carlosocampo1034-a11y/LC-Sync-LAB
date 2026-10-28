@@ -86,8 +86,17 @@ final class CloudApi {
                 .put("password", body.optString("password"))
                 .put("data", new JSONObject().put("nombre", body.optString("nombre")).put("telefono", body.optString("telefono")));
         Api.Respuesta r = http("POST", BuildConfig.SUPABASE_URL + "/auth/v1/signup", null, datos);
-        if (!r.ok()) return new Api.Respuesta(r.codigo, new JSONObject().put("error",
-                r.cuerpo != null && r.cuerpo.has("msg") ? r.cuerpo.optString("msg") : "No se pudo crear la cuenta"));
+        if (!r.ok()) {
+            String m = r.cuerpo != null ? (r.cuerpo.has("msg") ? r.cuerpo.optString("msg") : r.cuerpo.optString("message")) : "";
+            String ml = m.toLowerCase(java.util.Locale.ROOT);
+            String texto = r.codigo == -1 ? "Sin conexión con L&C"
+                    : ml.contains("invalid") && ml.contains("email") ? "Ese correo no es válido. Revísalo o usa otro."
+                    : ml.contains("already") || ml.contains("registered") ? "Ese correo ya tiene una cuenta. Prueba a iniciar sesión."
+                    : ml.contains("password") ? "La contraseña no cumple los requisitos (mínimo 8 caracteres)."
+                    : ml.contains("rate") || r.codigo == 429 ? "Demasiados intentos. Espera unos minutos."
+                    : "No se pudo crear la cuenta. Inténtalo de nuevo.";
+            return new Api.Respuesta(r.codigo == -1 ? -1 : r.codigo, new JSONObject().put("error", texto));
+        }
         if (!r.cuerpo.has("access_token")) {
             return new Api.Respuesta(409, new JSONObject().put("error", "Revisa tu correo para confirmar la cuenta y luego entra."));
         }
