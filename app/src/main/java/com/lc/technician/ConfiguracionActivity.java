@@ -326,15 +326,15 @@ public class ConfiguracionActivity extends AppCompatActivity {
     }
 
     /**
-     * Resincronización forzada (QA). Compara con las órdenes que el servidor devuelve a este técnico y borra de Room
-     * las copias ya sincronizadas (synced = 1) que el servidor no tiene. NUNCA toca cambios pendientes de subir
-     * (synced != 1). Después reinicia el cursor de descarga y sincroniza de nuevo.
+     * Resincronización forzada (QA). Borra de Room las copias ya confirmadas por el servidor (synced = 1) y vuelve a
+     * bajarlas desde cero. NUNCA toca cambios pendientes de subir (synced != 1). Antes comprueba que el servidor
+     * responde, para no vaciar el teléfono sin poder reponerlo.
      */
     private void resincronizarDesdeServidor() {
         new AlertDialog.Builder(this)
             .setTitle("Resincronizar desde el servidor")
-            .setMessage("Se quitarán de este teléfono las órdenes antiguas que el servidor ya no tiene y se volverá a "
-                    + "descargar todo. Los cambios que aún no se han subido se conservan.")
+            .setMessage("Se borrará la copia local de órdenes ya sincronizadas y se volverá a descargar todo desde el servidor. "
+                    + "Los cambios que aún no se han subido se conservan.")
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Resincronizar", (d, w) -> Executors.newSingleThreadExecutor().execute(() -> {
                 int borradas = -1;
@@ -348,7 +348,9 @@ public class ConfiguracionActivity extends AppCompatActivity {
                         LcDatabase db = LcDatabase.getInstance(getApplicationContext());
                         java.util.List<Long> fantasmas = new java.util.ArrayList<>();
                         for (com.lc.technician.model.JobEntity e : db.jobDao().getAll()) {
-                            if (e.synced == 1 && !visibles.contains(e.id)) fantasmas.add(e.id);
+                            // todas las copias ya confirmadas por el servidor: así tampoco sobreviven las viejas
+                            // cuyo id coincide con una orden nueva (el servidor reinició sus ids tras la limpieza)
+                            if (e.synced == 1) fantasmas.add(e.id);
                         }
                         if (!fantasmas.isEmpty()) db.jobDao().deleteByIds(fantasmas);
                         borradas = fantasmas.size();
