@@ -60,6 +60,7 @@ public class SupabaseModels {
         @SerializedName("technician_code")  public String  technicianCode;
         public String  cliente;
         public String  telefono;
+        @SerializedName("created_at")       public Long    createdAt;
         public String  direccion;
         public Double  lat;
         public Double  lng;

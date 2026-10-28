@@ -337,20 +337,28 @@ public class ConfiguracionActivity extends AppCompatActivity {
                     + "Los cambios que aún no se han subido se conservan.")
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Resincronizar", (d, w) -> Executors.newSingleThreadExecutor().execute(() -> {
-                int borradas = -1;
+                int borradas = -1, conservadas = 0, fotosSubidas = 0, fotosCuarentena = 0;
                 try {
                     com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
                     retrofit2.Response<java.util.List<com.lc.technician.sync.SupabaseModels.JobRow>> r =
-                            sb.api().getJobsSince(sb.authHeader(), "gte.0", "id", 1000).execute();
+                            sb.api().getJobsSince(sb.authHeader(), "gte.0", "id,created_at", 1000).execute();
                     if (r.isSuccessful() && r.body() != null && r.body().size() < 1000) {
-                        java.util.Set<Long> visibles = new java.util.HashSet<>();
-                        for (com.lc.technician.sync.SupabaseModels.JobRow row : r.body()) visibles.add(row.id);
+                        java.util.Map<Long, Long> visibles = new java.util.HashMap<>();
+                        for (com.lc.technician.sync.SupabaseModels.JobRow row : r.body()) {
+                            visibles.put(row.id, row.createdAt == null ? 0L : row.createdAt);
+                        }
                         LcDatabase db = LcDatabase.getInstance(getApplicationContext());
+                        // 1) fotos: se suben a Storage antes de tocar nada; las que no pertenecen a una orden del servidor
+                        //    pasan a cuarentena (se conservan en el teléfono); nunca se borra una foto
+                        com.lc.technician.sync.PhotoSync.Resultado fr =
+                                com.lc.technician.sync.PhotoSync.procesarParaPurga(getApplicationContext(), db, sb, visibles);
+                        fotosSubidas = fr.subidas;
+                        fotosCuarentena = fr.enCuarentena;
+                        // 2) órdenes: solo las ya confirmadas por el servidor y sin fotos pendientes de subir
                         java.util.List<Long> fantasmas = new java.util.ArrayList<>();
                         for (com.lc.technician.model.JobEntity e : db.jobDao().getAll()) {
-                            // todas las copias ya confirmadas por el servidor: así tampoco sobreviven las viejas
-                            // cuyo id coincide con una orden nueva (el servidor reinició sus ids tras la limpieza)
-                            if (e.synced == 1) fantasmas.add(e.id);
+                            if (e.synced == 1 && !fr.ordenesConFotosPendientes.contains(e.id)) fantasmas.add(e.id);
+                            else if (e.synced == 1) conservadas++;
                         }
                         if (!fantasmas.isEmpty()) db.jobDao().deleteByIds(fantasmas);
                         borradas = fantasmas.size();
@@ -358,10 +366,11 @@ public class ConfiguracionActivity extends AppCompatActivity {
                         com.lc.technician.data.JobRepository.get().recargarCacheAsync(null);
                     }
                 } catch (Exception ignored) {}
-                final int n = borradas;
+                final int n = borradas, cons = conservadas, fs = fotosSubidas, fq = fotosCuarentena;
                 runOnUiThread(() -> {
                     Toast.makeText(this, n < 0 ? "No se pudo consultar el servidor; no se borró nada"
-                            : "Se quitaron " + n + " orden(es) antiguas. Descargando…", Toast.LENGTH_LONG).show();
+                            : "Se quitaron " + n + " orden(es) antiguas · fotos subidas: " + fs + " · fotos en cuarentena: " + fq
+                              + (cons > 0 ? " · conservadas por fotos sin subir: " + cons : "") + ". Descargando…", Toast.LENGTH_LONG).show();
                     if (n >= 0) sincronizarAhora();
                 });
             }))

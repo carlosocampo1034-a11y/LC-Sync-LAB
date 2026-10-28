@@ -160,6 +160,12 @@ public class SyncWorker extends Worker {
                     upsertSyncState(db, "PULL_JOB", now);
                     android.util.Log.i(TAG, "pull: " + pulledJobs + " jobs ← Supabase");
                     if (com.lc.technician.BuildConfig.CLOUD_LOGIN) pulledJobs += marcarReasignadas(db, sb);
+                    if (com.lc.technician.BuildConfig.CLOUD_LOGIN) {
+                        try {   // evidencias nuevas → Storage (el cliente y el Control las ven); nunca borra nada local
+                            int fotos = com.lc.technician.sync.PhotoSync.sincronizarNuevas(getApplicationContext(), db, sb);
+                            if (fotos > 0) android.util.Log.i(TAG, "fotos subidas: " + fotos);
+                        } catch (Exception fe) { android.util.Log.w(TAG, "fotos: " + fe.getMessage()); }
+                    }
                     // Igual que SyncV2: sin esto lo bajado (p. ej. una asignación del Control) no aparecía en la lista
                     if (pulledJobs > 0) com.lc.technician.data.JobRepository.get().recargarCacheAsync(null);
                 }

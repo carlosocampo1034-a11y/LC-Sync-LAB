@@ -1,6 +1,7 @@
 package com.lc.technician.sync;
 
 import java.util.List;
+import java.util.Map;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -74,6 +75,12 @@ public interface SupabaseApi {
             @Body java.util.Map<String, Object> body);
 
     /** Propuesta Good/Better/Best del técnico (idempotente por dispositivo + localId + contenido). */
+    /** Foto de evidencia de la orden (lc-api qa-8). clientPhotoId evita duplicados al reintentar. */
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/orders/{id}/photos")
+    Call<ResponseBody> uploadPhoto(@Header("Authorization") String authorization, @Path("id") long id,
+                                   @Body Map<String, Object> body);
+
     @Headers("Content-Type: application/json")
     @POST("functions/v1/lc-api/proposals")
     Call<ResponseBody> postProposal(

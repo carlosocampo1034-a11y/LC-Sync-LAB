@@ -18,6 +18,10 @@ public interface PhotoDao {
     @Query("SELECT * FROM photos ORDER BY timestamp ASC")
     List<PhotoEntity> getAll();
 
+    /** Cuarentena: jobId negativo = la foto se conserva en el teléfono pero ya no cuelga de ninguna orden. */
+    @Query("UPDATE photos SET jobId = :nuevo WHERE id = :id")
+    void moverAJob(long id, long nuevo);
+
     @Query("DELETE FROM photos WHERE id = :id")
     void deletePhoto(long id);
 }
