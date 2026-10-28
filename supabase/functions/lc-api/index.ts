@@ -267,6 +267,49 @@ async function notificarAsignacion(jobId: number, techId: string): Promise<void>
     cuerpo: [j?.categoria, j?.direccion].filter(Boolean).join(" · ").slice(0, 140) || "Revisa tu lista de órdenes" }, "3600s");
 }
 
+
+const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+async function marcarCorreo(jobId: number, estado: string, error: string | null = null) {
+  await db.from("job_closures").update({ email_status: estado, email_error: error,
+    email_sent_at: estado === "ENVIADO" ? new Date().toISOString() : null }).eq("job_id", jobId);
+}
+
+/**
+ * Correo automático al cliente con el reporte del trabajo (firma o negativa). Usa Resend: RESEND_API_KEY y RESEND_FROM son
+ * secretos de la función (nunca van en el código ni en `settings`). Sin ellos queda PENDIENTE_SIN_PROVEEDOR y no se pierde nada.
+ */
+async function enviarReporteCierre(jobId: number): Promise<void> {
+  const { data: j } = await db.from("jobs").select("id,categoria,descripcion,notas,customer_id,cliente,technician_code").eq("id", jobId).maybeSingle();
+  const { data: c } = await db.from("job_closures").select("kind,firmante,firma_png,negativa_at,created_at").eq("job_id", jobId).maybeSingle();
+  if (!j || !c) return;
+  const key = Deno.env.get("RESEND_API_KEY"), from = Deno.env.get("RESEND_FROM");
+  if (!key || !from) return await marcarCorreo(jobId, "PENDIENTE_SIN_PROVEEDOR", "Falta RESEND_API_KEY o RESEND_FROM");
+  let to: string | null = null;
+  if (j.customer_id) {
+    const { data: cu } = await db.from("customers").select("email").eq("user_id", j.customer_id).maybeSingle();
+    to = cu?.email || null;
+    if (!to) { const { data: au } = await db.auth.admin.getUserById(j.customer_id); to = au?.user?.email ?? null; }
+  }
+  if (!to) return await marcarCorreo(jobId, "SIN_CORREO_CLIENTE", "El cliente no tiene correo registrado");
+  const { count } = await db.from("job_photos").select("id", { count: "exact", head: true }).eq("job_id", jobId);
+  const fecha = (iso: string) => new Date(iso).toLocaleString("es-US", { timeZone: "America/New_York", dateStyle: "long", timeStyle: "short" });
+  const cierre = c.kind === "FIRMA"
+    ? `Firmó: <b>${esc(c.firmante)}</b> (${esc(fecha(c.created_at))})`
+    : `El cliente no quiso firmar. Registrado el ${esc(fecha(c.negativa_at || c.created_at))}.`;
+  const html = `<div style="font-family:Arial,sans-serif;color:#171717;max-width:560px">
+    <h2 style="color:#e91605;margin:0 0 8px">L&amp;C Home Services</h2><p>Reporte de su servicio, orden Nº ${j.id}</p>
+    <p><b>Servicio:</b> ${esc(j.categoria)}<br><b>Problema:</b> ${esc(j.descripcion)}<br><b>Técnico:</b> ${esc(j.technician_code)}</p>
+    <p><b>Diagnóstico y trabajo realizado:</b><br>${esc(j.notas).replace(/\n/g, "<br>")}</p>
+    <p><b>Fotos de evidencia:</b> ${count ?? 0}</p><p>${cierre}</p>
+    <p style="color:#62666a;font-size:12px">Este mensaje se genera automáticamente. Si no reconoce este servicio, responda a este correo.</p></div>`;
+  const payload: Record<string, unknown> = { from, to: [to], subject: `Reporte de su servicio · Orden Nº ${j.id}`, html };
+  if (c.kind === "FIRMA" && c.firma_png) payload.attachments = [{ filename: "firma.png", content: c.firma_png }];
+  const r = await fetch("https://api.resend.com/emails", { method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  await marcarCorreo(jobId, r.ok ? "ENVIADO" : "ERROR", r.ok ? null : `Resend HTTP ${r.status}`);
+}
+
 /** No retrasa la respuesta HTTP: sigue en segundo plano (EdgeRuntime.waitUntil) y nunca propaga errores. */
 function segundoPlano(p: Promise<unknown>) {
   const q = p.catch((e) => console.error("push", e instanceof Error ? e.message : "error"));
@@ -282,7 +325,7 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-10" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-11" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
@@ -686,6 +729,30 @@ Deno.serve(async (req) => {
       if (user.role !== "CUSTOMER") return out(403, { error: "role_denied" });
       const { data, error } = await db.rpc("lc_pay_test", { p_actor: user.id, p_job: Number(mpay[1]) });
       return error ? out(500, { error: "pay_failed" }) : fromRpc(data, out);
+    }
+
+    // ── Cierre del trabajo: firma del cliente o negativa registrada (Orden 21). El candado de cierre vive en lc_patch_order ──
+    const mcl = route.match(/^\/(?:orders|jobs)\/(\d+)\/closure$/);
+    if (mcl) {
+      const jobId = Number(mcl[1]);
+      const { data: job } = await db.from("jobs").select("id,customer_id,technician_id").eq("id", jobId).maybeSingle();
+      if (!job || user.role === "CUSTOMER" || !hasAccess(user, job)) return out(404, { error: "not_found" });
+      if (req.method === "GET") {
+        const { data: c } = await db.from("job_closures").select("kind,firmante,negativa_at,created_at,email_status").eq("job_id", jobId).maybeSingle();
+        return out(200, c ? { existe: true, kind: c.kind, firmante: c.firmante, negativaAt: c.negativa_at, creadoAt: c.created_at,
+          correo: c.email_status } : { existe: false });
+      }
+      if (req.method === "POST") {
+        if (!body || typeof body !== "object") return out(422, { error: "json_required" });
+        const kind = body.kind === "FIRMA" || body.kind === "NEGATIVA" ? body.kind : "";
+        const firma = typeof body.firmaBase64 === "string" ? body.firmaBase64.replace(/^data:image\/png;base64,/, "") : "";
+        const { data, error } = await db.rpc("lc_closure_save", { p_actor: user.id, p_job: jobId, p_kind: kind,
+          p_firmante: txt(body.nombre, 120), p_firma: firma || null, p_motivo: txt(body.motivo, 300) || null });
+        if (error) return out(500, { error: "closure_failed" });
+        if ((data as { http?: number } | null)?.http === 201) segundoPlano(enviarReporteCierre(jobId));
+        return fromRpc(data, out);
+      }
+      return out(405, { error: "method_not_allowed" });
     }
 
     // ── Mensajes y fotos por orden (qa-8). Acceso solo con hasAccess: un cliente nunca ve órdenes ajenas ──────
