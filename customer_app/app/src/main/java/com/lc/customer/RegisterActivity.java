@@ -22,10 +22,11 @@ public class RegisterActivity extends AppCompatActivity {
         EditText nombre = Ui.campo(this, p.contenido, "Nombre completo",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         EditText tel = Ui.campo(this, p.contenido, "Teléfono", InputType.TYPE_CLASS_PHONE);
-        EditText email = Ui.campo(this, p.contenido, "Email (opcional)",
+        EditText email = Ui.campo(this, p.contenido, CloudApi.activo() ? "Correo electrónico" : "Email (opcional)",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         Ui.seccion(this, p.contenido, "Acceso");
         EditText usuario = Ui.campo(this, p.contenido, "Usuario (3-40: letras, números, . _ -)", InputType.TYPE_CLASS_TEXT);
+        if (CloudApi.activo()) usuario.setVisibility(android.view.View.GONE);   // en QA se entra con el correo
         EditText clave = Ui.campo(this, p.contenido, "Contraseña (mínimo 8)",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         TextView error = Ui.texto(this, "", 14, R.color.lc_rojo, false);
@@ -36,6 +37,9 @@ public class RegisterActivity extends AppCompatActivity {
             String d = tel.getText().toString().replaceAll("\\D", "");
             if (n.length() < 3) { nombre.setError("Escribe tu nombre"); return; }
             if (d.length() != 10 && !(d.length() == 11 && d.startsWith("1"))) { tel.setError("Teléfono de 10 dígitos"); return; }
+            if (CloudApi.activo() && !android.util.Patterns.EMAIL_ADDRESS.matcher(email.getText().toString().trim()).matches()) {
+                email.setError("Escribe un correo válido"); email.requestFocus(); return;
+            }
             if (clave.getText().length() < 8) { clave.setError("Mínimo 8 caracteres"); return; }
             crear.setEnabled(false);
             Executors.newSingleThreadExecutor().execute(() -> {

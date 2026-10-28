@@ -24,9 +24,10 @@ public class LoginActivity extends AppCompatActivity {
             finish();
             return;
         }
-        Ui.Pantalla p = Ui.pantalla(this, "L&C", "Servicio técnico a domicilio · LABORATORIO", false);
+        Ui.Pantalla p = Ui.pantalla(this, "L&C", "Servicio técnico a domicilio", false);
         Ui.seccion(this, p.contenido, "Inicia sesión");
-        EditText usuario = Ui.campo(this, p.contenido, "Usuario", InputType.TYPE_CLASS_TEXT);
+        EditText usuario = Ui.campo(this, p.contenido, CloudApi.activo() ? "Correo electrónico" : "Usuario",
+                CloudApi.activo() ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS : InputType.TYPE_CLASS_TEXT);
         EditText clave = Ui.campo(this, p.contenido, "Contraseña",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         TextView error = Ui.texto(this, "", 14, R.color.lc_rojo, false);
@@ -67,11 +68,15 @@ public class LoginActivity extends AppCompatActivity {
         diag.setGravity(android.view.Gravity.CENTER_VERTICAL);
         p.contenido.addView(diag);
         diag.setOnClickListener(v -> startActivity(new Intent(this, DiagnosticoActivity.class)));
+        if (CloudApi.activo()) {   // el cliente no ve URL de servidor ni herramientas técnicas
+            servidor.setVisibility(android.view.View.GONE);
+            diag.setVisibility(android.view.View.GONE);
+        }
         crear.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
         entrar.setOnClickListener(v -> {
             String u = usuario.getText().toString().trim();
             String c = clave.getText().toString();
-            if (u.isEmpty() || c.isEmpty()) { error.setText("Escribe usuario y contraseña"); return; }
+            if (u.isEmpty() || c.isEmpty()) { error.setText(CloudApi.activo() ? "Escribe tu correo y contraseña" : "Escribe usuario y contraseña"); return; }
             entrar.setEnabled(false);
             Executors.newSingleThreadExecutor().execute(() -> {
                 JSONObject body = new JSONObject();
