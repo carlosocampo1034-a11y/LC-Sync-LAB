@@ -247,7 +247,17 @@ public class CierreActivity extends AppCompatActivity {
             if (publicando) return;
             publicando = true;   // un solo envío aunque el observador se entregue otra vez o venza el tiempo
             estadoTrabajo.removeObservers(this);
-            Executors.newSingleThreadExecutor().execute(() -> publicar(body));
+            Executors.newSingleThreadExecutor().execute(() -> {
+                // Tope de 20 s: con la red caída las renovaciones de sesión reintentan y tardarían minutos; pasado el tope el
+                // envío se guarda en la cola persistente y se envía solo al volver la conexión.
+                java.util.concurrent.Future<?> f = Executors.newSingleThreadExecutor().submit(() -> publicar(body));
+                try { f.get(20, java.util.concurrent.TimeUnit.SECONDS); }
+                catch (java.util.concurrent.TimeoutException t) {
+                    f.cancel(true);
+                    ColaCierre.agregar(this, jobId, body);
+                    runOnUiThread(() -> { publicando = false; esperarEnvio(); });
+                } catch (Exception ignored) { }
+            });
         };
         estadoTrabajo.observe(this, info -> { if (info != null && info.getState().isFinished()) seguir.run(); });
         // Si la sincronización queda en reintento (p. ej. mientras se renueva la sesión) no se espera para siempre
