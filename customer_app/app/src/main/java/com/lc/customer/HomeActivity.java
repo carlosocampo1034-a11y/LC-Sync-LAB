@@ -229,8 +229,9 @@ public class HomeActivity extends AppCompatActivity {
             d.setPadding(0, Ui.dp(this, 6), 0, 0);
             card.addView(d);
             long cita = j.optLong("programadoPara", 0);
-            card.addView(Ui.texto(this, (cita > 0 ? "Cita: " + Ui.fecha(cita) : "Cita por confirmar")
-                    + (j.optString("direccion").isEmpty() ? "" : " · " + j.optString("direccion")), 13, R.color.lc_sec, false));
+            String citaTxt = cita > 0 ? "Cita: " + Ui.fecha(cita) : act ? "Cita por confirmar" : "";
+            String dir = j.optString("direccion");
+            card.addView(Ui.texto(this, citaTxt + (citaTxt.isEmpty() || dir.isEmpty() ? "" : " · ") + dir, 13, R.color.lc_sec, false));
             final long jid = j.optLong("id");
             card.setOnClickListener(v -> {
                 Intent it = new Intent(this, RequestDetailActivity.class);
@@ -286,8 +287,11 @@ public class HomeActivity extends AppCompatActivity {
         boolean enRuta = "EN RUTA".equals(est) || "LLEGUÉ".equals(est) || "EN REPARACIÓN".equals(est)
                 || "ESPERANDO APROBACIÓN".equals(est) || "PART HOLD".equals(est) || "COMPLETADO".equals(est);
         l.add(new String[]{"Técnico en camino", enRuta ? "1" : "0"});
-        boolean trabajo = "LLEGUÉ".equals(est) || "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est)
-                || "PART HOLD".equals(est) || "COMPLETADO".equals(est);
+        boolean enSitio = "LLEGUÉ".equals(est) || "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est)
+                || "PART HOLD".equals(est) || "PAUSADO".equals(est) || "COMPLETADO".equals(est);
+        l.add(new String[]{"Técnico en el lugar", enSitio ? "1" : "0"});
+        boolean trabajo = "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est)
+                || "PART HOLD".equals(est) || "PAUSADO".equals(est) || "COMPLETADO".equals(est);
         l.add(new String[]{"Trabajo en progreso", trabajo ? "1" : "0"});
         JSONArray pr = d.optJSONArray("propuestas");
         boolean pend = false;

@@ -259,6 +259,16 @@ public class ConfiguracionActivity extends AppCompatActivity {
 
         Button btnSyncNow = findViewById(R.id.btnSyncAhora);
         if (btnSyncNow != null) btnSyncNow.setOnClickListener(v -> sincronizarAhora());
+        if (btnSyncNow != null && com.lc.technician.BuildConfig.CLOUD_LOGIN
+                && btnSyncNow.getParent() instanceof android.view.ViewGroup) {
+            // QA: limpia la copia local de órdenes que el servidor ya no tiene y vuelve a bajar todo
+            android.view.ViewGroup padre = (android.view.ViewGroup) btnSyncNow.getParent();
+            Button btnResync = new Button(this);
+            btnResync.setText("RESINCRONIZAR DESDE EL SERVIDOR");
+            btnResync.setTextSize(12);
+            btnResync.setOnClickListener(v -> resincronizarDesdeServidor());
+            padre.addView(btnResync, padre.indexOfChild(btnSyncNow) + 1);
+        }
 
         Button btnCambiarPin = findViewById(R.id.btnCambiarPin);
         if (btnCambiarPin != null) btnCambiarPin.setOnClickListener(v -> mostrarDialogoCambiarPin());
@@ -313,6 +323,47 @@ public class ConfiguracionActivity extends AppCompatActivity {
             Bitmap qr = generarQR(dashUrl, sizePx);
             if (qr != null) ivQR.setImageBitmap(qr);
         }
+    }
+
+    /**
+     * Resincronización forzada (QA). Compara con las órdenes que el servidor devuelve a este técnico y borra de Room
+     * las copias ya sincronizadas (synced = 1) que el servidor no tiene. NUNCA toca cambios pendientes de subir
+     * (synced != 1). Después reinicia el cursor de descarga y sincroniza de nuevo.
+     */
+    private void resincronizarDesdeServidor() {
+        new AlertDialog.Builder(this)
+            .setTitle("Resincronizar desde el servidor")
+            .setMessage("Se quitarán de este teléfono las órdenes antiguas que el servidor ya no tiene y se volverá a "
+                    + "descargar todo. Los cambios que aún no se han subido se conservan.")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Resincronizar", (d, w) -> Executors.newSingleThreadExecutor().execute(() -> {
+                int borradas = -1;
+                try {
+                    com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
+                    retrofit2.Response<java.util.List<com.lc.technician.sync.SupabaseModels.JobRow>> r =
+                            sb.api().getJobsSince(sb.authHeader(), "gte.0", "id", 1000).execute();
+                    if (r.isSuccessful() && r.body() != null && r.body().size() < 1000) {
+                        java.util.Set<Long> visibles = new java.util.HashSet<>();
+                        for (com.lc.technician.sync.SupabaseModels.JobRow row : r.body()) visibles.add(row.id);
+                        LcDatabase db = LcDatabase.getInstance(getApplicationContext());
+                        java.util.List<Long> fantasmas = new java.util.ArrayList<>();
+                        for (com.lc.technician.model.JobEntity e : db.jobDao().getAll()) {
+                            if (e.synced == 1 && !visibles.contains(e.id)) fantasmas.add(e.id);
+                        }
+                        if (!fantasmas.isEmpty()) db.jobDao().deleteByIds(fantasmas);
+                        borradas = fantasmas.size();
+                        if (db.syncStateDao().countByType("PULL_JOB") > 0) db.syncStateDao().markSuccess("PULL_JOB", 0L);
+                        com.lc.technician.data.JobRepository.get().recargarCacheAsync(null);
+                    }
+                } catch (Exception ignored) {}
+                final int n = borradas;
+                runOnUiThread(() -> {
+                    Toast.makeText(this, n < 0 ? "No se pudo consultar el servidor; no se borró nada"
+                            : "Se quitaron " + n + " orden(es) antiguas. Descargando…", Toast.LENGTH_LONG).show();
+                    if (n >= 0) sincronizarAhora();
+                });
+            }))
+            .show();
     }
 
     private void sincronizarAhora() {
