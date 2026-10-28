@@ -492,7 +492,8 @@ public class InvoiceActivity extends AppCompatActivity {
 
     private void mostrarDialogoPago() {
         String[] metodos = com.lc.technician.sync.Listas.lista(this, "payment_methods.list",
-                new String[][]{{"EFECTIVO", "Efectivo"}, {"CHEQUE", "Cheque"}, {"TARJETA", "Tarjeta de crédito"}, {"ZELLE", "Zelle"}}, null).labels;
+                new String[][]{{"EFECTIVO", "Efectivo"}, {"CHEQUE", "Cheque"}, {"TARJETA", "Tarjeta"}, {"ZELLE", "Zelle"},
+                        {"TRANSFERENCIA", "Transferencia"}, {"OTRO", "Otro"}}, null).labels;
         new AlertDialog.Builder(this)
                 .setTitle("Método de pago")
                 .setItems(metodos, (dialog, which) -> registrarPago(metodos[which]))

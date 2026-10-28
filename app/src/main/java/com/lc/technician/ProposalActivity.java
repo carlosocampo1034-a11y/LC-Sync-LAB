@@ -80,9 +80,9 @@ public class ProposalActivity extends AppCompatActivity {
         // Precios de la empresa (Control → Precios): margen e impuesto por defecto salen de settings; el ajuste local
         // solo se usa si el teléfono aún no ha descargado la configuración.
         com.lc.technician.sync.Listas.refrescar(this, true, null);
-        double mk = com.lc.technician.sync.Listas.numero(this, "pricing.markup_percent", defMarkup[0]);
+        double mk = com.lc.technician.sync.Listas.numero(this, "pricing.markup_percent", 7.0);
         defMarkup = new double[]{mk, mk, mk};
-        defTax = com.lc.technician.sync.Listas.numero(this, "pricing.tax_percent", defTax);
+        defTax = com.lc.technician.sync.Listas.numero(this, "pricing.tax_percent", 7.0);
 
         ((ImageView) findViewById(R.id.btnAtras)).setOnClickListener(v -> finish());
         mostrarPreciosReferencia();
