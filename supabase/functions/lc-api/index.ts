@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-9" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-10" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
@@ -551,22 +551,26 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "dispatch_failed" }) : out(200, { ofertasNuevas: data });
     }
 
+    // /dispatch/config se conserva por compatibilidad: ahora lee y escribe settings dispatch.* (con auditoría)
     if (route === "/dispatch/config" && req.method === "GET") {
       if (!staff) return out(403, { error: "role_denied" });
-      const { data } = await db.from("dispatch_config").select("enabled,fanout,offer_ttl_seconds").eq("id", 1).maybeSingle();
-      return out(200, data);
+      const { data } = await db.from("settings").select("key,value").like("key", "dispatch.%");
+      const m = Object.fromEntries((data || []).map((r) => [r.key.replace("dispatch.", ""), r.value]));
+      return out(200, { enabled: m.enabled, fanout: m.fanout, offer_ttl_seconds: m.offer_ttl_seconds, fallback_to_generalists: m.fallback_to_generalists });
     }
     if (route === "/dispatch/config" && req.method === "PATCH") {
-      if (user.role !== "ADMIN") return out(403, { error: "Solo un administrador cambia el despacho automático." });
-      const c: Record<string, unknown> = {};
-      if (typeof body?.enabled === "boolean") c.enabled = body.enabled;
-      if (Number.isInteger(body?.fanout) && body.fanout >= 1 && body.fanout <= 10) c.fanout = body.fanout;
-      if (Number.isInteger(body?.offer_ttl_seconds) && body.offer_ttl_seconds >= 20 && body.offer_ttl_seconds <= 3600) {
-        c.offer_ttl_seconds = body.offer_ttl_seconds;
+      if (!staff) return out(403, { error: "role_denied" });
+      const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || null;
+      const cambios: Record<string, unknown> = {};
+      for (const k of ["enabled", "fanout", "offer_ttl_seconds", "fallback_to_generalists"]) if (body && k in body) cambios[k] = body[k];
+      if (Object.keys(cambios).length === 0) return out(422, { error: "nothing_to_update" });
+      for (const [k, v] of Object.entries(cambios)) {
+        const { data, error } = await db.rpc("lc_setting_set", { p_actor: user.id, p_key: "dispatch." + k, p_value: v, p_expected_version: null,
+          p_reason: "PATCH /dispatch/config", p_ip: ip, p_ua: req.headers.get("user-agent"), p_via: "api" });
+        if (error) return out(500, { error: "update_failed" });
+        if ((data as { http?: number }).http !== 200) return fromRpc(data as Record<string, unknown>, out);
       }
-      if (Object.keys(c).length === 0) return out(422, { error: "nothing_to_update" });
-      const { error } = await db.from("dispatch_config").update({ ...c, updated_at: Date.now() }).eq("id", 1);
-      return error ? out(500, { error: "update_failed" }) : out(200, c);
+      return out(200, cambios);
     }
 
     // ── Configuración dinámica (settings) · qa-9 ───────────────────────────────────────────────────────
@@ -676,6 +680,14 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "decide_failed" }) : fromRpc(data, out);
     }
 
+    // ── Pago de PRUEBA (sin cobro real) · qa-10: solo con payments.mode = simulated ────────────────────────
+    const mpay = route.match(/^\/(?:orders|jobs)\/(\d+)\/pay-test$/);
+    if (mpay && req.method === "POST") {
+      if (user.role !== "CUSTOMER") return out(403, { error: "role_denied" });
+      const { data, error } = await db.rpc("lc_pay_test", { p_actor: user.id, p_job: Number(mpay[1]) });
+      return error ? out(500, { error: "pay_failed" }) : fromRpc(data, out);
+    }
+
     // ── Mensajes y fotos por orden (qa-8). Acceso solo con hasAccess: un cliente nunca ve órdenes ajenas ──────
     const mm = route.match(/^\/(?:orders|jobs)\/(\d+)\/(messages|photos)$/);
     if (mm) {
@@ -770,6 +782,11 @@ Deno.serve(async (req) => {
         if (data.technician_id) extra.tecnico_nombre = (await nombres([data.technician_id]))[data.technician_id] ?? null;
         const { count } = await db.from("job_photos").select("id", { count: "exact", head: true }).eq("job_id", data.id);
         extra.fotos_count = count ?? 0;
+        const { data: fac } = await db.from("invoices").select("id,number,items,subtotal,tax_pct,tax,total,estado,created_at,paid_at").eq("job_id", data.id).maybeSingle();
+        if (fac) {
+          const { data: pg } = await db.from("payments").select("id,amount,currency,method,status,created_at").eq("job_id", data.id).order("id");
+          extra.factura = { ...fac, pagos: pg || [] };
+        }
       }
       return out(200, { ...data, ...extra, propuestas: (props || []).map((p) => forma(p as Record<string, unknown>, false)) });
     }
@@ -791,7 +808,9 @@ Deno.serve(async (req) => {
       let propiedad = null, cliente = null;
       if (j.property_id) propiedad = (await db.from("customer_properties").select("*").eq("id", j.property_id).maybeSingle()).data;
       if (j.customer_ref) cliente = (await db.from("customers").select("id,nombre,telefono,email,user_id").eq("id", j.customer_ref).maybeSingle()).data;
-      return out(200, { job: j, propiedad, cliente,
+      const { data: factura } = await db.from("invoices").select("*").eq("job_id", id).maybeSingle();
+      const { data: pagos } = await db.from("payments").select("*").eq("job_id", id).order("id");
+      return out(200, { job: j, propiedad, cliente, factura: factura || null, pagos: pagos || [],
         historial: (hist || []).map((h) => ({ ...h, actor_nombre: quien[h.actor] || "sistema" })),
         conflictos: (conf || []).map((c) => ({ ...c, actor_nombre: quien[c.actor] || "—" })),
         ofertas: (ofs || []).map((o) => ({ ...o, tecnico_nombre: quien[o.technician_id] || "—" })),

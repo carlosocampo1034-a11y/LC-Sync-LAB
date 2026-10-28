@@ -54,6 +54,9 @@ final class CloudApi {
                 return r.ok() ? new Api.Respuesta(200, aContrato(r.cuerpo)) : r;
             }
             if ("POST".equals(metodo) && "/customer/requests".equals(ruta)) return crearSolicitud(c, body);
+            if ("POST".equals(metodo) && ruta.matches("/customer/requests/\\d+/pay-test")) {   // pago de PRUEBA (sin cobro real)
+                return lcApi(c, "POST", "/orders/" + ruta.split("/")[3] + "/pay-test", new JSONObject());
+            }
             // Mensajes, fotos y avisos de la orden (lc-api qa-8)
             if (ruta.matches("/customer/requests/\\d+/(messages|photos)(\\?since=\\d+)?")) {
                 String[] parts = ruta.split("/");
@@ -216,6 +219,32 @@ final class CloudApi {
                 : j.isNull("technician_code") ? "" : j.optString("technician_code"));
         if (j.optJSONArray("historial") != null) o.put("historial", j.optJSONArray("historial"));
         o.put("fotosCount", j.optInt("fotos_count", 0));
+        o.put("diagnostico", j.isNull("notas") ? "" : j.optString("notas"));   // lo que el técnico anotó en el diagnóstico
+        JSONObject f = j.optJSONObject("factura");
+        if (f != null) {
+            JSONArray its = new JSONArray();
+            JSONArray in = f.optJSONArray("items");
+            double descuento = 0;
+            for (int i = 0; in != null && i < in.length(); i++) {
+                JSONObject it = in.optJSONObject(i);
+                if (it.optDouble("importe") < 0) { descuento += -it.optDouble("importe"); continue; }
+                its.put(new JSONObject().put("descripcion", it.optString("descripcion")).put("cantidad", it.optDouble("cantidad", 1))
+                        .put("precio", it.optDouble("precio")).put("importe", it.optDouble("importe")));
+            }
+            double pagado = 0;
+            JSONArray pagos = new JSONArray();
+            JSONArray pg = f.optJSONArray("pagos");
+            for (int i = 0; pg != null && i < pg.length(); i++) {
+                JSONObject p = pg.optJSONObject(i);
+                if ("CONFIRMADO".equals(p.optString("status"))) pagado += p.optDouble("amount");
+                pagos.put(new JSONObject().put("metodo", "TEST".equals(p.optString("method")) ? "PRUEBA" : p.optString("method"))
+                        .put("monto", p.optDouble("amount")).put("estado", p.optString("status")));
+            }
+            o.put("factura", new JSONObject().put("numero", f.optString("number")).put("items", its).put("descuento", descuento)
+                    .put("subtotal", f.optDouble("subtotal")).put("impuesto", f.optDouble("tax")).put("total", f.optDouble("total"))
+                    .put("estado", f.optString("estado")).put("pagado", pagado).put("saldo", Math.max(0, f.optDouble("total") - pagado)).put("tienePdf", false));
+            o.put("pagos", pagos);
+        }
         if (!j.isNull("programado_para")) o.put("programadoPara", j.optLong("programado_para"));
         o.put("updatedAt", j.optLong("updated_at"));
         if (j.optJSONArray("propuestas") != null) o.put("propuestas", j.optJSONArray("propuestas"));   // Good/Better/Best

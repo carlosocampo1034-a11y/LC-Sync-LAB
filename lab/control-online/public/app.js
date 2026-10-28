@@ -191,10 +191,11 @@
   // ── DETALLE (control_job.html) ────────────────────────────────────────────────────────────
   async function vistaDetalle(id, mensaje) {
     cabecera("Dashboard", null, "tablero");
-    const [r, t] = await Promise.all([api("GET", `/orders/${id}/detail`), tecnicos.length ? null : api("GET", "/technicians")]);
+    const [r, t, fr] = await Promise.all([api("GET", `/orders/${id}/detail`), tecnicos.length ? null : api("GET", "/technicians"), api("GET", `/orders/${id}/photos`)]);
     if (t && t.status === 200) tecnicos = t.body;
     if (r.status !== 200) return errorVista(r);
-    const { job: j, historial, conflictos, descuentos, propiedad, cliente } = r.body;
+    const { job: j, historial, conflictos, descuentos, propiedad, cliente, factura, pagos, ofertas } = r.body;
+    const fotos = fr && fr.status === 200 && Array.isArray(fr.body) ? fr.body : [];
     const info = (l, v) => `<div class="info-row"><span class="info-label">${l}</span><span class="info-value">${v}</span></div>`;
     const tipoProp = j.tipo_propiedad || propiedad?.tipo;
     $("lcBody").innerHTML = `<div class="job-page">
@@ -244,8 +245,17 @@
           </div>
           <div class="lc-card mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3"><div class="section-title mb-0"><i class="bi bi-receipt me-1"></i> Factura</div></div>
-            <div class="text-center py-3 text-muted"><i class="bi bi-receipt" style="font-size:2rem;opacity:.3"></i>
-              <p class="mt-2 mb-0" style="font-size:.88rem">Sin factura registrada</p></div>
+            ${factura ? `<div class="mb-2"><span class="fw-bold">${esc(factura.number)}</span>
+                <span class="badge ${factura.estado === "PAGADA" ? "bg-success" : "bg-warning text-dark"} ms-2">${esc(factura.estado)}</span></div>
+              <div class="table-responsive"><table class="lc-table w-100"><tbody>
+                ${(factura.items || []).map((it) => `<tr><td>${esc(it.descripcion)}</td><td class="text-end">${money(it.importe)}</td></tr>`).join("")}
+                <tr><td class="text-muted">Subtotal</td><td class="text-end">${money(factura.subtotal)}</td></tr>
+                <tr><td class="text-muted">Impuesto (${esc(factura.tax_pct)}%)</td><td class="text-end">${money(factura.tax)}</td></tr>
+                <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">${money(factura.total)}</td></tr></tbody></table></div>
+              ${(pagos || []).map((p) => `<div class="text-muted mt-2" style="font-size:.82rem"><i class="bi bi-credit-card text-success me-1"></i>
+                Pago ${esc(p.method === "TEST" ? "de prueba" : p.method)} · ${money(p.amount)} · ${esc(p.status)} · ${esc(fecha(Number(p.created_at)))}</div>`).join("")}`
+              : `<div class="text-center py-3 text-muted"><i class="bi bi-receipt" style="font-size:2rem;opacity:.3"></i>
+              <p class="mt-2 mb-0" style="font-size:.88rem">Sin factura registrada</p></div>`}
             <hr class="mt-3" style="border-color:#f0f2f6">
             <div class="text-muted mb-2" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Autorizar descuento</div>
             <form id="fDescuento" class="d-flex gap-2 flex-wrap">
@@ -258,9 +268,14 @@
           </div>
           <div class="lc-card mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3"><div class="section-title mb-0"><i class="bi bi-camera me-1"></i> Evidencias</div>
-              <div class="text-muted" style="font-size:.82rem"><i class="bi bi-image me-1"></i>0 foto(s) &nbsp;·&nbsp; <i class="bi bi-journal-text me-1"></i>0 nota(s)</div></div>
-            <div class="text-center py-2 text-muted" style="font-size:.85rem">Sin evidencias registradas.</div>
+              <div class="text-muted" style="font-size:.82rem"><i class="bi bi-image me-1"></i>${fotos.length} foto(s) &nbsp;·&nbsp; <i class="bi bi-journal-text me-1"></i>${j.notas ? 1 : 0} nota(s)</div></div>
+            ${fotos.length || j.notas ? `${fotos.length ? `<div class="d-flex gap-2 flex-wrap mb-2">${fotos.map((f) => f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener"><img src="${esc(f.url)}" alt="Evidencia ${esc(f.categoria)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid #e3e5e7"></a>` : "").join("")}</div>` : ""}
+              ${j.notas ? `<div class="text-muted" style="font-size:.78rem;text-transform:uppercase;font-weight:600">Diagnóstico del técnico</div><div style="white-space:pre-line">${esc(j.notas)}</div>` : ""}`
+              : `<div class="text-center py-2 text-muted" style="font-size:.85rem">Sin evidencias registradas.</div>`}
           </div>
+          ${(ofertas || []).length ? `<div class="lc-card mb-4"><div class="section-title"><i class="bi bi-broadcast me-1"></i> Despacho automático · ofertas</div>
+            <div class="table-responsive"><table class="lc-table w-100"><thead><tr><th>Técnico</th><th>Estado</th><th>Cuándo</th></tr></thead><tbody>
+            ${ofertas.map((o) => `<tr><td>${esc(o.tecnico_nombre)}</td><td>${esc(o.estado)}</td><td class="text-muted">${esc(fecha(Number(o.created_at)))}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
           <div class="lc-card">
             <div class="section-title"><i class="bi bi-clock-history me-1"></i> Historial de cambios</div>
             ${historial.length ? `<div class="table-responsive"><table class="lc-table hist-table w-100">

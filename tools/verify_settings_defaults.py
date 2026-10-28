@@ -20,6 +20,14 @@ for f in MIG:
     for k, v in re.findall(r"\('(pricing\.[a-z_.]+)',\s*'([0-9.]+)',\s*'number'", t):
         numeros[k] = float(v)
 
+# actualizaciones puntuales de textos para el cliente: when 'ID' then o || '{"customer_label":"TEXTO"}'::jsonb
+for f in MIG:
+    t = f.read_text(encoding="utf-8")
+    if "order_states.list" in t and "jsonb_agg" in t:
+        for sid, txt in re.findall(r"when '([^']+)' then o \|\| '\{\"customer_label\":\"([^\"]+)\"\}'::jsonb", t):
+            for o in listas.get("order_states.list", []):
+                if o["id"] == sid: o["customer_label"] = txt
+
 def activos(k): return [o for o in listas[k] if o.get("active", True)]
 
 # ── 2) Utilidades para leer arreglos Java/JS

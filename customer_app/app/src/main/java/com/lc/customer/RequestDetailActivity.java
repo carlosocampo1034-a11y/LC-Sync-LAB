@@ -239,6 +239,12 @@ public class RequestDetailActivity extends AppCompatActivity {
         fila(card, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora");
         fila(card, "Técnico", j.optString("tecnicoNombre"));
         fila(card, "Dirección", j.optString("direccion"));
+        String diag = j.optString("diagnostico");
+        if (!diag.isEmpty() && !"null".equals(diag)) {   // lo que anotó el técnico
+            Ui.seccion(this, c, "Diagnóstico del técnico");
+            LinearLayout dc = Ui.tarjeta(this, c);
+            dc.addView(Ui.texto(this, diag, 15, R.color.lc_texto, false));
+        }
         seccionFotos(c);
 
         // Fase 6: propuestas del técnico (Good/Better/Best). Se decide sobre la versión exacta mostrada (sha).
@@ -367,6 +373,22 @@ public class RequestDetailActivity extends AppCompatActivity {
                 fila(fc, "Pago " + pg.optString("metodo").toLowerCase(), String.format(java.util.Locale.US, "$%.2f · ",
                         pg.optDouble("monto")) + ("CONFIRMADO".equals(estPago) ? "confirmado"
                         : "RECHAZADO".equals(estPago) ? "no aceptado" : "en revisión por L&C"));
+            }
+            if ("EMITIDA".equals(f.optString("estado")) && "simulated".equals(Ajustes.texto(this, "payments.mode", "off"))) {
+                final double aPagar = f.optDouble("saldo", f.optDouble("total"));
+                Ui.boton(this, fc, "Pagar (prueba)", true).setOnClickListener(v -> new AlertDialog.Builder(this)
+                        .setTitle("Pagar (prueba)")
+                        .setMessage(String.format(java.util.Locale.US, "Se registrará un pago de prueba de $%.2f.\nNo se cobra nada a tu tarjeta.", aPagar))
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Pagar (prueba)", (d, w) -> Executors.newSingleThreadExecutor().execute(() -> {
+                            Api.Respuesta pr = Api.post(this, "/customer/requests/" + id + "/pay-test", new JSONObject());
+                            runOnUiThread(() -> {
+                                Toast.makeText(this, pr.ok() ? "Pago de prueba confirmado" : pr.error(), Toast.LENGTH_LONG).show();
+                                cargar();
+                            });
+                        })).show());
+            } else if ("PAGADA".equals(f.optString("estado"))) {
+                fc.addView(Ui.texto(this, "✓ Pagada", 16, R.color.lc_ok, true));
             }
             if (f.optBoolean("tienePdf")) {
                 final long jid = j.optLong("id");

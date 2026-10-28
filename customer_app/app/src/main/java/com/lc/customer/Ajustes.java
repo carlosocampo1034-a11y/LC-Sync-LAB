@@ -78,6 +78,12 @@ final class Ajustes {
 
     static void limpiar(Context c) { prefs(c).edit().clear().apply(); }
 
+    /** Valor de texto de una setting (p. ej. payments.mode). */
+    static String texto(Context c, String key, String respaldo) {
+        JSONObject f = datos(c).optJSONObject(key);
+        return f == null || f.isNull("v") ? respaldo : f.optString("v", respaldo);
+    }
+
     static double numero(Context c, String key, double respaldo) {
         JSONObject f = datos(c).optJSONObject(key);
         return f == null ? respaldo : f.optDouble("v", respaldo);
@@ -118,10 +124,10 @@ final class Ajustes {
     static final String[][] ACCESOS = {{"Ninguno", "Ninguno"}, {"Código puerta", "Código puerta"}, {"Garaje", "Garaje"},
             {"Lockbox", "Lockbox"}, {"Vecino", "Vecino"}, {"Llave escondida", "Llave escondida"}};
     static final String[][] ESTADOS = {
-            {"PENDIENTE", "Pendiente", "Recibida"}, {"EN RUTA", "En ruta", "Técnico en camino"}, {"LLEGUÉ", "Llegué", "Técnico en el lugar"},
+            {"PENDIENTE", "Pendiente", "Recibida"}, {"EN RUTA", "En ruta", "Tu técnico va en camino"}, {"LLEGUÉ", "Llegué", "Técnico en el lugar"},
             {"EN REPARACIÓN", "En reparación", "En reparación"}, {"ESPERANDO APROBACIÓN", "Esperando aprobación", "Esperando tu aprobación"},
             {"PART HOLD", "Falta repuesto", "Esperando repuesto"}, {"PAUSADO", "Pausado", "Pausada"},
-            {"COMPLETADO", "Completado", "Completada"}, {"CANCELADO", "Cancelado", "Cancelada"}};
+            {"COMPLETADO", "Completado", "Trabajo completado"}, {"CANCELADO", "Cancelado", "Cancelada"}};
 
     /** Texto del estado para el cliente (editable en Control → Listas editables → Estados de la orden). */
     static String estadoCliente(Context c, String estado) {
