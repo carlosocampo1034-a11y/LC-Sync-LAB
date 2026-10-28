@@ -544,18 +544,18 @@
         <td class="fw-semibold">${esc(nombre)}<div class="text-muted" style="font-size:.72rem">${esc(s.key)}</div></td>
         <td style="width:170px"><input class="form-control form-control-sm cfg-input" type="number" step="0.01" min="${s.constraints?.min ?? 0}"
             ${s.constraints?.max != null ? `max="${s.constraints.max}"` : ""} value="${esc(s.value)}" ${puede ? "" : "disabled"} aria-label="${esc(nombre)}"></td>
-        <td class="text-muted" style="font-size:.82rem">${fmtVal(s.default_value)}</td>
-        <td class="text-muted" style="font-size:.78rem">${esc(fecha(s.updated_at))} · v${s.version}</td>
+        <td class="text-muted d-none d-md-table-cell" style="font-size:.82rem">${fmtVal(s.default_value)}</td>
+        <td class="text-muted d-none d-md-table-cell" style="font-size:.78rem">${esc(fecha(s.updated_at))} · v${s.version}</td>
         <td class="text-end" style="white-space:nowrap">
           ${puede ? `<button class="btn btn-accent btn-sm cfg-guardar">Guardar</button>` : `<span class="text-muted" style="font-size:.75rem"><i class="bi bi-lock"></i> Solo administrador</span>`}
           ${yo.role === "ADMIN" ? `<button class="btn btn-outline-secondary btn-sm cfg-reset" title="Volver al valor inicial">↺</button>
-          <button class="btn btn-outline-secondary btn-sm cfg-hist" title="Historial">Historial</button>` : ""}
+          <button class="btn btn-outline-secondary btn-sm cfg-hist d-none d-md-inline-block" title="Historial">Historial</button>` : ""}
         </td></tr>
         <tr class="cfg-msg" data-for="${esc(s.key)}" hidden><td colspan="5"></td></tr>`;
     };
     const tabla = (titulo, subt, items) => `<div class="lc-card mb-4"><div class="p-3 pb-0"><div class="fw-bold">${esc(titulo)}</div>
         ${subt ? `<div class="text-muted" style="font-size:.78rem">${esc(subt)}</div>` : ""}</div>
-        <div class="table-responsive"><table class="lc-table w-100"><thead><tr><th>Concepto</th><th>Valor</th><th>Inicial</th><th>Última modificación</th><th></th></tr></thead>
+        <div class="table-responsive"><table class="lc-table w-100"><thead><tr><th>Concepto</th><th>Valor</th><th class="d-none d-md-table-cell">Inicial</th><th class="d-none d-md-table-cell">Última modificación</th><th></th></tr></thead>
         <tbody>${items.join("")}</tbody></table></div></div>`;
     const orden = ["hvac", "plumbing", "electricity", "general"];
     $("lcBody").innerHTML = `
@@ -572,6 +572,7 @@
       r.hidden = !texto; r.firstElementChild.innerHTML = texto ? `<div class="alert alert-${ok ? "success" : "danger"} py-1 px-2 mb-1" style="font-size:.8rem">${esc(texto)}</div>` : ""; };
     $("lcBody").querySelectorAll("tr[data-key]").forEach((tr) => {
       const k = tr.dataset.key, inp = tr.querySelector(".cfg-input");
+      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); tr.querySelector(".cfg-guardar")?.click(); } });
       tr.querySelector(".cfg-guardar")?.addEventListener("click", async (e) => {
         const v = Number(inp.value);
         if (!Number.isFinite(v)) return msg(k, "Escribe un número", false);
