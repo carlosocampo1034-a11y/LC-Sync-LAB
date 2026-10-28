@@ -68,7 +68,9 @@ public class CierreActivity extends AppCompatActivity {
         sv.setBackgroundColor(0xFFFFFFFF);
         LinearLayout raiz = col();
         int barra = getResources().getIdentifier("status_bar_height", "dimen", "android");
-        raiz.setPadding(dp(20), dp(20) + (barra > 0 ? getResources().getDimensionPixelSize(barra) : dp(24)), dp(20), dp(28));
+        int nav = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+        raiz.setPadding(dp(20), dp(20) + (barra > 0 ? getResources().getDimensionPixelSize(barra) : dp(24)), dp(20),
+                dp(28) + (nav > 0 ? getResources().getDimensionPixelSize(nav) : dp(48)));   // el botón final no queda bajo la barra
         sv.addView(raiz);
         setContentView(sv);
 
@@ -241,12 +243,15 @@ public class CierreActivity extends AppCompatActivity {
         WorkManager wm = WorkManager.getInstance(this);
         wm.enqueue(req);
         final androidx.lifecycle.LiveData<WorkInfo> estadoTrabajo = wm.getWorkInfoByIdLiveData(req.getId());
-        estadoTrabajo.observe(this, info -> {
-            if (info == null || !info.getState().isFinished() || publicando) return;
-            publicando = true;   // un solo envío aunque el observador se entregue otra vez
+        final Runnable seguir = () -> {
+            if (publicando) return;
+            publicando = true;   // un solo envío aunque el observador se entregue otra vez o venza el tiempo
             estadoTrabajo.removeObservers(this);
             Executors.newSingleThreadExecutor().execute(() -> publicar(body));
-        });
+        };
+        estadoTrabajo.observe(this, info -> { if (info != null && info.getState().isFinished()) seguir.run(); });
+        // Si la sincronización queda en reintento (p. ej. mientras se renueva la sesión) no se espera para siempre
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(seguir, 8000);
     }
 
     private void publicar(Map<String, Object> body) {
@@ -254,7 +259,9 @@ public class CierreActivity extends AppCompatActivity {
         JSONObject ok = null;
         try {
             SupabaseClient sb = SupabaseClient.get(this);
-            if (sb.ensureAuthSync() != null) error = "Sin sesión. Inicia sesión de nuevo.";
+            String fallo = sb.ensureAuthSync();
+            if (fallo != null) { Thread.sleep(2500); fallo = sb.ensureAuthSync(); }   // la sesión puede estar renovándose
+            if (fallo != null) error = "Sin sesión. Inicia sesión de nuevo.";
             else {
                 retrofit2.Response<okhttp3.ResponseBody> r = sb.api().closurePost(sb.authHeader(), jobId, body).execute();
                 String txt = r.isSuccessful() && r.body() != null ? r.body().string()
