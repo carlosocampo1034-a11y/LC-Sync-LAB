@@ -8,6 +8,7 @@ import android.text.InputType;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,12 +36,17 @@ import java.util.concurrent.Executors;
 public class NewRequestActivity extends AppCompatActivity {
 
     static final String[] CATEGORIAS = {"ELECTRODOMESTICOS", "HVAC", "PLOMERIA", "ELECTRICIDAD", "OTRO"};
+    private static final String[] CATEGORIAS_TXT = {"Electrodomésticos", "Aire acondicionado / HVAC", "Plomería", "Electricidad", "Otro"};
+    private static final int PASOS = 4;
 
     private final List<JSONObject> props = new ArrayList<>();
     private Spinner spProp, spEquipo, spCat;
     private EditText desc, ventana;
-    private TextView tvFecha, tvFoto, error;
-    private Button enviar;
+    private TextView tvFecha, tvFoto, error, errProp, errDesc, tvPaso, resumen;
+    private Button enviar, siguiente, atras;
+    private final LinearLayout[] paso = new LinearLayout[PASOS];
+    private int actual = 0;
+    private boolean cargado = false;
     private long fechaPreferida = 0;
     private Uri foto;
     private String fotoMime;
@@ -61,35 +67,55 @@ public class NewRequestActivity extends AppCompatActivity {
         super.onCreate(b);
         clientRequestId = b != null ? b.getString("crid") : null;
         if (clientRequestId == null) clientRequestId = UUID.randomUUID().toString();  // mismo id en reintentos
-        if (b != null) fechaPreferida = b.getLong("fecha", 0);
-        Ui.Pantalla p = Ui.pantalla(this, "Solicitar servicio", "Cuéntanos qué necesitas", true);
-        Ui.seccion(this, p.contenido, "¿Dónde?");
+        if (b != null) { fechaPreferida = b.getLong("fecha", 0); actual = b.getInt("paso", 0); }
+        Ui.Pantalla p = Ui.pantalla(this, "Solicitar servicio", null, true);
+        tvPaso = Ui.texto(this, "", 14, R.color.lc_sec, true);
+        p.cabecera.addView(tvPaso);
+        for (int i = 0; i < PASOS; i++) {
+            paso[i] = new LinearLayout(this);
+            paso[i].setOrientation(LinearLayout.VERTICAL);
+            p.contenido.addView(paso[i]);
+        }
+        // Paso 1: propiedad y equipo
+        Ui.seccion(this, paso[0], "¿Dónde es el servicio?");
         spProp = new Spinner(this);
-        p.contenido.addView(spProp);
-        Ui.seccion(this, p.contenido, "¿Qué equipo?");
+        paso[0].addView(spProp);
+        errProp = errorCampo(paso[0]);
+        Ui.seccion(this, paso[0], "¿Qué equipo?");
         spEquipo = new Spinner(this);
-        p.contenido.addView(spEquipo);
+        paso[0].addView(spEquipo);
+        // Paso 2: servicio y problema
+        Ui.seccion(this, paso[1], "Tipo de servicio");
         spCat = new Spinner(this);
-        spCat.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, CATEGORIAS));
-        p.contenido.addView(spCat);
-        Ui.seccion(this, p.contenido, "Describe el problema");
-        desc = Ui.campo(this, p.contenido, "Ej. La nevera no enfría desde ayer (mín. 10 caracteres)",
+        spCat.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, CATEGORIAS_TXT));
+        paso[1].addView(spCat);
+        Ui.seccion(this, paso[1], "Describe el problema");
+        desc = Ui.campo(this, paso[1], "Ej. La nevera no enfría desde ayer",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         desc.setMinLines(3);
-        Ui.seccion(this, p.contenido, "Disponibilidad");
-        tvFecha = Ui.texto(this, "Elegir fecha y hora preferidas (opcional)", 15, R.color.lc_rojo, true);
+        errDesc = errorCampo(paso[1]);
+        paso[1].addView(Ui.texto(this, "Mínimo 10 caracteres.", 13, R.color.lc_sec, false));
+        // Paso 3: disponibilidad y fotos (opcionales)
+        Ui.seccion(this, paso[2], "Disponibilidad (opcional)");
+        tvFecha = Ui.texto(this, "Elegir fecha y hora preferidas", 15, R.color.lc_rojo, true);
         tvFecha.setMinHeight(Ui.dp(this, 48));
         tvFecha.setGravity(android.view.Gravity.CENTER_VERTICAL);
         tvFecha.setOnClickListener(v -> elegirFecha());
-        p.contenido.addView(tvFecha);
+        paso[2].addView(tvFecha);
         if (fechaPreferida > 0) tvFecha.setText("Preferencia: " + Ui.fecha(fechaPreferida));
-        ventana = Ui.campo(this, p.contenido, "Otra disponibilidad (ej. tardes después de las 3)");
-        p.contenido.addView(Ui.texto(this, "La cita la confirma L&C; te avisaremos.", 13, R.color.lc_sec, false));
-        Ui.seccion(this, p.contenido, "Foto (opcional)");
+        ventana = Ui.campo(this, paso[2], "Otra disponibilidad (ej. tardes después de las 3)");
+        paso[2].addView(Ui.texto(this, "La fecha es solo una preferencia: la cita queda confirmada cuando L&C la apruebe.", 13, R.color.lc_sec, false));
         tvFoto = Ui.texto(this, "Adjuntar una foto del equipo", 15, R.color.lc_rojo, true);
-        tvFoto.setMinHeight(Ui.dp(this, 48));
-        tvFoto.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        p.contenido.addView(tvFoto);
+        tvFotoPrueba = Ui.texto(this, "+ Agregar foto de prueba (laboratorio)", 15, R.color.lc_rojo, true);
+        if (!CloudApi.activo()) {   // el servidor QA todavía no recibe fotos: no se ofrece un botón que no funciona
+            Ui.seccion(this, paso[2], "Foto (opcional)");
+            tvFoto.setMinHeight(Ui.dp(this, 48));
+            tvFoto.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            paso[2].addView(tvFoto);
+            tvFotoPrueba.setMinHeight(Ui.dp(this, 48));
+            tvFotoPrueba.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            paso[2].addView(tvFotoPrueba);
+        }
         elegirFoto = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
             if (uri == null) return;
             String mime = getContentResolver().getType(uri);
@@ -108,22 +134,83 @@ public class NewRequestActivity extends AppCompatActivity {
             tvFoto.setText("✓ Foto adjunta (toca para cambiar)");
         });
         tvFoto.setOnClickListener(v -> mostrarMenuFoto());
-        tvFotoPrueba = Ui.texto(this, "+ Agregar foto de prueba (laboratorio)", 15, R.color.lc_rojo, true);
-        tvFotoPrueba.setMinHeight(Ui.dp(this, 48));
-        tvFotoPrueba.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        p.contenido.addView(tvFotoPrueba);
         tvFotoPrueba.setOnClickListener(v -> agregarFotoPrueba());
-        error = Ui.texto(this, "", 14, R.color.lc_rojo, false);
-        p.contenido.addView(error);
+        // Paso 4: revisar y enviar
+        Ui.seccion(this, paso[3], "Revisa tu solicitud");
+        resumen = Ui.texto(this, "", 15, R.color.lc_texto, false);
+        paso[3].addView(resumen);
+        error = Ui.texto(this, "", 14, R.color.lc_rojo, true);
+        paso[3].addView(error);
+        // Botones: Siguiente / Enviar y Atrás
+        siguiente = Ui.boton(this, p.inferior, "Siguiente", true);
+        siguiente.setOnClickListener(v -> siguientePaso());
         enviar = Ui.boton(this, p.inferior, "Enviar solicitud", true);
         enviar.setOnClickListener(v -> enviar());
+        atras = Ui.boton(this, p.inferior, "Atrás", false);
+        atras.setOnClickListener(v -> { if (actual > 0) mostrarPaso(actual - 1); });
         spProp.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(android.widget.AdapterView<?> a, android.view.View v, int pos, long id) {
-                llenarEquipos(pos);
+                llenarEquipos(pos);   // equipos vinculados a la propiedad elegida
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> a) {}
         });
+        mostrarPaso(actual);
         cargarPropiedades();
+    }
+
+    private TextView errorCampo(LinearLayout dest) {
+        TextView t = Ui.texto(this, "", 13, R.color.lc_rojo, true);
+        t.setVisibility(android.view.View.GONE);
+        dest.addView(t);
+        return t;
+    }
+
+    private void mostrarError(TextView t, String msg) {
+        t.setText(msg);
+        t.setVisibility(msg == null || msg.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+    }
+
+    private void mostrarPaso(int n) {
+        actual = n;
+        for (int i = 0; i < PASOS; i++) paso[i].setVisibility(i == n ? android.view.View.VISIBLE : android.view.View.GONE);
+        String[] t = {"Propiedad y equipo", "Servicio y problema", "Disponibilidad y fotos", "Revisar y enviar"};
+        tvPaso.setText("Paso " + (n + 1) + " de " + PASOS + " · " + t[n]);
+        siguiente.setVisibility(n < PASOS - 1 ? android.view.View.VISIBLE : android.view.View.GONE);
+        enviar.setVisibility(n == PASOS - 1 ? android.view.View.VISIBLE : android.view.View.GONE);
+        atras.setVisibility(n > 0 && solicitudCreada == 0 ? android.view.View.VISIBLE : android.view.View.GONE);
+        if (n == PASOS - 1) resumen.setText(textoResumen());
+    }
+
+    /** Valida solo el paso actual; el error se muestra junto al campo y los datos se conservan. */
+    private void siguientePaso() {
+        if (actual == 0) {
+            if (props.isEmpty()) { mostrarError(errProp, "Primero agrega una propiedad en «Mis propiedades y equipos»."); return; }
+            mostrarError(errProp, "");
+        } else if (actual == 1) {
+            String d = desc.getText().toString().trim();
+            if (d.length() < 10) {
+                mostrarError(errDesc, "Describe el problema con al menos 10 caracteres (llevas " + d.length() + ").");
+                desc.requestFocus();
+                return;
+            }
+            mostrarError(errDesc, "");
+        }
+        mostrarPaso(actual + 1);
+    }
+
+    private String textoResumen() {
+        StringBuilder sb = new StringBuilder();
+        if (!props.isEmpty() && spProp.getSelectedItemPosition() >= 0) {
+            sb.append("Dirección: ").append(props.get(spProp.getSelectedItemPosition()).optString("direccion")).append("\n");
+        }
+        Object eq = spEquipo.getSelectedItem();
+        sb.append("Equipo: ").append(eq == null ? "Sin especificar" : eq).append("\n");
+        sb.append("Servicio: ").append(CATEGORIAS_TXT[Math.max(0, spCat.getSelectedItemPosition())]).append("\n");
+        sb.append("Problema: ").append(desc.getText().toString().trim()).append("\n");
+        sb.append(fechaPreferida > 0 ? "Fecha preferida: " + Ui.fecha(fechaPreferida) + " (por confirmar)" : "Sin fecha preferida");
+        String v = ventana.getText().toString().trim();
+        if (!v.isEmpty()) sb.append("\nDisponibilidad: ").append(v);
+        return sb.toString();
     }
 
     @Override
@@ -131,6 +218,7 @@ public class NewRequestActivity extends AppCompatActivity {
         super.onSaveInstanceState(out);
         out.putString("crid", clientRequestId);
         out.putLong("fecha", fechaPreferida);
+        out.putInt("paso", actual);
     }
 
     private void cargarPropiedades() {
@@ -144,9 +232,9 @@ public class NewRequestActivity extends AppCompatActivity {
                     props.add(ps.optJSONObject(i));
                     nombres.add(ps.optJSONObject(i).optString("direccion"));
                 }
+                cargado = true;
                 if (nombres.isEmpty()) {
-                    error.setText(r.ok() ? "Primero agrega una propiedad en «Mis propiedades»." : r.error());
-                    enviar.setEnabled(false);
+                    mostrarError(errProp, r.ok() ? "Primero agrega una propiedad en «Mis propiedades y equipos»." : r.error());
                 }
                 spProp.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, nombres));
             });
@@ -156,7 +244,7 @@ public class NewRequestActivity extends AppCompatActivity {
     private void llenarEquipos(int pos) {
         List<String> eq = new ArrayList<>();
         eq.add("Sin especificar");
-        JSONArray a = props.get(pos).optJSONArray("equipos");
+        JSONArray a = pos >= 0 && pos < props.size() ? props.get(pos).optJSONArray("equipos") : null;
         for (int i = 0; a != null && i < a.length(); i++) eq.add(a.optJSONObject(i).optString("nombre"));
         spEquipo.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, eq));
     }
@@ -182,16 +270,21 @@ public class NewRequestActivity extends AppCompatActivity {
     private void enviar() {
         if (enviando || props.isEmpty()) return;
         String d = desc.getText().toString().trim();
-        if (d.length() < 10) { desc.setError("Describe el problema (mín. 10 caracteres)"); desc.requestFocus(); return; }
+        if (d.length() < 10) {          // defensa: normalmente ya se validó en el paso 2
+            mostrarPaso(1);
+            mostrarError(errDesc, "Describe el problema con al menos 10 caracteres (llevas " + d.length() + ").");
+            return;
+        }
         enviando = true;
         enviar.setEnabled(false);
+        atras.setVisibility(android.view.View.GONE);
         enviar.setText("ENVIANDO…");
         error.setText("");
         JSONObject prop = props.get(spProp.getSelectedItemPosition());
         JSONObject body = new JSONObject();
         try {
             body.put("propertyId", prop.optLong("id")).put("descripcion", d)
-                    .put("categoria", spCat.getSelectedItem()).put("clientRequestId", clientRequestId)
+                    .put("categoria", CATEGORIAS[Math.max(0, spCat.getSelectedItemPosition())]).put("clientRequestId", clientRequestId)
                     .put("zonaHoraria", java.util.TimeZone.getDefault().getID());
             int ie = spEquipo.getSelectedItemPosition();
             JSONArray eqs = prop.optJSONArray("equipos");
@@ -234,12 +327,20 @@ public class NewRequestActivity extends AppCompatActivity {
                     enviar.setText("SOLICITUD ENVIADA ✓");
                     new AlertDialog.Builder(this).setTitle("Solicitud enviada")
                             .setMessage("Nº " + r.cuerpo.optLong("id") + "\nEstado: Recibida por L&C." + fm
-                                    + "\n\nTe avisaremos cuando se programe la visita.")
+                                    + "\n\nLa fecha que elegiste es solo una preferencia. Te avisaremos cuando L&C confirme la cita.")
                             .setCancelable(false).setPositiveButton("Aceptar", (x, y) -> finish()).show();
                 } else {
                     enviar.setEnabled(true);
                     enviar.setText("ENVIAR SOLICITUD");
-                    error.setText(r.error() + (r.codigo == -1 ? " · tus datos siguen aquí; reintenta." : ""));
+                    atras.setVisibility(android.view.View.VISIBLE);
+                    if (r.codigo == 422 || r.codigo == 400) {
+                        // el servidor rechazó un dato: se explica junto al campo y se conserva todo lo escrito
+                        String m = r.error();
+                        if (m.contains("descrip")) { mostrarPaso(1); mostrarError(errDesc, "Describe el problema con al menos 10 caracteres."); }
+                        else error.setText(m);
+                    } else {
+                        error.setText(r.error() + (r.codigo == -1 ? " · tus datos siguen aquí; toca «Enviar» para reintentar sin duplicar." : ""));
+                    }
                 }
             });
         });

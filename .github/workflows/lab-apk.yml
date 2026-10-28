@@ -5,7 +5,7 @@ name: LAB APK (debug)
 on:
   workflow_dispatch:
   push:
-    branches: [qa/hermes-lab-build]
+    branches: [qa/hermes-lab-build, qa/cliente-profesional]
 permissions:
   contents: read
 concurrency:

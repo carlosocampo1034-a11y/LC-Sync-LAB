@@ -1,9 +1,9 @@
 <resources>
-    <color name="lc_rojo">#EB1700</color>
-    <color name="lc_texto">#191919</color>
-    <color name="lc_sec">#6B6B6B</color>
+    <color name="lc_rojo">#E91605</color>
+    <color name="lc_texto">#171717</color>
+    <color name="lc_sec">#62666A</color>
     <color name="lc_borde">#E5E5E5</color>
-    <color name="lc_suave">#F6F6F6</color>
+    <color name="lc_suave">#F1F2F3</color>
     <color name="lc_fondo">#FFFFFF</color>
     <color name="lc_ok">#137333</color>
 </resources>
