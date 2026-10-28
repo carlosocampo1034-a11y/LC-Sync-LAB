@@ -162,6 +162,18 @@ public class SyncWorker extends Worker {
                     if (com.lc.technician.BuildConfig.CLOUD_LOGIN) pulledJobs += marcarReasignadas(db, sb);
                     if (com.lc.technician.BuildConfig.CLOUD_LOGIN) com.lc.technician.sync.Listas.refrescar(getApplicationContext(), false, null);
                     if (com.lc.technician.BuildConfig.CLOUD_LOGIN) {
+                        try {   // una vez: categoría de las órdenes que ya estaban en el teléfono (grupo de precios de la propuesta)
+                            android.content.SharedPreferences flag = getApplicationContext().getSharedPreferences("lc_job_cat", android.content.Context.MODE_PRIVATE);
+                            if (!flag.getBoolean("_backfill", false)) {
+                                retrofit2.Response<List<SupabaseModels.JobRow>> cr = sb.api().getJobsSince(sb.authHeader(), "gte.0", "id,categoria", 1000).execute();
+                                if (cr.isSuccessful() && cr.body() != null) {
+                                    for (SupabaseModels.JobRow r0 : cr.body()) com.lc.technician.sync.Listas.guardarCategoria(getApplicationContext(), r0.id, r0.categoria);
+                                    flag.edit().putBoolean("_backfill", true).apply();
+                                }
+                            }
+                        } catch (Exception ce) { android.util.Log.w(TAG, "categorías: " + ce.getMessage()); }
+                    }
+                    if (com.lc.technician.BuildConfig.CLOUD_LOGIN) {
                         try {   // evidencias nuevas → Storage (el cliente y el Control las ven); nunca borra nada local
                             int fotos = com.lc.technician.sync.PhotoSync.sincronizarNuevas(getApplicationContext(), db, sb);
                             if (fotos > 0) android.util.Log.i(TAG, "fotos subidas: " + fotos);

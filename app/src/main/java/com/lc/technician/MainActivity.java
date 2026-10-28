@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String[] LABELS_CHIPS = {
         "Todos", "Pendiente", "En ruta",
-        "En sitio", "En reparación",
+        "Llegué", "En reparación",
         "Pausado", "Completado"
     };
 
@@ -471,7 +471,8 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < ESTADOS_CHIPS.length; i++) {
             final String estado = ESTADOS_CHIPS[i];
             TextView chip = new TextView(this);
-            chip.setText(LABELS_CHIPS[i]);
+            chip.setText(i == 0 ? LABELS_CHIPS[0]
+                    : com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", ESTADOS_CHIPS[i], LABELS_CHIPS[i]));
             chip.setTextSize(13f);
             chip.setGravity(Gravity.CENTER);
             chip.setPadding(dp16, dp6, dp16, dp6);

@@ -827,42 +827,49 @@ public class JobDetailActivity extends AppCompatActivity {
 
         switch (job.estado != null ? job.estado : "") {
             case Job.STATUS_PENDING:
-                setBotonPrincipal(bg, "VOY EN CAMINO", 0xFFEB1700, true);  // Rojo primario
+                setBotonPrincipal(bg, acc("GO_ENROUTE"), 0xFFEB1700, true);  // Rojo primario
                 if (btnRecordatorio != null) btnRecordatorio.setVisibility(View.VISIBLE);
                 if (btnVerComoCliente != null) btnVerComoCliente.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_EN_ROUTE:
-                setBotonPrincipal(bg, "LLEGUÉ", 0xFF1565C0, true);  // Azul claro
+                setBotonPrincipal(bg, acc("ARRIVED"), 0xFF1565C0, true);  // Azul claro
                 break;
             case Job.STATUS_ARRIVED:
-                setBotonPrincipal(bg, "PEDIR APROBACIÓN", 0xFF0D47A1, true);  // Azul oscuro
-                botonSecundario.setText("INICIAR REPARACIÓN");
+                setBotonPrincipal(bg, acc("ASK_APPROVAL"), 0xFF0D47A1, true);  // Azul oscuro
+                botonSecundario.setText(acc("START_DIRECT"));
                 botonSecundario.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_AWAITING_APPROVAL:
-                setBotonPrincipal(bg, "CLIENTE APROBÓ", 0xFF137333, true);  // Verde
+                setBotonPrincipal(bg, acc("CLIENT_APPROVED"), 0xFF137333, true);  // Verde
                 break;
             case Job.STATUS_EN_REPARACION:
-                setBotonPrincipal(bg, "TERMINÉ", 0xFF137333, true);  // Verde
-                botonSecundario.setText("FALTA REPUESTO");
+                setBotonPrincipal(bg, acc("COMPLETE"), 0xFF137333, true);  // Verde
+                botonSecundario.setText(acc("PART_HOLD"));
                 botonSecundario.setVisibility(View.VISIBLE);
-                botonSecundario2.setText("PAUSAR");
+                botonSecundario2.setText(acc("PAUSE"));
                 botonSecundario2.setVisibility(View.VISIBLE);
                 break;
             case Job.STATUS_PART_HOLD:
-                setBotonPrincipal(bg, "REANUDAR REPARACIÓN", 0xFFB25E00, true);  // Ámbar
+                setBotonPrincipal(bg, acc("RESUME"), 0xFFB25E00, true);  // Ámbar
                 break;
             case Job.STATUS_ON_HOLD:
-                setBotonPrincipal(bg, "REANUDAR REPARACIÓN", 0xFFB25E00, true);  // Ámbar
+                setBotonPrincipal(bg, acc("RESUME"), 0xFFB25E00, true);  // Ámbar
                 break;
             default:
-                setBotonPrincipal(bg, "COMPLETADO", 0xFF767676, false);
+                setBotonPrincipal(bg, com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", Job.STATUS_DONE, "Completado").toUpperCase(java.util.Locale.ROOT), 0xFF767676, false);
                 btnCompartirReporte.setVisibility(View.VISIBLE);
                 if (btnFactura != null) btnFactura.setVisibility(View.VISIBLE);
                 if (btnCompartirCliente != null) btnCompartirCliente.setVisibility(View.VISIBLE);
                 if (btnVerComoCliente != null) btnVerComoCliente.setVisibility(View.VISIBLE);
                 break;
         }
+    }
+
+    /** Texto en mayúsculas de una acción del menú (editable en Control → Listas editables → Acciones del menú de estado). */
+    private String acc(String id) {
+        com.lc.technician.sync.Listas.Lista l = com.lc.technician.sync.Listas.lista(this, "job_actions.list", ACCIONES_RESPALDO, null);
+        int ix = l.indexOf(id);
+        return (ix >= 0 ? l.labels[ix] : id).toUpperCase(java.util.Locale.ROOT);
     }
 
     private void setBotonPrincipal(GradientDrawable bg, String texto, int color, boolean enabled) {

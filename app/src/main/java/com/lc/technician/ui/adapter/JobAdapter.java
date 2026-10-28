@@ -42,7 +42,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         h.direccion.setText(job.direccion);
         h.hora.setText(job.horaConFecha());
         h.descripcion.setText(job.descripcion);
-        h.estado.setText(job.estado);
+        h.estado.setText(com.lc.technician.sync.Listas.etiqueta(h.estado.getContext(), "order_states.list", job.estado, job.estado));
 
         int color;
         switch (job.estado != null ? job.estado : "") {

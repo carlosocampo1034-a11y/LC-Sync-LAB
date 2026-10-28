@@ -621,7 +621,10 @@
     "refrigerants.list": "Refrigerantes (Técnico)", "voltages.list": "Voltajes (Técnico)", "phases.list": "Fases eléctricas (Técnico)",
     "system_roles.list": "Parte del sistema (Técnico)", "lifecycle_statuses.list": "Ciclo de vida del equipo (Técnico)",
     "inspection_types.list": "Tipos de medición (Técnico)", "inspection_units.list": "Unidades (Técnico)", "inspection_resolutions.list": "Resoluciones de hallazgo (Técnico)",
-    "finding_areas.list": "Áreas de hallazgo (Técnico)", "payment_methods.list": "Métodos de pago (Técnico)" };
+    "finding_areas.list": "Áreas de hallazgo (Técnico)", "payment_methods.list": "Métodos de pago (Técnico)",
+    "job_actions.list": "Acciones del menú de estado (Técnico, solo textos)", "photo_categories.list": "Categorías de foto (Técnico, solo textos)",
+    "photo_sources.list": "Origen de la foto (Técnico, solo textos)", "share_channels.list": "Canales para avisar al cliente (Técnico, solo textos)",
+    "work_item_types.list": "Tipos de partida (Técnico, solo textos)" };
   const idDesde = (texto, listaKey) => {
     const base = texto.trim();
     return ["categories.list", "specialties.list"].includes(listaKey)
