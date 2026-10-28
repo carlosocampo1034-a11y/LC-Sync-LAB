@@ -72,10 +72,19 @@ public final class ColaCierre {
                 Map<String, Object> body = new java.util.HashMap<>();
                 for (java.util.Iterator<String> it = j.keys(); it.hasNext(); ) { String k = it.next(); body.put(k, j.get(k)); }
                 retrofit2.Response<okhttp3.ResponseBody> r = sb.api().closurePost(sb.authHeader(), jobId, body).execute();
-                if (r.isSuccessful() || (r.code() >= 400 && r.code() < 500)) {   // aceptado o rechazo definitivo: ya no se reintenta
+                if (r.isSuccessful()) {                                              // aceptado: sale de la cola
                     //noinspection ResultOfMethodCallIgnored
                     f.delete();
-                    if (r.isSuccessful()) enviados++;
+                    enviados++;
+                } else if (r.code() >= 400 && r.code() < 500) {
+                    String cuerpo = r.errorBody() != null ? r.errorBody().string() : "";
+                    // el diagnóstico o la foto todavía no llegaron al servidor (se suben con la sincronización): NO se borra la firma,
+                    // se vuelve a intentar cuando terminen de subirse
+                    boolean faltaPrevio = r.code() == 422 && (cuerpo.contains("diagnostico_corto") || cuerpo.contains("sin_fotos"));
+                    if (!faltaPrevio) {   // rechazo definitivo (p. ej. la orden ya no está en reparación)
+                        //noinspection ResultOfMethodCallIgnored
+                        f.delete();
+                    }
                 }
             }
         } catch (Exception e) {

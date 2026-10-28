@@ -63,6 +63,7 @@ public final class Red {
 
     private static void cambio(Application app, boolean ahora) {
         disponible = ahora;
+        Log.i(TAG, ahora ? "red disponible (cambio de red)" : "red perdida");   // sin datos personales
         synchronized (cerrojo) { cerrojo.notifyAll(); }
         for (Runnable r : alCambiar) { try { r.run(); } catch (Exception ignored) { } }   // las conexiones de la red anterior ya no sirven
         avisar();
@@ -103,7 +104,7 @@ public final class Red {
         ui.postDelayed(() -> fondo.execute(() -> {
             sondaProgramada = false;
             if (fallos == 0) return;
-            if (sonda()) { for (Runnable r : alVolver) { try { r.run(); } catch (Exception ignored) { } } }
+            if (sonda()) { Log.i(TAG, "servidor responde de nuevo: se vacian las colas"); for (Runnable r : alVolver) { try { r.run(); } catch (Exception ignored) { } } }
             else programarSonda();
         }), 5000);
     }
