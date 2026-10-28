@@ -57,18 +57,6 @@ public class ConfiguracionActivity extends AppCompatActivity {
     private static final SimpleDateFormat BACKUP_FMT =
             new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US);
 
-    private Button btnHacerBackup;
-    private TextView tvEstadoBackup;
-    private TextView tvUltimoBackup;
-
-    private Button btnExportarBackup;
-    private Button btnRestaurarBackup;
-    private Button btnCompartirBackup;
-    private TextView tvUltimoBackupDB;
-    private TextView tvEstadoBackupDB;
-
-    private ActivityResultLauncher<String[]> pickFileLauncher;
-
     private TextView tvRamUsada;
     private TextView tvRamMax;
     private TextView tvCacheJobs;
@@ -122,21 +110,6 @@ public class ConfiguracionActivity extends AppCompatActivity {
 
         ((ImageView) findViewById(R.id.btnAtras)).setOnClickListener(v -> finish());
 
-        btnHacerBackup = findViewById(R.id.btnHacerBackup);
-        tvEstadoBackup = findViewById(R.id.tvEstadoBackup);
-        tvUltimoBackup = findViewById(R.id.tvUltimoBackup);
-
-        btnExportarBackup  = findViewById(R.id.btnExportarBackup);
-        btnRestaurarBackup = findViewById(R.id.btnRestaurarBackup);
-        btnCompartirBackup = findViewById(R.id.btnCompartirBackup);
-        tvUltimoBackupDB   = findViewById(R.id.tvUltimoBackupDB);
-        tvEstadoBackupDB   = findViewById(R.id.tvEstadoBackupDB);
-
-        // File picker for restore
-        pickFileLauncher = registerForActivityResult(
-                new ActivityResultContracts.OpenDocument(),
-                uri -> { if (uri != null) restaurarDesdeUri(uri); });
-
         TextView tvVersion = findViewById(R.id.tvVersion);
         String versionName = "?";
         try {
@@ -186,15 +159,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
             btnGenerarTarjeta.setOnClickListener(v -> mostrarDialogoGenerarTarjeta());
         }
 
-        cargarUltimoBackup();
-        cargarUltimoBackupDB();
         actualizarRendimiento();
-
-        btnHacerBackup.setOnClickListener(v -> hacerBackup());
-        btnExportarBackup.setOnClickListener(v -> exportarBackupDB());
-        btnRestaurarBackup.setOnClickListener(v -> pickFileLauncher.launch(
-                new String[]{"application/octet-stream", "*/*"}));
-        btnCompartirBackup.setOnClickListener(v -> compartirBackupDB());
 
         // 27A — Partes e Inventario
         View btnPartes = findViewById(R.id.btnPartesInventario);
@@ -614,225 +579,6 @@ public class ConfiguracionActivity extends AppCompatActivity {
                 });
             }
         });
-    }
-
-    // ── BACKUP DE CARPETA EXISTENTE ──────────────────────────────────────────
-
-    private void cargarUltimoBackup() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        long ts = prefs.getLong("ultimo_backup_ts", 0);
-        if (ts == 0) {
-            tvUltimoBackup.setText("Sin backups aún.");
-        } else {
-            String fecha = FMT.format(new Date(ts));
-            float mb = prefs.getFloat("ultimo_backup_size_mb", 0f);
-            tvUltimoBackup.setText(fecha + "  ·  " + String.format(Locale.US, "%.1f MB", mb));
-        }
-    }
-
-    private void hacerBackup() {
-        btnHacerBackup.setEnabled(false);
-        tvEstadoBackup.setText("Respaldando datos…");
-        tvEstadoBackup.setVisibility(View.VISIBLE);
-
-        new Thread(() -> {
-            try {
-                String ts = String.valueOf(System.currentTimeMillis());
-                File destDir = new File(getExternalFilesDir(null), "backups/backup_" + ts);
-                destDir.mkdirs();
-
-                File dbFile = getDatabasePath("lc_database");
-                for (String suf : new String[]{"", "-shm", "-wal"}) {
-                    File src = new File(dbFile.getPath() + suf);
-                    if (src.exists()) copyFile(src, new File(destDir, src.getName()));
-                }
-
-                File fotosDir = new File(getExternalFilesDir(null), "fotos");
-                if (fotosDir.exists()) copyDir(fotosDir, new File(destDir, "fotos"));
-
-                File reportesDir = new File(getExternalFilesDir(null), "reportes");
-                if (reportesDir.exists()) copyDir(reportesDir, new File(destDir, "reportes"));
-
-                long bytes = dirSize(destDir);
-                float mb = bytes / (1024f * 1024f);
-
-                SharedPreferences.Editor ed = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-                ed.putLong("ultimo_backup_ts", System.currentTimeMillis());
-                ed.putFloat("ultimo_backup_size_mb", mb);
-                ed.putString("ultimo_backup_path", destDir.getAbsolutePath());
-                ed.apply();
-
-                runOnUiThread(() -> {
-                    btnHacerBackup.setEnabled(true);
-                    tvEstadoBackup.setText(String.format(Locale.US, "✓ Backup guardado: %.1f MB", mb));
-                    cargarUltimoBackup();
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    btnHacerBackup.setEnabled(true);
-                    tvEstadoBackup.setText("✕ Error: " + e.getMessage());
-                });
-            }
-        }).start();
-    }
-
-    // ── BACKUP DB ÚNICO ARCHIVO ──────────────────────────────────────────────
-
-    private void cargarUltimoBackupDB() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        long ts = prefs.getLong("ultimo_backup_db_ts", 0);
-        if (ts == 0) {
-            tvUltimoBackupDB.setText("Sin backups DB aún.");
-        } else {
-            String fecha = FMT.format(new Date(ts));
-            float mb = prefs.getFloat("ultimo_backup_db_mb", 0f);
-            tvUltimoBackupDB.setText("Último backup: " + fecha + " · "
-                    + String.format(Locale.US, "%.1f MB", mb));
-        }
-    }
-
-    private void exportarBackupDB() {
-        btnExportarBackup.setEnabled(false);
-        tvEstadoBackupDB.setText("Exportando DB…");
-        tvEstadoBackupDB.setVisibility(View.VISIBLE);
-
-        new Thread(() -> {
-            try {
-                String stamp = BACKUP_FMT.format(new Date());
-                File dstDir = new File(getExternalFilesDir(
-                        android.os.Environment.DIRECTORY_DOWNLOADS), "");
-                dstDir.mkdirs();
-                File dst = new File(dstDir, "lc_backup_" + stamp + ".db");
-
-                // Copy main DB + WAL/SHM for consistency
-                File dbSrc = getDatabasePath("lc_database");
-                copyFile(dbSrc, dst);
-                // Also copy WAL if it exists so restore includes latest transactions
-                File walSrc = new File(dbSrc.getPath() + "-wal");
-                if (walSrc.exists() && walSrc.length() > 0) {
-                    copyFile(walSrc, new File(dstDir, "lc_backup_" + stamp + ".db-wal"));
-                }
-
-                long bytes = dst.length();
-                float mb = bytes / (1024f * 1024f);
-
-                SharedPreferences.Editor ed = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-                ed.putLong("ultimo_backup_db_ts", System.currentTimeMillis());
-                ed.putFloat("ultimo_backup_db_mb", mb);
-                ed.putString("ultimo_backup_db_path", dst.getAbsolutePath());
-                ed.apply();
-
-                runOnUiThread(() -> {
-                    btnExportarBackup.setEnabled(true);
-                    tvEstadoBackupDB.setVisibility(View.GONE);
-                    cargarUltimoBackupDB();
-                    new AlertDialog.Builder(this)
-                            .setTitle("✓ Backup exportado")
-                            .setMessage("Archivo: " + dst.getName()
-                                    + "\nRuta: " + dst.getAbsolutePath()
-                                    + "\nTamaño: " + String.format(Locale.US, "%.2f MB", mb))
-                            .setPositiveButton("OK", null)
-                            .setNeutralButton("Compartir", (d, w) -> compartirArchivo(dst))
-                            .show();
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    btnExportarBackup.setEnabled(true);
-                    tvEstadoBackupDB.setText("✕ " + e.getMessage());
-                    tvEstadoBackupDB.setVisibility(View.VISIBLE);
-                });
-            }
-        }).start();
-    }
-
-    private void restaurarDesdeUri(Uri uri) {
-        new AlertDialog.Builder(this)
-                .setTitle("Restaurar backup")
-                .setMessage("¿Reemplazar la base de datos actual con el archivo seleccionado? "
-                        + "Se perderán los cambios no respaldados.")
-                .setPositiveButton("Restaurar", (d, w) -> ejecutarRestauracion(uri))
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
-
-    private void ejecutarRestauracion(Uri uri) {
-        tvEstadoBackupDB.setText("Restaurando…");
-        tvEstadoBackupDB.setVisibility(View.VISIBLE);
-        btnRestaurarBackup.setEnabled(false);
-
-        new Thread(() -> {
-            try {
-                // Close Room database
-                LcDatabase.getInstance(getApplicationContext()).close();
-
-                File dbDst = getDatabasePath("lc_database");
-                dbDst.getParentFile().mkdirs();
-
-                // Delete WAL/SHM
-                new File(dbDst.getPath() + "-wal").delete();
-                new File(dbDst.getPath() + "-shm").delete();
-
-                // Copy from URI
-                try (InputStream in = getContentResolver().openInputStream(uri);
-                     OutputStream out = new FileOutputStream(dbDst)) {
-                    if (in == null) throw new IOException("No se pudo abrir el archivo");
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                }
-
-                runOnUiThread(() -> {
-                    btnRestaurarBackup.setEnabled(true);
-                    tvEstadoBackupDB.setVisibility(View.GONE);
-                    Toast.makeText(this, "Backup restaurado. Reiniciá la app.",
-                            Toast.LENGTH_LONG).show();
-                    // Relaunch app
-                    Intent intent = getBaseContext().getPackageManager()
-                            .getLaunchIntentForPackage(getBaseContext().getPackageName());
-                    if (intent != null) {
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                | Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                        android.os.Process.killProcess(android.os.Process.myPid());
-                    }
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    btnRestaurarBackup.setEnabled(true);
-                    tvEstadoBackupDB.setText("✕ " + e.getMessage());
-                    tvEstadoBackupDB.setVisibility(View.VISIBLE);
-                });
-            }
-        }).start();
-    }
-
-    private void compartirBackupDB() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        String path = prefs.getString("ultimo_backup_db_path", null);
-        if (path == null) {
-            Toast.makeText(this, "Primero exportá un backup", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        File f = new File(path);
-        if (!f.exists()) {
-            Toast.makeText(this, "Archivo no encontrado. Exportá uno nuevo.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        compartirArchivo(f);
-    }
-
-    private void compartirArchivo(File f) {
-        try {
-            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", f);
-            Intent share = new Intent(Intent.ACTION_SEND);
-            share.setType("application/octet-stream");
-            share.putExtra(Intent.EXTRA_STREAM, uri);
-            share.putExtra(Intent.EXTRA_SUBJECT, "LC Backup " + f.getName());
-            share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(share, "Compartir backup"));
-        } catch (Exception e) {
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
     }
 
     // ── UTILS ────────────────────────────────────────────────────────────────

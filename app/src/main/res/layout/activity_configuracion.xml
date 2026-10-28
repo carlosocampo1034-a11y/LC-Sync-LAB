@@ -56,7 +56,7 @@
             android:padding="20dp">
 
             <!-- ═══════════════════════════════════════════════════════ -->
-            <!-- SECCIÓN 1: SISTEMA — versión + BACKUP primario          -->
+            <!-- SECCIÓN 1: SISTEMA — versión          -->
             <!-- ═══════════════════════════════════════════════════════ -->
             <TextView
                 android:layout_width="match_parent"
@@ -75,29 +75,6 @@
                 android:layout_marginTop="14dp"
                 android:textColor="@color/lc_text_secondary"
                 android:textSize="14sp" />
-
-            <!-- HACER BACKUP — botón primario sólido -->
-            <Button
-                android:id="@+id/btnHacerBackup"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_button_primary"
-                android:text="HACER BACKUP AHORA"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:textSize="14sp"
-                android:letterSpacing="0.03"
-                android:stateListAnimator="@null" />
-
-            <TextView
-                android:id="@+id/tvEstadoBackup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textColor="@color/lc_text"
-                android:textSize="14sp"
-                android:visibility="gone" />
 
             <!-- ═══════════════════════════════════════════════════════ -->
             <!-- SECCIÓN 2: SINCRONIZACIÓN — inmediatamente después       -->
@@ -219,107 +196,6 @@
             </LinearLayout>
 
             <!-- ═══════════════════════════════════════════════════════ -->
-            <!-- SECCIÓN 3: ÚLTIMO BACKUP                                -->
-            <!-- ═══════════════════════════════════════════════════════ -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:text="ÚLTIMO BACKUP"
-                android:textColor="@color/lc_text_tertiary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08" />
-
-            <TextView
-                android:id="@+id/tvUltimoBackup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:textColor="@color/lc_text_secondary"
-                android:textSize="14sp" />
-
-            <!-- ═══════════════════════════════════════════════════════ -->
-            <!-- SECCIÓN 4: BACKUP Y RESTAURACIÓN                        -->
-            <!-- ═══════════════════════════════════════════════════════ -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:text="BACKUP Y RESTAURACIÓN"
-                android:textColor="@color/lc_text_tertiary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="@drawable/bg_surface">
-
-                <TextView
-                    android:id="@+id/tvUltimoBackupDB"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/lc_text_secondary"
-                    android:textSize="12sp"
-                    android:text="Sin backups DB aún." />
-
-                <!-- EXPORTAR BACKUP — outline (secundario) -->
-                <Button
-                    android:id="@+id/btnExportarBackup"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="14dp"
-                    android:background="@drawable/bg_btn_outline_red"
-                    android:text="EXPORTAR BACKUP"
-                    android:textColor="@color/lc_primary"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:letterSpacing="0.03"
-                    android:stateListAnimator="@null" />
-
-                <!-- RESTAURAR BACKUP — secundario neutro -->
-                <Button
-                    android:id="@+id/btnRestaurarBackup"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_chip_inactive"
-                    android:text="RESTAURAR BACKUP"
-                    android:textColor="@color/lc_text"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:letterSpacing="0.03"
-                    android:stateListAnimator="@null" />
-
-                <!-- COMPARTIR BACKUP — secundario neutro -->
-                <Button
-                    android:id="@+id/btnCompartirBackup"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_chip_inactive"
-                    android:text="COMPARTIR BACKUP"
-                    android:textColor="@color/lc_text"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:letterSpacing="0.03"
-                    android:stateListAnimator="@null" />
-
-                <TextView
-                    android:id="@+id/tvEstadoBackupDB"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:textSize="13sp"
-                    android:textColor="@color/lc_text"
-                    android:visibility="gone" />
-            </LinearLayout>
-
             <!-- ═══════════════════════════════════════════════════════ -->
             <!-- SECCIÓN 5: ADMINISTRACIÓN                               -->
             <!-- ═══════════════════════════════════════════════════════ -->
