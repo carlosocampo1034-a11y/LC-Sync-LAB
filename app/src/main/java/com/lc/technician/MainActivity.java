@@ -610,7 +610,7 @@ public class MainActivity extends AppCompatActivity {
         if (net == null || !net.isConnected()) {
             if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
             android.widget.Toast.makeText(this,
-                    "Sin conexión · cambios en cola", android.widget.Toast.LENGTH_SHORT).show();
+                    "Reconectando… tus cambios están en cola", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
         androidx.work.OneTimeWorkRequest req = new androidx.work.OneTimeWorkRequest.Builder(
@@ -631,7 +631,7 @@ public class MainActivity extends AppCompatActivity {
                                         android.widget.Toast.LENGTH_SHORT).show();
                             } else {
                                 android.widget.Toast.makeText(this,
-                                        "Sin conexión con el servidor",
+                                        "Reconectando con el servidor…",
                                         android.widget.Toast.LENGTH_SHORT).show();
                             }
                         });

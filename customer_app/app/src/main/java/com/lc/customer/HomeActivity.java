@@ -148,7 +148,7 @@ public class HomeActivity extends AppCompatActivity {
             return;
         }
         if (errorCarga != null) {
-            p.contenido.addView(Ui.texto(this, "Sin conexión: mostrando lo último guardado.", 13, R.color.lc_rojo, false));
+            p.contenido.addView(Ui.texto(this, "Reconectando… mostrando lo último que se descargó.", 13, R.color.lc_rojo, false));
         }
         if (tab == 0) pintarInicio();
         else if (tab == 1) pintarSolicitudes();
@@ -324,6 +324,7 @@ public class HomeActivity extends AppCompatActivity {
         android.widget.Button salir = Ui.boton(this, c, "Cerrar sesión", false);
         salir.setOnClickListener(v -> {
             Api.cerrarSesion(this);
+            ColaCliente.borrarTodo(this);   // la cola pertenece al usuario que cerró sesión: no se envía con otra cuenta
             startActivity(new Intent(this, LoginActivity.class));
             finish();
         });

@@ -47,7 +47,7 @@ public class CierreActivity extends AppCompatActivity {
 
     private long jobId;
     private int diagLen, fotos;
-    private boolean cierreRegistrado, publicando;
+    private boolean cierreRegistrado, publicando, enCola;
     private String resumenCierre = "";
 
     private LinearLayout checklist, panelFirma, panelListo;
@@ -255,6 +255,7 @@ public class CierreActivity extends AppCompatActivity {
     }
 
     private void publicar(Map<String, Object> body) {
+        enCola = false;
         String error = null;
         JSONObject ok = null;
         try {
@@ -270,15 +271,21 @@ public class CierreActivity extends AppCompatActivity {
                 if (r.isSuccessful()) ok = o;
                 else error = o.optString("mensaje", o.optString("error", "No se pudo registrar (" + r.code() + ")"));
             }
+        } catch (java.io.IOException e) {
+            // La red falló aun después de los reintentos: se guarda y se envía sola cuando vuelva la conexión
+            ColaCierre.agregar(this, jobId, body);
+            enCola = true;
         } catch (Exception e) {
-            error = "Sin conexión con L&C. Tus datos siguen aquí; intenta de nuevo.";
+            error = "No se pudo registrar. Intenta de nuevo.";
         }
         final String msg = error;
+        final boolean encolado = enCola;
         final boolean fueFirma = "FIRMA".equals(body.get("kind"));
         runOnUiThread(() -> {
             publicando = false;
             btnGuardar.setEnabled(true);
             btnNegativa.setEnabled(true);
+            if (encolado) { esperarEnvio(); return; }
             if (msg != null) { aviso.setText(msg); return; }
             cierreRegistrado = true;
             resumenCierre = fueFirma ? "Firmó " + body.get("nombre") : "El cliente no quiso firmar · registrado ahora";
@@ -286,6 +293,24 @@ public class CierreActivity extends AppCompatActivity {
             pintar();
             consultarCierre();   // trae el estado del correo
         });
+    }
+
+    /** El envío quedó en cola: se avisa con calma y se vigila hasta que el servidor lo tenga (sin errores en rojo). */
+    private void esperarEnvio() {
+        btnGuardar.setEnabled(false);
+        btnNegativa.setEnabled(false);
+        aviso.setText("Guardado en el teléfono. Se enviará solo cuando vuelva la conexión.");
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        h.postDelayed(new Runnable() {
+            @Override public void run() {
+                if (isFinishing() || cierreRegistrado) return;
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    ColaCierre.vaciar(CierreActivity.this);   // si ya hay red, lo envía ahora
+                    consultarCierre();                        // y comprueba si ya está en el servidor
+                });
+                h.postDelayed(this, 5000);
+            }
+        }, 3000);
     }
 
     private void terminar(String accion) {

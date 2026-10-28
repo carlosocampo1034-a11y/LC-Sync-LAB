@@ -340,6 +340,18 @@ public class NewRequestActivity extends AppCompatActivity {
         Executors.newSingleThreadExecutor().execute(() -> {
             // mismo clientRequestId en cada reintento: el servidor devuelve la misma solicitud, no otra
             Api.Respuesta r = Api.post(this, "/customer/requests", body);
+            if (r.codigo == 202 && r.cuerpo != null && r.cuerpo.optBoolean("enCola")) {
+                // sin red incluso tras los reintentos: la solicitud quedó guardada y se envía sola al volver la conexión
+                runOnUiThread(() -> {
+                    enviando = false;
+                    enviar.setText("SOLICITUD GUARDADA ✓");
+                    new AlertDialog.Builder(this).setTitle("Solicitud guardada")
+                            .setMessage("Ahora mismo no hay conexión. Tu solicitud quedó guardada en el teléfono y se enviará sola "
+                                    + "cuando vuelva la red; no tienes que hacer nada más.\n\nLas fotos puedes agregarlas después desde el detalle.")
+                            .setCancelable(false).setPositiveButton("Aceptar", (x, y) -> finish()).show();
+                });
+                return;
+            }
             String fotoMsg = "";
             if (r.ok() && foto != null) {
                 byte[] datos = leer(foto);

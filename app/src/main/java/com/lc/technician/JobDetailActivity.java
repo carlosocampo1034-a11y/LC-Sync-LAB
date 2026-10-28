@@ -145,8 +145,20 @@ public class JobDetailActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), res -> {
                 if (res.getResultCode() != RESULT_OK || res.getData() == null || job == null) return;
                 String accion = res.getData().getStringExtra(CierreActivity.RESULT_ACCION);
-                if ("COMPLETE".equals(accion)) aplicarEstado(Job.STATUS_DONE, "Trabajo completado");
-                else if ("PART_HOLD".equals(accion)) aplicarEstado(Job.STATUS_PART_HOLD, "Part hold — esperando repuesto");
+                if ("COMPLETE".equals(accion)) {
+                    aplicarEstado(Job.STATUS_DONE, "Trabajo completado");
+                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("Trabajo completado")
+                            .setMessage("La orden Nº " + job.id + " quedó cerrada con diagnóstico, foto y firma.\n\n"
+                                    + "La factura se genera automáticamente y el reporte del servicio queda registrado en la orden.")
+                            .setPositiveButton("Entendido", null).show();
+                } else if ("PART_HOLD".equals(accion)) {
+                    aplicarEstado(Job.STATUS_PART_HOLD, "Part hold — esperando repuesto");
+                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("Repuesto solicitado")
+                            .setMessage("La orden Nº " + job.id + " quedó en espera de repuesto, con el diagnóstico, la foto y la firma registrados.")
+                            .setPositiveButton("Entendido", null).show();
+                }
             });
     private final ActivityResultLauncher<Uri> launcherCamara =
             registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {

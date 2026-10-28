@@ -55,7 +55,16 @@ final class CloudApi {
             }
             if ("POST".equals(metodo) && "/customer/requests".equals(ruta)) return crearSolicitud(c, body);
             if ("POST".equals(metodo) && ruta.matches("/customer/requests/\\d+/pay-test")) {   // pago de PRUEBA (sin cobro real)
-                return lcApi(c, "POST", "/orders/" + ruta.split("/")[3] + "/pay-test", new JSONObject());
+                // un identificador único por intento de pago: si se reenvía, el servidor devuelve el mismo pago, no otro
+                JSONObject pago = new JSONObject().put("idempotencyKey",
+                        body != null && body.has("idempotencyKey") ? body.optString("idempotencyKey") : "pago-" + java.util.UUID.randomUUID());
+                String rutaPago = "/orders/" + ruta.split("/")[3] + "/pay-test";
+                Api.Respuesta rp = lcApi(c, "POST", rutaPago, pago);
+                if (rp.codigo == -1) {
+                    ColaCliente.agregar(c, "POST", rutaPago, pago);
+                    return new Api.Respuesta(202, new JSONObject().put("enCola", true));
+                }
+                return rp;
             }
             // Mensajes, fotos y avisos de la orden (lc-api qa-8)
             if (ruta.matches("/customer/requests/\\d+/(messages|photos)(\\?since=\\d+)?")) {
@@ -74,7 +83,17 @@ final class CloudApi {
                 return r.ok() ? new Api.Respuesta(200, new JSONObject().put("avisos", r.cuerpo.optJSONArray("items"))) : r;
             }
             // La propuesta del técnico se decide (aprobar con firma o rechazar) en lc-api; el servidor valida todo
-            if ("POST".equals(metodo) && ruta.matches("/customer/proposals/\\d+/decide")) return lcApi(c, "POST", ruta, body);
+            if ("POST".equals(metodo) && ruta.matches("/customer/proposals/\\d+/decide")) {
+                Api.Respuesta rd = lcApi(c, "POST", ruta, body);
+                if (rd.codigo == -1) {
+                    ColaCliente.agregar(c, "POST", ruta, body);
+                    return new Api.Respuesta(202, new JSONObject().put("enCola", true));
+                }
+                // la primera respuesta se perdió pero el servidor sí la procesó: el reintento recibe «ya decidida» = éxito
+                if (rd.codigo == 409 && Boolean.TRUE.equals(huboReintento.get()) && rd.cuerpo != null
+                        && rd.cuerpo.optString("error").contains("ya fue decidida")) return new Api.Respuesta(200, new JSONObject().put("replay", true));
+                return rd;
+            }
         } catch (Exception e) {
             android.util.Log.w("LcCloud", metodo + " " + ruta + " → " + e);   // diagnóstico: solo método, ruta y tipo de error
             return new Api.Respuesta(-1, null);
@@ -109,7 +128,7 @@ final class CloudApi {
                 .put("password", body.optString("password"));
         Api.Respuesta r = http("POST", BuildConfig.SUPABASE_URL + "/auth/v1/token?grant_type=password", null, cred);
         if (!r.ok()) return new Api.Respuesta(r.codigo == -1 ? -1 : 401, new JSONObject().put("error",
-                r.codigo == -1 ? "Sin conexión con L&C" : "Correo o contraseña incorrectos"));
+                r.codigo == -1 ? "Reconectando… intenta de nuevo en unos segundos" : "Correo o contraseña incorrectos"));
         return sesionDesde(c, r.cuerpo, body.optString("username").trim());
     }
 
@@ -121,7 +140,7 @@ final class CloudApi {
         if (!r.ok()) {
             String m = r.cuerpo != null ? (r.cuerpo.has("msg") ? r.cuerpo.optString("msg") : r.cuerpo.optString("message")) : "";
             String ml = m.toLowerCase(java.util.Locale.ROOT);
-            String texto = r.codigo == -1 ? "Sin conexión con L&C"
+            String texto = r.codigo == -1 ? "Reconectando… intenta de nuevo en unos segundos"
                     : ml.contains("invalid") && ml.contains("email") ? "Ese correo no es válido. Revísalo o usa otro."
                     : ml.contains("already") || ml.contains("registered") ? "Ese correo ya tiene una cuenta. Prueba a iniciar sesión."
                     : ml.contains("password") ? "La contraseña no cumple los requisitos (mínimo 8 caracteres)."
@@ -204,6 +223,10 @@ final class CloudApi {
         String tel = local(c).getString("telefono", "");
         if (!tel.isEmpty()) orden.put("telefono", tel);
         Api.Respuesta r = lcApi(c, "POST", "/orders", orden);
+        if (r.codigo == -1) {   // sin red aun tras los reintentos: se guarda y se envía sola (mismo request_id: no duplica)
+            ColaCliente.agregar(c, "POST", "/orders", orden);
+            return new Api.Respuesta(202, new JSONObject().put("enCola", true));
+        }
         return r.ok() ? new Api.Respuesta(r.codigo, new JSONObject().put("id", r.cuerpo.optLong("id"))) : r;
     }
 
@@ -382,16 +405,40 @@ final class CloudApi {
         return new Api.Respuesta(404, new JSONObject().put("error", "Propiedad no encontrada"));
     }
 
+    /** Reenvío de un envío en cola (la sesión y la renovación del token las maneja lcApi). */
+    static Api.Respuesta reenviar(Context c, String metodo, String ruta, JSONObject body) throws Exception {
+        return lcApi(c, metodo, ruta, body);
+    }
+
     // ── HTTP ────────────────────────────────────────────────────────────────────────────────────
 
     /** Respuestas JSON; un array se entrega como {"items": [...]}. */
+    /** Marca de que esta llamada necesitó más de un intento (la primera respuesta pudo perderse aunque el servidor la procesara). */
+    static final ThreadLocal<Boolean> huboReintento = new ThreadLocal<>();
+
+    /** Reintenta ante fallos de red: hasta 3 intentos con espera exponencial (1 s, 2 s) y esperando a que vuelva la red. */
     private static Api.Respuesta http(String metodo, String url, String token, JSONObject body) {
+        huboReintento.set(false);
+        Api.Respuesta r = null;
+        for (int intento = 1; intento <= 3; intento++) {
+            r = httpUnaVez(metodo, url, token, body);
+            if (r.codigo != -1) { Red.exito(); return r; }
+            Red.fallo();
+            if (intento == 3) break;
+            huboReintento.set(true);
+            try { Thread.sleep(1000L << (intento - 1)); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+            Red.esperarRed(8000);
+        }
+        return r;
+    }
+
+    private static Api.Respuesta httpUnaVez(String metodo, String url, String token, JSONObject body) {
         HttpURLConnection con = null;
         try {
             con = (HttpURLConnection) new URL(url).openConnection();
             con.setRequestMethod(metodo);
-            con.setConnectTimeout(10000);
-            con.setReadTimeout(20000);
+            con.setConnectTimeout(8000);
+            con.setReadTimeout(15000);
             con.setRequestProperty("Accept", "application/json");
             con.setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY);
             if (token != null) con.setRequestProperty("Authorization", "Bearer " + token);

@@ -14,8 +14,8 @@ android {
         applicationId "com.lc.customer.lab"
         minSdk 24
         targetSdk 36
-        versionCode 8
-        versionName "0.5.0"
+        versionCode 9
+        versionName "0.5.1"
         buildConfigField "String", "API_BASE", "\"http://127.0.0.1:5055/api/v2\""
         // Vacío fuera de QA: LAB y release siguen hablando con el backend de laboratorio.
         buildConfigField "String", "SUPABASE_URL", "\"\""

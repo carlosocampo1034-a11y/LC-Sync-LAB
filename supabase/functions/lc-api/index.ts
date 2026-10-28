@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-11" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-12" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
@@ -727,7 +727,9 @@ Deno.serve(async (req) => {
     const mpay = route.match(/^\/(?:orders|jobs)\/(\d+)\/pay-test$/);
     if (mpay && req.method === "POST") {
       if (user.role !== "CUSTOMER") return out(403, { error: "role_denied" });
-      const { data, error } = await db.rpc("lc_pay_test", { p_actor: user.id, p_job: Number(mpay[1]) });
+      // Clave de idempotencia: un id único por intento de pago (cuerpo o cabecera). Reenviarla no cobra dos veces.
+      const clave = txt((body as Record<string, unknown> | null)?.idempotencyKey, 100) || txt(req.headers.get("idempotency-key"), 100) || null;
+      const { data, error } = await db.rpc("lc_pay_test", { p_actor: user.id, p_job: Number(mpay[1]), p_key: clave });
       return error ? out(500, { error: "pay_failed" }) : fromRpc(data, out);
     }
 

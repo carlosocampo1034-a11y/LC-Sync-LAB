@@ -381,9 +381,13 @@ public class RequestDetailActivity extends AppCompatActivity {
                         .setMessage(String.format(java.util.Locale.US, "Se registrará un pago de prueba de $%.2f.\nNo se cobra nada a tu tarjeta.", aPagar))
                         .setNegativeButton("Cancelar", null)
                         .setPositiveButton("Pagar (prueba)", (d, w) -> Executors.newSingleThreadExecutor().execute(() -> {
-                            Api.Respuesta pr = Api.post(this, "/customer/requests/" + id + "/pay-test", new JSONObject());
+                            JSONObject cuerpoPago = new JSONObject();
+                            try { cuerpoPago.put("idempotencyKey", "pago-" + java.util.UUID.randomUUID()); } catch (Exception ignored) { }   // un id por intento: no cobra dos veces
+                            Api.Respuesta pr = Api.post(this, "/customer/requests/" + id + "/pay-test", cuerpoPago);
+                            final boolean enCola = pr.codigo == 202 && pr.cuerpo != null && pr.cuerpo.optBoolean("enCola");
                             runOnUiThread(() -> {
-                                Toast.makeText(this, pr.ok() ? "Pago de prueba confirmado" : pr.error(), Toast.LENGTH_LONG).show();
+                                Toast.makeText(this, enCola ? "Sin conexión por ahora: tu pago quedó guardado y se enviará solo al volver la red."
+                                        : pr.ok() ? "Pago de prueba confirmado" : pr.error(), Toast.LENGTH_LONG).show();
                                 cargar();
                             });
                         })).show());
@@ -521,6 +525,11 @@ public class RequestDetailActivity extends AppCompatActivity {
         Executors.newSingleThreadExecutor().execute(() -> {
             Api.Respuesta r = Api.post(this, "/customer/proposals/" + pr.optLong("id") + "/decide", body);
             runOnUiThread(() -> {
+                if (r.codigo == 202 && r.cuerpo != null && r.cuerpo.optBoolean("enCola")) {
+                    d.dismiss();
+                    Toast.makeText(this, "Sin conexión por ahora: tu decisión quedó guardada y se enviará sola al volver la red.", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 if (r.ok()) { d.dismiss(); cargar(); }
                 else {
                     // p. ej. 409: el técnico cambió la propuesta → se recarga para ver la versión nueva

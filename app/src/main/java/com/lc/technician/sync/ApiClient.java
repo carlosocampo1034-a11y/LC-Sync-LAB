@@ -53,10 +53,12 @@ public class ApiClient {
         logging.setLevel(HttpLoggingInterceptor.Level.BASIC);
 
         OkHttpClient http = new OkHttpClient.Builder()
+                .addInterceptor(new ReintentoInterceptor())
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .addInterceptor(logging)
                 .build();
+        com.lc.technician.Red.alCambiar(() -> http.connectionPool().evictAll());   // las conexiones de la red anterior ya no sirven
 
         return new Retrofit.Builder()
                 .baseUrl(baseUrl)

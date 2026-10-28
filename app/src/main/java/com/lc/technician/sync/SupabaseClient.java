@@ -45,16 +45,18 @@ public class SupabaseClient {
                    .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 
         OkHttpClient http = new OkHttpClient.Builder()
+                .addInterceptor(new ReintentoInterceptor())
                 .connectTimeout(8, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .writeTimeout(15, TimeUnit.SECONDS)
                 // tope TOTAL por llamada (conexión + envío + respuesta): con red lenta no se acumulan minutos
-                .callTimeout(20, TimeUnit.SECONDS)
+                .callTimeout(45, TimeUnit.SECONDS)
                 // Añade apikey en cada petición (requerido por PostgREST + auth)
                 .addInterceptor(chain -> {
                     Request req = chain.request().newBuilder()
                             .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
                             .build();
+        com.lc.technician.Red.alCambiar(() -> http.connectionPool().evictAll());   // las conexiones de la red anterior ya no sirven
                     return chain.proceed(req);
                 })
                 .build();

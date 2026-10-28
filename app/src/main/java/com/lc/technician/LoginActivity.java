@@ -112,7 +112,7 @@ public class LoginActivity extends AppCompatActivity {
                                 if (!"TECHNICIAN".equals(role)) {
                                     sb.signOut();
                                     Toast.makeText(LoginActivity.this, role == null
-                                            ? "Sin conexión con L&C" : "Esta app es para técnicos", Toast.LENGTH_LONG).show();
+                                            ? "Reconectando… intenta de nuevo en unos segundos" : "Esta app es para técnicos", Toast.LENGTH_LONG).show();
                                     return;
                                 }
                                 // Las órdenes llegan con technician_code (QA-T01): es la identidad que filtra "Mis Jobs"

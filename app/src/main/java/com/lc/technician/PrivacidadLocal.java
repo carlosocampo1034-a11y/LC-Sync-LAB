@@ -59,6 +59,7 @@ public final class PrivacidadLocal {
             for (com.lc.technician.model.JobEntity j : db.jobDao().getAll()) if (j.synced != 1) n++;
             long desde = c.getApplicationContext().getSharedPreferences("lc_qa_photos_up", Context.MODE_PRIVATE).getLong("auto_desde", 0);
             for (PhotoEntity p : db.photoDao().getAll()) if (p.timestamp >= desde && !PhotoSync.subida(c, p.id)) n++;
+            n += ColaCierre.pendientes(c);   // firmas o negativas guardadas esperando red
         } catch (Exception e) {
             Log.w(TAG, "pendientes: " + e.getClass().getSimpleName());
             return Integer.MAX_VALUE;   // ante la duda, no se cierra sesión

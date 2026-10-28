@@ -160,7 +160,7 @@ public final class OfertasPoller {
                 msg = ok ? (aceptar ? "Orden asignada a ti" : "Oferta rechazada")
                          : o.optString("mensaje", "No se pudo completar (" + r.code() + ")");
             } catch (Exception e) {
-                msg = "Sin conexión; vuelve a intentarlo";
+                msg = "Reconectando… vuelve a intentarlo en unos segundos";
             }
             final String texto = msg;
             final boolean exito = ok;

@@ -22,7 +22,7 @@ final class Api {
         Respuesta(int c, JSONObject b) { codigo = c; cuerpo = b; }
         boolean ok() { return codigo >= 200 && codigo < 300; }
         String error() {
-            if (codigo == -1) return "Sin conexión con L&C";
+            if (codigo == -1) return "Reconectando… se reintentará solo";
             String e = cuerpo != null ? cuerpo.optString("error", "") : "";
             return e.isEmpty() ? "Error " + codigo : e;
         }
