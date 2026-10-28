@@ -69,27 +69,43 @@ public final class Red {
         if (ahora) {
             // red nueva: comprobar que el servidor responde y vaciar lo que quedó en cola
             fondo.execute(() -> {
-                sonda();
+                if (!sonda()) fallo();
                 for (Runnable r : alVolver) { try { r.run(); } catch (Exception ignored) { } }
             });
         }
     }
 
-    private static void sonda() {
+    /** Comprueba que el servidor responde. true = hay conexión real (quita el banner). */
+    private static boolean sonda() {
         HttpURLConnection con = null;
         try {
             String base = BuildConfig.SUPABASE_URL;
-            if (base == null || base.isEmpty()) { exito(); return; }
+            if (base == null || base.isEmpty()) { exito(); return true; }
             con = (HttpURLConnection) new URL(base + "/functions/v1/lc-api/health").openConnection();
             con.setConnectTimeout(6000);
             con.setReadTimeout(6000);
             con.setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY);
-            if (con.getResponseCode() == 200) exito();
+            if (con.getResponseCode() == 200) { exito(); return true; }
+            return false;
         } catch (Exception e) {
-            fallo();
+            return false;
         } finally {
             if (con != null) con.disconnect();
         }
+    }
+
+    private static volatile boolean sondaProgramada;
+
+    /** Mientras haya fallos sin recuperar, se vuelve a comprobar el servidor cada 5 s; al responder se vacían las colas. */
+    private static void programarSonda() {
+        if (sondaProgramada) return;
+        sondaProgramada = true;
+        ui.postDelayed(() -> fondo.execute(() -> {
+            sondaProgramada = false;
+            if (fallos == 0) return;
+            if (sonda()) { for (Runnable r : alVolver) { try { r.run(); } catch (Exception ignored) { } } }
+            else programarSonda();
+        }), 5000);
     }
 
     /** Hay que mostrar «Reconectando…»: sin red, o con peticiones que fallaron y todavía no se han recuperado. */
@@ -97,7 +113,7 @@ public final class Red {
 
     public static void exito() { if (fallos != 0) { fallos = 0; avisar(); } }
 
-    public static void fallo() { fallos++; avisar(); }
+    public static void fallo() { fallos++; avisar(); programarSonda(); }
 
     /** Bloquea (en un hilo de fondo) hasta que haya red o venza el plazo. */
     public static boolean esperarRed(long ms) {

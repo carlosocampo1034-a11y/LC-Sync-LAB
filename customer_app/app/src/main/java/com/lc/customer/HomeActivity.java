@@ -73,6 +73,7 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (ColaCliente.pendientes(this) > 0) Red.vaciarColasYa();   // envíos que quedaron esperando red
         if (!Api.conSesion(this)) { startActivity(new Intent(this, LoginActivity.class)); finish(); return; }
         visible = true;
         Ajustes.refrescar(this, true, this::pintar);   // precios y listas editables (Control)
