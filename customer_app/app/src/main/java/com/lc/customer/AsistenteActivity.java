@@ -36,7 +36,7 @@ public class AsistenteActivity extends AppCompatActivity {
         idioma = Ui.texto(this, "", 14, R.color.lc_rojo, true);
         idioma.setMinHeight(Ui.dp(this, 44));
         idioma.setGravity(Gravity.CENTER_VERTICAL);
-        idioma.setOnClickListener(v -> { en = !en; recrearTextos(); });
+        idioma.setOnClickListener(v -> cambiarIdioma());
         p.contenido.addView(idioma);
         chat = new LinearLayout(this);
         chat.setOrientation(LinearLayout.VERTICAL);
@@ -57,7 +57,19 @@ public class AsistenteActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putBoolean("en", en); }
 
+    /** Cambia el idioma de TODA la pantalla: título, saludo, sugerencias, campo y botones; la conversación se reinicia. */
+    private void cambiarIdioma() {
+        en = !en;
+        recrearTextos();
+        chat.removeAllViews();
+        burbuja(false, saludo());
+        for (String s : sugerencias()) sugerencia(s);
+    }
+
     private void recrearTextos() {
+        ((TextView) p.cabecera.getChildAt(1)).setText(en ? "Assistant" : "Asistente");
+        ((TextView) p.cabecera.getChildAt(2)).setText(en ? "Automated assistant · common questions" : "Asistente automático · preguntas frecuentes");
+        ((TextView) p.cabecera.getChildAt(0)).setText(en ? "← Back" : "← Volver");
         idioma.setText(en ? "Español" : "English");
         entrada.setHint(en ? "Write your question" : "Escribe tu pregunta");
         ((Button) p.inferior.findViewWithTag("enviar")).setText(en ? "Send" : "Enviar");
