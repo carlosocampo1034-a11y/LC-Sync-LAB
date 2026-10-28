@@ -94,6 +94,24 @@ jobs:
         if: steps.qa.outputs.enabled == '1'
         working-directory: customer_app
         run: ./gradlew --no-daemon --stacktrace bundleInternal
+      - name: APK de prueba de la variante internal (llave efímera de un solo uso; NO es la llave de Play)
+        if: steps.qa.outputs.enabled == '1'
+        run: |
+          ./gradlew --no-daemon --stacktrace assembleInternal
+          (cd customer_app && ./gradlew --no-daemon --stacktrace assembleInternal)
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          KP=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 20)
+          keytool -genkeypair -keystore "$RUNNER_TEMP/prueba.jks" -storepass "$KP" -keypass "$KP" -alias prueba \
+            -keyalg RSA -keysize 2048 -validity 2 -dname "CN=prueba efimera" >/dev/null 2>&1
+          mkdir -p internal-test
+          for spec in "app/build/outputs/apk/internal:tecnico" "customer_app/app/build/outputs/apk/internal:cliente"; do
+            d=${spec%%:*}; n=${spec##*:}; src=$(ls "$d"/*.apk | head -1)
+            "$BT/zipalign" -f -p 4 "$src" "internal-test/$n-aligned.apk"
+            "$BT/apksigner" sign --ks "$RUNNER_TEMP/prueba.jks" --ks-pass "pass:$KP" --key-pass "pass:$KP" \
+              --out "internal-test/$n-internal-prueba.apk" "internal-test/$n-aligned.apk"
+            rm "internal-test/$n-aligned.apk"
+            echo "$n: $("$BT/aapt2" dump packagename "internal-test/$n-internal-prueba.apk") vc=$("$BT/aapt2" dump badging "internal-test/$n-internal-prueba.apk" | grep -oE "versionCode='[0-9]+'|versionName='[^']+'" | tr '\n' ' ')"
+          done
       - name: Verificar APK QA (applicationId, firma, SHA-256, sin secretos)
         if: steps.qa.outputs.enabled == '1'
         run: |
@@ -112,6 +130,13 @@ jobs:
       - name: Resumen de APKs
         run: |
           find . -name "*.apk" \( -path "*debug*" -o -path "*/qa/*" \) -printf "%p %s bytes\n" | tee apks.txt
+      - uses: actions/upload-artifact@v4
+        if: steps.qa.outputs.enabled == '1'
+        with:
+          name: lc-internal-test-apks
+          retention-days: 3
+          if-no-files-found: error
+          path: internal-test/*.apk
       - uses: actions/upload-artifact@v4
         if: steps.qa.outputs.enabled == '1'
         with:
