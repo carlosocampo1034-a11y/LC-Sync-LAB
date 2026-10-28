@@ -20,6 +20,7 @@
         <activity android:name=".RequestDetailActivity" android:exported="false" />
         <activity android:name=".PdfViewerActivity" android:exported="false" />
         <activity android:name=".FotoActivity" android:exported="false" />
+        <activity android:name=".AsistenteActivity" android:exported="false" />
         <activity android:name=".DiagnosticoActivity" android:exported="false" />
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -168,6 +168,8 @@ public class HomeActivity extends AppCompatActivity {
         sol.setOnClickListener(v -> startActivity(new Intent(this, NewRequestActivity.class)));
         android.widget.Button props = Ui.boton(this, c, "Mis propiedades y equipos", false);
         props.setOnClickListener(v -> startActivity(new Intent(this, PropertiesActivity.class)));
+        android.widget.Button asist = Ui.boton(this, c, "Asistente · Assistant", false);
+        asist.setOnClickListener(v -> startActivity(new Intent(this, AsistenteActivity.class)));
         Ui.seccion(this, c, "Avisos");
         if (avisos.length() == 0 && novedades.isEmpty()) {
             c.addView(Ui.texto(this, "Sin avisos por ahora.", 15, R.color.lc_sec, false));
