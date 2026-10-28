@@ -162,6 +162,7 @@ public class JobDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        com.lc.technician.sync.Listas.refrescar(this, false, null);   // menús y listas editables desde Control
         setContentView(R.layout.activity_job_detail);
         // Edge-to-edge (Android 15+): cabecera bajo la barra de estado (bottomBar ya se gestiona abajo)
         InsetsHelper.padTop(findViewById(R.id.header));
@@ -634,76 +635,91 @@ public class JobDetailActivity extends AppCompatActivity {
 
     // ── Estado ────────────────────────────────────────────────────────────────
 
+    /** Respaldo = valor inicial de settings job_actions.list. */
+    private static final String[][] ACCIONES_RESPALDO = {
+            {"GO_ENROUTE", "Voy en camino"}, {"ARRIVED", "Llegué"}, {"ASK_APPROVAL", "Pedir aprobación al cliente"},
+            {"START_DIRECT", "Iniciar reparación directo"}, {"CLIENT_APPROVED", "Cliente aprobó — Iniciar reparación"},
+            {"COMPLETE", "Terminé (Completar)"}, {"PART_HOLD", "Falta repuesto (Part Hold)"}, {"PAUSE", "Pausar trabajo"},
+            {"RESUME", "Reanudar reparación"}, {"CLIENT_CANCELLED", "Cliente canceló"}, {"NO_ACCESS", "Cliente no está en casa"},
+            {"NEED_ORDER", "Necesito una orden"}};
+
     private void mostrarMenuEstado() {
         String estado = job.estado != null ? job.estado : "";
         String[] opciones;
         switch (estado) {
             case Job.STATUS_PENDING:
                 opciones = new String[]{
-                    "Voy en camino",
-                    "Cliente canceló",
-                    "Necesito una orden"
+                    "GO_ENROUTE",
+                    "CLIENT_CANCELLED",
+                    "NEED_ORDER"
                 };
                 break;
             case Job.STATUS_EN_ROUTE:
                 opciones = new String[]{
-                    "Llegué",
-                    "Cliente canceló",
-                    "Necesito una orden"
+                    "ARRIVED",
+                    "CLIENT_CANCELLED",
+                    "NEED_ORDER"
                 };
                 break;
             case Job.STATUS_ARRIVED:
                 opciones = new String[]{
-                    "Pedir aprobación al cliente",
-                    "Iniciar reparación directo",
-                    "Cliente no está en casa",
-                    "Necesito una orden"
+                    "ASK_APPROVAL",
+                    "START_DIRECT",
+                    "NO_ACCESS",
+                    "NEED_ORDER"
                 };
                 break;
             case Job.STATUS_AWAITING_APPROVAL:
                 opciones = new String[]{
-                    "Cliente aprobó — Iniciar reparación",
-                    "Cliente canceló"
+                    "CLIENT_APPROVED",
+                    "CLIENT_CANCELLED"
                 };
                 break;
             case Job.STATUS_EN_REPARACION:
                 opciones = new String[]{
-                    "Terminé (Completar)",
-                    "Falta repuesto (Part Hold)",
-                    "Pausar trabajo",
-                    "Necesito una orden"
+                    "COMPLETE",
+                    "PART_HOLD",
+                    "PAUSE",
+                    "NEED_ORDER"
                 };
                 break;
             case Job.STATUS_PART_HOLD:
             case Job.STATUS_ON_HOLD:
                 opciones = new String[]{
-                    "Reanudar reparación",
-                    "Cliente canceló"
+                    "RESUME",
+                    "CLIENT_CANCELLED"
                 };
                 break;
             default:
                 return;
         }
 
+        // los textos del menú son editables en Control (settings job_actions.list); la lógica usa los ids
+        final com.lc.technician.sync.Listas.Lista acc = com.lc.technician.sync.Listas.lista(this, "job_actions.list", ACCIONES_RESPALDO, null);
+        final String[] etiquetas = new String[opciones.length];
+        for (int q = 0; q < opciones.length; q++) {
+            int ix = acc.indexOf(opciones[q]);
+            etiquetas[q] = ix >= 0 ? acc.labels[ix] : opciones[q];
+        }
         new AlertDialog.Builder(this)
                 .setTitle("¿Qué quieres hacer?")
-                .setItems(opciones, (dialog, which) -> manejarOpcionMenu(estado, opciones[which]))
+                .setItems(etiquetas, (dialog, which) -> manejarOpcionMenu(estado, opciones[which]))
                 .show();
     }
 
     private void manejarOpcionMenu(String estado, String opcion) {
         switch (opcion) {
-            case "Voy en camino":
+            case "GO_ENROUTE":
                 aplicarEstado(Job.STATUS_EN_ROUTE, "En ruta hacia el cliente"); break;
-            case "Llegué":
+            case "ARRIVED":
                 aplicarEstado(Job.STATUS_ARRIVED, "Llegada registrada"); break;
-            case "Pedir aprobación al cliente":
+            case "ASK_APPROVAL":
                 aplicarEstado(Job.STATUS_AWAITING_APPROVAL, "Esperando aprobación del cliente");
                 if (com.lc.technician.sync.LabSession.conServidor(this)) abrirPropuesta();   // se prepara y envía allí
                 break;
-            case "Iniciar reparación directo":
+            case "START_DIRECT":
                 aplicarEstado(Job.STATUS_EN_REPARACION, "Reparación iniciada directamente"); break;
-            case "Cliente aprobó — Iniciar reparación":
+            case "CLIENT_APPROVED":
                 if (com.lc.technician.sync.LabSession.conServidor(this)) {
                     // sin evidencia válida (firma del cliente confirmada por el servidor) no se marca aprobado
                     JobRepository.get().getProposalForJobAsync(job.id, p -> {
@@ -725,19 +741,19 @@ public class JobDetailActivity extends AppCompatActivity {
                     break;
                 }
                 aplicarEstado(Job.STATUS_EN_REPARACION, "Reparación iniciada"); break;
-            case "Terminé (Completar)":
+            case "COMPLETE":
                 intentarCompletar(); break;
-            case "Falta repuesto (Part Hold)":
+            case "PART_HOLD":
                 aplicarEstado(Job.STATUS_PART_HOLD, "Part hold — esperando repuesto"); break;
-            case "Pausar trabajo":
+            case "PAUSE":
                 aplicarEstado(Job.STATUS_ON_HOLD, "Trabajo pausado"); break;
-            case "Reanudar reparación":
+            case "RESUME":
                 aplicarEstado(Job.STATUS_EN_REPARACION, "Reparación reanudada"); break;
-            case "Cliente canceló":
+            case "CLIENT_CANCELLED":
                 registrarNota("Cliente canceló el servicio"); break;
-            case "Cliente no está en casa":
+            case "NO_ACCESS":
                 registrarNota("Cliente no estaba en casa al llegar"); break;
-            case "Necesito una orden":
+            case "NEED_ORDER":
                 registrarNota("Técnico solicitó una orden de trabajo"); break;
         }
     }
@@ -794,7 +810,7 @@ public class JobDetailActivity extends AppCompatActivity {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
         bg.setCornerRadius(6f);
-        estadoView.setText(job.estado);
+        estadoView.setText(com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", job.estado, job.estado));
         estadoView.setBackground(bg);
     }
 
@@ -921,25 +937,32 @@ public class JobDetailActivity extends AppCompatActivity {
     }
 
     private void mostrarOpcionesFoto() {
+        // categorías editables en Control (settings photo_categories.list)
+        final com.lc.technician.sync.Listas.Lista pcat = com.lc.technician.sync.Listas.lista(this, "photo_categories.list",
+                new String[][]{{"ANTES", "Antes"}, {"DESPUÉS", "Después"}, {"EQUIPO", "Equipo"}, {"NAMEPLATE", "Nameplate"}}, null);
         new AlertDialog.Builder(this)
                 .setTitle("Categoría de la foto")
-                .setItems(new String[]{"Antes", "Después", "Equipo", "Nameplate"}, (d, which) -> {
-                    pendingCategoria = new String[]{"ANTES", "DESPUÉS", "EQUIPO", "NAMEPLATE"}[which];
+                .setItems(pcat.labels, (d, which) -> {
+                    pendingCategoria = pcat.ids[which];
                     mostrarFuenteFoto();
                 })
                 .show();
     }
 
     private void mostrarFuenteFoto() {
-        // Solo en la variante de laboratorio (debug): foto sintética, sin cámara ni galería personal
-        String[] opciones = BuildConfig.DEBUG
-                ? new String[]{"Tomar foto", "Elegir de galería", "Foto de prueba (laboratorio)"}
-                : new String[]{"Tomar foto", "Elegir de galería"};
+        // orígenes editables en Control (settings photo_sources.list); la foto sintética solo existe en la variante de laboratorio
+        final com.lc.technician.sync.Listas.Lista src = com.lc.technician.sync.Listas.lista(this, "photo_sources.list",
+                new String[][]{{"CAMERA", "Tomar foto"}, {"GALLERY", "Elegir de galería"}}, null);
+        final int n = src.ids.length;
+        String[] opciones = new String[n + (BuildConfig.DEBUG ? 1 : 0)];
+        System.arraycopy(src.labels, 0, opciones, 0, n);
+        if (BuildConfig.DEBUG) opciones[n] = "Foto de prueba (laboratorio)";
         new AlertDialog.Builder(this)
                 .setTitle("Origen de la foto")
                 .setItems(opciones, (dialog, which) -> {
-                    if (which == 0) launcherPermisoCamara.launch(Manifest.permission.CAMERA);
-                    else if (which == 1) launcherGaleria.launch("image/*");
+                    String id = which < n ? src.ids[which] : "LAB";
+                    if ("CAMERA".equals(id)) launcherPermisoCamara.launch(Manifest.permission.CAMERA);
+                    else if ("GALLERY".equals(id)) launcherGaleria.launch("image/*");
                     else crearFotoDePrueba();
                 })
                 .show();
@@ -1773,12 +1796,14 @@ public class JobDetailActivity extends AppCompatActivity {
         final String fEmail    = email;
         final String mensaje   = construirMensajeAviso(nombreContacto);
 
+        final com.lc.technician.sync.Listas.Lista canales = com.lc.technician.sync.Listas.lista(this, "share_channels.list",
+                new String[][]{{"WHATSAPP", "WhatsApp"}, {"SMS", "SMS"}, {"EMAIL", "Email"}}, null);
         new AlertDialog.Builder(this)
                 .setTitle("¿Cómo avisar al cliente?")
-                .setItems(new String[]{"WhatsApp", "SMS", "Email"}, (dialog, which) -> {
-                    switch (which) {
-                        case 0: abrirWhatsApp(fTelefono, mensaje); break;
-                        case 1: abrirSMS(fTelefono, mensaje);      break;
+                .setItems(canales.labels, (dialog, which) -> {
+                    switch (canales.ids[which]) {
+                        case "WHATSAPP": abrirWhatsApp(fTelefono, mensaje); break;
+                        case "SMS": abrirSMS(fTelefono, mensaje);      break;
                         default: abrirEmail(fEmail, mensaje);       break;
                     }
                 })
@@ -1948,21 +1973,17 @@ public class JobDetailActivity extends AppCompatActivity {
 
     /** Agregar (existente == null) o editar una partida de trabajo con el mismo diálogo. */
     private void mostrarDialogoWorkItem(WorkItemEntity existente) {
-        final String[] tipos = {
-            WorkItemEntity.TYPE_LABOR,
-            WorkItemEntity.TYPE_PART,
-            WorkItemEntity.TYPE_SERVICE,
-            WorkItemEntity.TYPE_FEE,
-            WorkItemEntity.TYPE_OTHER
-        };
-
         android.widget.LinearLayout container = new android.widget.LinearLayout(this);
         container.setOrientation(android.widget.LinearLayout.VERTICAL);
         container.setPadding(48, 16, 48, 0);
 
+        // tipos de partida editables en Control (settings work_item_types.list): se muestra el texto, se guarda el id
+        final com.lc.technician.sync.Listas.Lista tiposL = com.lc.technician.sync.Listas.lista(this, "work_item_types.list",
+                new String[][]{{"LABOR", "Mano de obra"}, {"PART", "Repuesto"}, {"SERVICE", "Servicio"}, {"FEE", "Cargo"}, {"OTHER", "Otro"}}, null);
+        final String[] tiposIds = tiposL.ids;
         android.widget.Spinner spinnerTipo = new android.widget.Spinner(this);
         spinnerTipo.setAdapter(new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, tipos));
+                android.R.layout.simple_spinner_item, tiposL.labels));
         container.addView(spinnerTipo);
 
         EditText etDesc = new EditText(this);
@@ -2001,7 +2022,8 @@ public class JobDetailActivity extends AppCompatActivity {
         etCant.addTextChangedListener(liveCalc);
         etPrecio.addTextChangedListener(liveCalc);
         if (existente != null) {
-            for (int i = 0; i < tipos.length; i++) if (tipos[i].equals(existente.tipo)) spinnerTipo.setSelection(i);
+            int ti = tiposL.indexOf(existente.tipo);
+            if (ti >= 0) spinnerTipo.setSelection(ti);
             etDesc.setText(existente.descripcion);
             if (existente.cantidad != null) etCant.setText(String.valueOf(existente.cantidad));
             if (existente.precioUnitario != null) etPrecio.setText(String.valueOf(existente.precioUnitario));
@@ -2011,7 +2033,7 @@ public class JobDetailActivity extends AppCompatActivity {
                 .setTitle(existente == null ? "Agregar ítem de trabajo" : "Editar ítem de trabajo")
                 .setView(container)
                 .setPositiveButton("Guardar", (d, w) -> {
-                    String tipo = tipos[spinnerTipo.getSelectedItemPosition()];
+                    String tipo = tiposIds[spinnerTipo.getSelectedItemPosition()];
                     String desc = etDesc.getText().toString().trim();
                     if (desc.isEmpty()) {
                         Toast.makeText(this, "Descripción requerida", Toast.LENGTH_SHORT).show();

@@ -77,8 +77,15 @@ public class ProposalActivity extends AppCompatActivity {
         ConfigManager config = new ConfigManager(this);
         defMarkup = config.getMarkups();
         defTax    = config.getTaxRate();
+        // Precios de la empresa (Control → Precios): margen e impuesto por defecto salen de settings; el ajuste local
+        // solo se usa si el teléfono aún no ha descargado la configuración.
+        com.lc.technician.sync.Listas.refrescar(this, true, null);
+        double mk = com.lc.technician.sync.Listas.numero(this, "pricing.markup_percent", defMarkup[0]);
+        defMarkup = new double[]{mk, mk, mk};
+        defTax = com.lc.technician.sync.Listas.numero(this, "pricing.tax_percent", defTax);
 
         ((ImageView) findViewById(R.id.btnAtras)).setOnClickListener(v -> finish());
+        mostrarPreciosReferencia();
 
         // Bind card views first (before async load)
         int[] cardIds = {R.id.cardGood, R.id.cardBetter, R.id.cardBest};
@@ -512,11 +519,12 @@ public class ProposalActivity extends AppCompatActivity {
             "Limpieza profunda + sellado + tratamiento antimicrobial + certificación"
         }
     };
-    // [plantilla][opcion] = {manoObra, materiales}
-    private static final double[][] TMPL_MANO = {
-        {150, 200, 250},
-        {800, 1200, 1800},
-        {200, 300, 450}
+    // [plantilla][opcion] = horas de mano de obra; el importe = horas × pricing.<grupo>.hourly (settings).
+    // Equivalen a los montos antiguos (150/200/250, 800/1200/1800, 200/300/450) a $50 por hora.
+    private static final double[][] TMPL_HORAS = {
+        {3, 4, 5},
+        {16, 24, 36},
+        {4, 6, 9}
     };
     private static final double[][] TMPL_MAT = {
         {50, 100, 150},
@@ -524,11 +532,36 @@ public class ProposalActivity extends AppCompatActivity {
         {0, 50, 100}
     };
 
+    /** Grupo de precios de la orden (por su categoría) y su tarifa por hora, de settings. */
+    private String grupoPrecio() {
+        return com.lc.technician.sync.Listas.grupoPrecio(this, com.lc.technician.sync.Listas.categoriaDe(this, jobId));
+    }
+
+    private double tarifaHora() { return com.lc.technician.sync.Listas.precio(this, grupoPrecio(), "hourly"); }
+
+    /** Barra informativa con los precios de referencia vigentes (settings pricing.*). */
+    private void mostrarPreciosReferencia() {
+        String g = grupoPrecio();
+        TextView tv = new TextView(this);
+        tv.setText(String.format(java.util.Locale.US, "Precios de la empresa (%s): visita de diagnóstico $%.2f · hora $%.2f · emergencia ×%.1f · margen %.1f%% · impuesto %.1f%%",
+                g, com.lc.technician.sync.Listas.precio(this, g, "diagnostic"), com.lc.technician.sync.Listas.precio(this, g, "hourly"),
+                com.lc.technician.sync.Listas.precio(this, g, "emergency_multiplier"), defMarkup[0], defTax));
+        tv.setTextSize(12f);
+        tv.setTextColor(0xFF62666A);
+        tv.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
+        tv.setTag("preciosReferencia");
+        android.view.View card = findViewById(R.id.cardGood);
+        if (card != null && card.getParent() instanceof android.view.ViewGroup) {
+            android.view.ViewGroup padre = (android.view.ViewGroup) card.getParent();
+            padre.addView(tv, padre.indexOfChild(card));
+        }
+    }
+
     private void aplicarPlantilla(int tipo) {
         for (int i = 0; i < 3; i++) {
             etTitulo[i].setText(TMPL_TITULO[tipo][i]);
             etDescripcion[i].setText(TMPL_DESC[tipo][i]);
-            etManoObra[i].setText(fmt(TMPL_MANO[tipo][i]));
+            etManoObra[i].setText(fmt(TMPL_HORAS[tipo][i] * tarifaHora()));
             etMateriales[i].setText(fmt(TMPL_MAT[tipo][i]));
             etEquipo[i].setText("0");
             etPermiso[i].setText("0");

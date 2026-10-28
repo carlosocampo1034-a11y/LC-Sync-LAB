@@ -241,6 +241,7 @@ public class SyncWorker extends Worker {
         if (rows == null) return 0;
         int count = 0;
         for (SupabaseModels.JobRow row : rows) {
+            com.lc.technician.sync.Listas.guardarCategoria(getApplicationContext(), row.id, row.categoria);
             JobEntity existing = db.jobDao().getJobById(row.id);
             // Don't overwrite a local pending change
             if (existing != null && existing.synced != 1) {

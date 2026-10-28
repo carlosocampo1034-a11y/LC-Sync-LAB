@@ -17,7 +17,14 @@
   const money = (n) => "$" + Number(n || 0).toFixed(2);
 
   // jobs.py del Control original
-  const ESTADOS = ["PENDIENTE", "EN RUTA", "LLEGUÉ", "EN REPARACIÓN", "ESPERANDO APROBACIÓN", "PART HOLD", "PAUSADO", "COMPLETADO", "CANCELADO"];
+  // Estados de la orden: ids fijos (llevan lógica); el TEXTO y el orden salen de settings order_states.list (editable en Listas editables).
+  // Respaldo = valor inicial de la tabla (supabase/migrations/20261028160000_settings.sql).
+  const ESTADOS_RESPALDO = [["PENDIENTE", "Pendiente"], ["EN RUTA", "En ruta"], ["LLEGUÉ", "Llegué"], ["EN REPARACIÓN", "En reparación"],
+    ["ESPERANDO APROBACIÓN", "Esperando aprobación"], ["PART HOLD", "Falta repuesto"], ["PAUSADO", "Pausado"], ["COMPLETADO", "Completado"], ["CANCELADO", "Cancelado"]]
+    .map(([id, label]) => ({ id, label, active: true }));
+  let CFG_ESTADOS = null, cfgAt = 0;
+  const estadosCfg = () => CFG_ESTADOS || ESTADOS_RESPALDO;
+  const etiquetaEstado = (id) => (estadosCfg().find((o) => o.id === id) || {}).label || id;
   const EN_CURSO = new Set(["EN RUTA", "LLEGUÉ", "EN REPARACIÓN", "ESPERANDO APROBACIÓN", "PART HOLD", "PAUSADO"]);
   const ETIQUETAS = [["EN_CURSO", "En curso"], ["HOY", "Hoy"], ["ATRASADOS", "Atrasados"], ["PROXIMOS", "Próximos"],
                      ["SIN_FECHA", "Sin fecha"], ["COMPLETADOS", "Completados"], ["CANCELADOS", "Cancelados"]];
@@ -78,6 +85,13 @@
     if (r.status === 403 && j && j.error === "account_disabled") { await sb.auth.signOut(); mostrarLogin("Cuenta desactivada."); }
     return { status: r.status, body: j };
   }
+  /** Descarga la lista de estados (como mucho una vez por minuto). */
+  async function cargarCfg(forzar) {
+    if (!forzar && Date.now() - cfgAt < 60000) return;
+    cfgAt = Date.now();
+    const r = await api("GET", "/settings/order_states.list");
+    if (r.status === 200 && r.body?.settings?.[0] && Array.isArray(r.body.settings[0].value)) CFG_ESTADOS = r.body.settings[0].value;
+  }
   const device = (() => { let d; try { d = localStorage.getItem("lc-control-device"); } catch (_) {}
     if (!d) { d = "control-web-" + crypto.randomUUID().slice(0, 8); try { localStorage.setItem("lc-control-device", d); } catch (_) {} }
     return d; })();
@@ -121,7 +135,7 @@
       <div class="order-card estado-${cssEstado(o.estado)}">
         <div class="order-top">
           <div class="order-service">${esc(o.categoria || (o.descripcion ? o.descripcion.slice(0, 42) : "Servicio General"))}</div>
-          <span class="badge-estado ${badgeEstado(o.estado)}"><i class="bi bi-circle-fill" style="font-size:.45rem;"></i> ${esc(o.estado || "PENDIENTE")}</span>
+          <span class="badge-estado ${badgeEstado(o.estado)}"><i class="bi bi-circle-fill" style="font-size:.45rem;"></i> ${esc(etiquetaEstado(o.estado || "PENDIENTE"))}</span>
         </div>
         <div class="order-meta">
           <span><i class="bi bi-person"></i> ${esc(o.cliente || "Sin cliente")}</span>
@@ -168,7 +182,7 @@
               <td><a href="#/jobs/${o.id}" style="text-decoration:none;"><span class="job-id">#${String(o.id % 100000).padStart(5, "0")}</span></a></td>
               <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(o.categoria || (o.descripcion ? o.descripcion.slice(0, 20) : "—"))}</td>
               <td>${o.technician_code ? `<span class="tech-pill">${esc(o.technician_code)}</span>` : '<span style="color:#f59e0b;font-size:.72rem;">—</span>'}</td>
-              <td><span class="badge-estado ${badgeEstado(o.estado)}">${esc(o.estado || "PENDIENTE")}</span></td></tr>`).join("")}
+              <td><span class="badge-estado ${badgeEstado(o.estado)}">${esc(etiquetaEstado(o.estado || "PENDIENTE"))}</span></td></tr>`).join("")}
             </tbody></table>` : `<div class="empty-state"><i class="bi bi-clock-history"></i><p>Sin actividad reciente.</p></div>`}
         </div>
       </div>`;
@@ -190,7 +204,7 @@
           <h4 class="mb-0 fw-bold text-truncate">${esc(j.cliente || "Orden sin nombre")}</h4>
           <span class="text-muted" style="font-size:.82rem">Orden #${j.id} &nbsp;·&nbsp; v${j.version}</span>
         </div>
-        <span class="badge badge-${esc(j.estado.toLowerCase().replaceAll(" ", "-"))} px-3 py-2" style="font-size:.8rem">${esc(j.estado)}</span>
+        <span class="badge badge-${esc(j.estado.toLowerCase().replaceAll(" ", "-"))} px-3 py-2" style="font-size:.8rem">${esc(etiquetaEstado(j.estado))}</span>
       </div>
       ${mensaje ? `<div class="alert ${mensaje.ok === false ? "alert-danger" : "alert-success"} d-flex align-items-center gap-2 mb-3">
         <i class="bi bi-${mensaje.ok === false ? "exclamation-triangle" : "check-circle"}-fill"></i> ${esc(mensaje.texto)}</div>` : ""}
@@ -280,7 +294,7 @@
             <div class="section-title"><i class="bi bi-arrow-repeat me-1"></i> Cambiar estado</div>
             <form id="fEstado">
               <div class="mb-3"><select name="estado" class="form-select form-select-sm" aria-label="Estado">
-                ${ESTADOS.map((e) => `<option ${e === j.estado ? "selected" : ""}>${e}</option>`).join("")}</select></div>
+                ${estadosCfg().map((o) => `<option value="${esc(o.id)}" ${o.id === j.estado ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select></div>
               <button class="btn btn-accent w-100"><i class="bi bi-check2-circle me-1"></i> Cambiar estado</button>
             </form>
           </div>
@@ -288,7 +302,7 @@
             <div class="section-title"><i class="bi bi-info-circle me-1"></i> Resumen</div>
             <div class="d-flex flex-column gap-2">
               <div class="d-flex justify-content-between" style="font-size:.85rem"><span class="text-muted">Estado actual</span>
-                <span class="badge badge-${esc(j.estado.toLowerCase().replaceAll(" ", "-"))}">${esc(j.estado)}</span></div>
+                <span class="badge badge-${esc(j.estado.toLowerCase().replaceAll(" ", "-"))}">${esc(etiquetaEstado(j.estado))}</span></div>
               <div class="d-flex justify-content-between" style="font-size:.85rem"><span class="text-muted">Versión</span><span class="fw-semibold">v${j.version}</span></div>
               <div class="d-flex justify-content-between" style="font-size:.85rem"><span class="text-muted">Origen</span><span class="fw-semibold">${esc(j.origin)}</span></div>
             </div>
@@ -760,8 +774,9 @@
     conectarTiempoReal(); contarNotif();
     enrutar();
   }
-  function enrutar() {
+  async function enrutar() {
     if (!yo) return;
+    await cargarCfg(false);
     alerta("");
     $("notifPanel").hidden = true;
     const h = location.hash.replace(/^#/, "") || "/";

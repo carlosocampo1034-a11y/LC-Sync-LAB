@@ -94,6 +94,49 @@ public final class Listas {
         return new Lista(ids, labels);
     }
 
+    /** Valor numérico de una setting (precios, márgenes); respaldo si aún no se descargó. */
+    public static double numero(Context c, String key, double respaldo) {
+        JSONObject d = datos(c);
+        return d.has(key) ? d.optDouble(key, respaldo) : respaldo;
+    }
+
+    /** La categoría de cada orden se recuerda aparte para no cambiar el esquema de Room. */
+    public static void guardarCategoria(Context c, long jobId, String categoria) {
+        if (categoria != null) c.getApplicationContext().getSharedPreferences("lc_job_cat", Context.MODE_PRIVATE).edit().putString(String.valueOf(jobId), categoria).apply();
+    }
+
+    public static String categoriaDe(Context c, long jobId) {
+        return c.getApplicationContext().getSharedPreferences("lc_job_cat", Context.MODE_PRIVATE).getString(String.valueOf(jobId), null);
+    }
+
+    /** Grupo de precios (hvac, plumbing, electricity, general) de una categoría, según categories.list → price_group. */
+    public static String grupoPrecio(Context c, String categoriaId) {
+        JSONArray a = datos(c).optJSONArray("categories.list");
+        for (int i = 0; a != null && categoriaId != null && i < a.length(); i++) {
+            JSONObject o = a.optJSONObject(i);
+            if (o != null && categoriaId.equals(o.optString("id"))) return o.optString("price_group", "general");
+        }
+        switch (categoriaId == null ? "" : categoriaId) {   // respaldo = valor inicial de la tabla
+            case "HVAC": return "hvac";
+            case "PLOMERIA": return "plumbing";
+            case "ELECTRICIDAD": return "electricity";
+            default: return "general";
+        }
+    }
+
+    /** Precio de referencia pricing.<grupo>.<concepto>. */
+    public static double precio(Context c, String grupo, String concepto) {
+        double resp = concepto.equals("emergency_multiplier") ? 1.0 : 50.0;
+        switch (grupo + "." + concepto) {
+            case "hvac.diagnostic": resp = 90.0; break;
+            case "hvac.hourly": resp = 85.0; break;
+            case "hvac.emergency_multiplier": case "plumbing.emergency_multiplier": case "electricity.emergency_multiplier": resp = 1.5; break;
+            case "plumbing.diagnostic": case "electricity.diagnostic": resp = 65.0; break;
+            default: break;
+        }
+        return numero(c, "pricing." + grupo + "." + concepto, resp);
+    }
+
     /** Texto de un id (incluye opciones desactivadas, para mostrar datos históricos). */
     public static String etiqueta(Context c, String key, String id, String respaldo) {
         JSONArray a = datos(c).optJSONArray(key);
