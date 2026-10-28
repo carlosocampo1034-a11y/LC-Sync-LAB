@@ -55,3 +55,15 @@ firebase-admin.json
 *-firebase-adminsdk-*
 app/google-services.json
 .lc-secrets/
+
+# Secretos adicionales (Orden 29): nunca deben llegar a GitHub
+secrets.json
+secrets.*.json
+.env.*
+*.p12
+*.pfx
+*service-account*.json
+firebase-admin*.json
+CONTRASENAS*
+llaves/
+resend*.txt
