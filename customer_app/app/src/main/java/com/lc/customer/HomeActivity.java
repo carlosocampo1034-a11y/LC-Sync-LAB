@@ -64,11 +64,26 @@ public class HomeActivity extends AppCompatActivity {
         out.putInt("filtro", filtro);
     }
 
+    private final android.os.Handler hh = new android.os.Handler(android.os.Looper.getMainLooper());
+    private boolean visible = false;
+    private final Runnable refresco = new Runnable() {
+        @Override public void run() { if (visible) { cargar(); hh.postDelayed(this, 8000); } }
+    };
+
     @Override
     protected void onResume() {
         super.onResume();
         if (!Api.conSesion(this)) { startActivity(new Intent(this, LoginActivity.class)); finish(); return; }
-        cargar();
+        visible = true;
+        hh.removeCallbacks(refresco);
+        hh.post(refresco);   // lista y seguimiento se actualizan solos mientras la pantalla está abierta
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        visible = false;
+        hh.removeCallbacks(refresco);
     }
 
     private void cargar() {

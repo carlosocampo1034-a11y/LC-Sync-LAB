@@ -28,7 +28,7 @@ public class RequestDetailActivity extends AppCompatActivity {
     private boolean activa = false;
     private final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable sondeo = new Runnable() {
-        @Override public void run() { if (activa) { cargarMensajes(); h.postDelayed(this, 8000); } }
+        @Override public void run() { if (activa) { cargarMensajes(); revisarEstado(); h.postDelayed(this, 6000); } }
     };
     private androidx.activity.result.ActivityResultLauncher<String> elegirFoto;
 
@@ -63,6 +63,23 @@ public class RequestDetailActivity extends AppCompatActivity {
         super.onPause();
         activa = false;
         h.removeCallbacks(sondeo);
+    }
+
+    private String firmaEstado = null;
+
+    /** Seguimiento en vivo: si cambió el estado, la cita o el técnico, se recarga la pantalla sola (sin tocar nada). */
+    private void revisarEstado() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Api.Respuesta r = Api.get(this, "/customer/requests/" + id);
+            if (!r.ok()) return;
+            String f = r.cuerpo.optString("estado") + "|" + r.cuerpo.optLong("programadoPara", 0) + "|" + r.cuerpo.optString("tecnicoNombre");
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                boolean cambio = firmaEstado != null && !firmaEstado.equals(f);
+                firmaEstado = f;
+                if (cambio) mostrar(r);
+            });
+        });
     }
 
     // ── Mensajes con L&C (asociados a esta orden; reintentar no duplica) ──────────────────────────
@@ -207,6 +224,7 @@ public class RequestDetailActivity extends AppCompatActivity {
     }
 
     private void mostrar(Api.Respuesta r) {
+        if (r.ok()) firmaEstado = r.cuerpo.optString("estado") + "|" + r.cuerpo.optLong("programadoPara", 0) + "|" + r.cuerpo.optString("tecnicoNombre");
         LinearLayout c = dinamico;
         c.removeAllViews();
         if (!r.ok()) { c.addView(Ui.texto(this, r.error(), 15, R.color.lc_rojo, false)); return; }
