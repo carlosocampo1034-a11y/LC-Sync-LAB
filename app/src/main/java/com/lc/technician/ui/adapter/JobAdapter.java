@@ -53,7 +53,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
             case Job.STATUS_PART_HOLD:          color = 0xFF62666A; break;
             case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF171717; break;
             case Job.STATUS_ON_HOLD:            color = 0xFF62666A; break;
-            default:                            color = 0xFF62666A; break; suave (PENDIENTE)
+            default:                            color = 0xFF62666A; break;
         }
 
         GradientDrawable bg = new GradientDrawable();

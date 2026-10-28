@@ -47,7 +47,7 @@ public class CierreActivity extends AppCompatActivity {
 
     private long jobId;
     private int diagLen, fotos;
-    private boolean cierreRegistrado;
+    private boolean cierreRegistrado, publicando;
     private String resumenCierre = "";
 
     private LinearLayout checklist, panelFirma, panelListo;
@@ -239,9 +239,11 @@ public class CierreActivity extends AppCompatActivity {
         OneTimeWorkRequest req = new OneTimeWorkRequest.Builder(SyncWorker.class).build();
         WorkManager wm = WorkManager.getInstance(this);
         wm.enqueue(req);
-        wm.getWorkInfoByIdLiveData(req.getId()).observe(this, info -> {
-            if (info == null || !info.getState().isFinished()) return;
-            wm.getWorkInfoByIdLiveData(req.getId()).removeObservers(this);
+        final androidx.lifecycle.LiveData<WorkInfo> estadoTrabajo = wm.getWorkInfoByIdLiveData(req.getId());
+        estadoTrabajo.observe(this, info -> {
+            if (info == null || !info.getState().isFinished() || publicando) return;
+            publicando = true;   // un solo envío aunque el observador se entregue otra vez
+            estadoTrabajo.removeObservers(this);
             Executors.newSingleThreadExecutor().execute(() -> publicar(body));
         });
     }
@@ -266,6 +268,7 @@ public class CierreActivity extends AppCompatActivity {
         final String msg = error;
         final boolean fueFirma = "FIRMA".equals(body.get("kind"));
         runOnUiThread(() -> {
+            publicando = false;
             btnGuardar.setEnabled(true);
             btnNegativa.setEnabled(true);
             if (msg != null) { aviso.setText(msg); return; }
