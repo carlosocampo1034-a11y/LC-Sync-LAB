@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-7" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-8" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
@@ -619,12 +619,102 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "decide_failed" }) : fromRpc(data, out);
     }
 
+    // ── Mensajes y fotos por orden (qa-8). Acceso solo con hasAccess: un cliente nunca ve órdenes ajenas ──────
+    const mm = route.match(/^\/(?:orders|jobs)\/(\d+)\/(messages|photos)$/);
+    if (mm) {
+      const jobId = Number(mm[1]);
+      const { data: job } = await db.from("jobs").select("id,customer_id,technician_id,descripcion").eq("id", jobId).maybeSingle();
+      if (!job || !hasAccess(user, job)) return out(404, { error: "not_found" });
+      if (mm[2] === "messages" && req.method === "GET") {
+        const since = url.searchParams.get("since") || "0";
+        if (!/^\d{1,15}$/.test(since)) return out(422, { error: "invalid_since" });
+        const { data, error } = await db.from("job_messages").select("id,sender_id,sender_role,body,created_at")
+          .eq("job_id", jobId).gt("id", Number(since)).order("id").limit(200);
+        if (error) return out(500, { error: "list_failed" });
+        return out(200, (data || []).map((x) => ({ id: x.id, de: x.sender_role === "CUSTOMER" ? "CLIENTE" : "L&C",
+          propio: x.sender_id === user.id, texto: x.body, ts: x.created_at })));
+      }
+      if (mm[2] === "messages" && req.method === "POST") {
+        if (!body || typeof body !== "object") return out(422, { error: "json_required" });
+        const texto = txt(body.texto, 2000);
+        if (texto.length < 1) return out(422, { error: "El mensaje está vacío" });
+        const cmid = txt(body.clientMsgId, 64) || null;
+        let { data: fila, error } = await db.from("job_messages").insert({ job_id: jobId, sender_id: user.id,
+          sender_role: user.role, body: texto, client_msg_id: cmid }).select("id,created_at").maybeSingle();
+        if (error && (error as { code?: string }).code === "23505" && cmid) {   // reintento: devuelve el mismo mensaje
+          const r = await db.from("job_messages").select("id,created_at").eq("job_id", jobId).eq("sender_id", user.id)
+            .eq("client_msg_id", cmid).maybeSingle();
+          return r.data ? out(200, { id: r.data.id, ts: r.data.created_at, duplicado: true }) : out(500, { error: "send_failed" });
+        }
+        if (error || !fila) return out(500, { error: "send_failed" });
+        const aviso = user.role === "CUSTOMER"
+          ? { user_id: null as string | null, titulo: `Mensaje del cliente · orden ${jobId}` }
+          : { user_id: job.customer_id as string | null, titulo: "Mensaje de L&C" };
+        if (user.role === "CUSTOMER" || aviso.user_id) {
+          await db.from("notifications").insert({ user_id: aviso.user_id, job_id: jobId, tipo: "MENSAJE", titulo: aviso.titulo,
+            cuerpo: texto.slice(0, 140), created_at: Date.now() });
+          if (aviso.user_id) segundoPlano(enviarPush([aviso.user_id], { tipo: "message", job_id: String(jobId),
+            titulo: aviso.titulo, cuerpo: texto.slice(0, 140) }));
+        }
+        return out(201, { id: fila.id, ts: fila.created_at });
+      }
+      if (mm[2] === "photos" && req.method === "GET") {
+        const { data, error } = await db.from("job_photos").select("id,categoria,mime,created_at,path").eq("job_id", jobId).order("id");
+        if (error) return out(500, { error: "list_failed" });
+        const filas = data || [];
+        const { data: urls } = filas.length ? await db.storage.from("job-photos").createSignedUrls(filas.map((f) => f.path), 3600)
+          : { data: [] as { signedUrl: string }[] };
+        return out(200, filas.map((f, i) => ({ id: f.id, categoria: f.categoria, mime: f.mime, ts: f.created_at,
+          url: (urls || [])[i]?.signedUrl || null })));
+      }
+      if (mm[2] === "photos" && req.method === "POST") {
+        if (!body || typeof body !== "object") return out(422, { error: "json_required" });
+        const mime = txt(body.mime, 20);
+        if (mime !== "image/jpeg" && mime !== "image/png") return out(422, { error: "Solo fotos JPG o PNG" });
+        const cat = ["BEFORE", "AFTER", "OTHER"].includes(body.categoria as string) ? body.categoria as string : "BEFORE";
+        const cpid = typeof body.clientPhotoId === "number" && Number.isSafeInteger(body.clientPhotoId) && body.clientPhotoId > 0 ? body.clientPhotoId : null;
+        if (cpid) {
+          const ya = await db.from("job_photos").select("id").eq("job_id", jobId).eq("uploaded_by", user.id).eq("client_photo_id", cpid).maybeSingle();
+          if (ya.data) return out(200, { id: ya.data.id, duplicada: true });
+        }
+        let bytes: Uint8Array;
+        try { bytes = Uint8Array.from(atob(typeof body.datosBase64 === "string" ? body.datosBase64 : ""), (c) => c.charCodeAt(0)); }
+        catch { return out(400, { error: "foto inválida" }); }
+        const jpg = bytes[0] === 0xff && bytes[1] === 0xd8, png = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e;
+        if (bytes.length < 100 || bytes.length > 5 * 1024 * 1024 || (mime === "image/jpeg" ? !jpg : !png)) {
+          return out(400, { error: "La foto no es válida o supera 5 MB" });
+        }
+        const { count } = await db.from("job_photos").select("id", { count: "exact", head: true }).eq("job_id", jobId);
+        if ((count ?? 0) >= 12) return out(422, { error: "Máximo 12 fotos por solicitud" });
+        const path = `${jobId}/${crypto.randomUUID()}.${mime === "image/png" ? "png" : "jpg"}`;
+        const up = await db.storage.from("job-photos").upload(path, bytes, { contentType: mime, upsert: false });
+        if (up.error) return out(500, { error: "upload_failed" });
+        const ins = await db.from("job_photos").insert({ job_id: jobId, uploaded_by: user.id, categoria: cat, client_photo_id: cpid,
+          mime, path, bytes: bytes.length }).select("id").maybeSingle();
+        if (ins.error || !ins.data) {
+          await db.storage.from("job-photos").remove([path]);
+          return out(500, { error: "save_failed" });
+        }
+        return out(201, { id: ins.data.id });
+      }
+    }
+
     if (m && req.method === "GET") {
       const { data, error } = await db.from("jobs").select("*").eq("id", Number(m[1])).maybeSingle();
       if (error) return out(500, { error: "read_failed" });
       if (!data || !hasAccess(user, data)) return out(404, { error: "not_found" });
       const { data: props } = await db.from("job_proposals").select(COLS_PROP).eq("job_id", data.id).order("id");
-      return out(200, { ...data, propuestas: (props || []).map((p) => forma(p as Record<string, unknown>, false)) });
+      const extra: Record<string, unknown> = {};
+      if (user.role === "CUSTOMER") {   // lo que el cliente puede ver: estado/cita/técnico (sin notas internas ni despacho)
+        const { data: h } = await db.from("job_history").select("field,new_value,created_at").eq("job_id", data.id)
+          .in("field", ["estado", "programado_para", "technician_id"]).order("id", { ascending: false }).limit(60);
+        extra.historial = (h || []).map((e) => ({ campo: e.field === "estado" ? "Estado" : e.field === "programado_para" ? "Cita" : "Técnico asignado",
+          valor: e.new_value, ts: typeof e.created_at === "string" ? Date.parse(e.created_at) : e.created_at }));
+        if (data.technician_id) extra.tecnico_nombre = (await nombres([data.technician_id]))[data.technician_id] ?? null;
+        const { count } = await db.from("job_photos").select("id", { count: "exact", head: true }).eq("job_id", data.id);
+        extra.fotos_count = count ?? 0;
+      }
+      return out(200, { ...data, ...extra, propuestas: (props || []).map((p) => forma(p as Record<string, unknown>, false)) });
     }
 
     if (md && md[2] === "detail" && req.method === "GET") {

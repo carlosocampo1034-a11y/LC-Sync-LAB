@@ -107,11 +107,11 @@ public class NewRequestActivity extends AppCompatActivity {
         paso[2].addView(Ui.texto(this, "La fecha es solo una preferencia: la cita queda confirmada cuando L&C la apruebe.", 13, R.color.lc_sec, false));
         tvFoto = Ui.texto(this, "Adjuntar una foto del equipo", 15, R.color.lc_rojo, true);
         tvFotoPrueba = Ui.texto(this, "+ Agregar foto de prueba (laboratorio)", 15, R.color.lc_rojo, true);
-        if (!CloudApi.activo()) {   // el servidor QA todavía no recibe fotos: no se ofrece un botón que no funciona
-            Ui.seccion(this, paso[2], "Foto (opcional)");
-            tvFoto.setMinHeight(Ui.dp(this, 48));
-            tvFoto.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            paso[2].addView(tvFoto);
+        Ui.seccion(this, paso[2], "Foto (opcional)");
+        tvFoto.setMinHeight(Ui.dp(this, 48));
+        tvFoto.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        paso[2].addView(tvFoto);
+        if (!CloudApi.activo()) {   // las fotos sintéticas son herramienta de laboratorio, no del cliente
             tvFotoPrueba.setMinHeight(Ui.dp(this, 48));
             tvFotoPrueba.setGravity(android.view.Gravity.CENTER_VERTICAL);
             paso[2].addView(tvFotoPrueba);

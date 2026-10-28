@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -21,19 +22,173 @@ public class RequestDetailActivity extends AppCompatActivity {
 
     private long id;
     private Ui.Pantalla p;
+    private LinearLayout dinamico, chat, listaMsgs;
+    private EditText cajaMsg;
+    private String msgPendienteId = null;
+    private boolean activa = false;
+    private final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable sondeo = new Runnable() {
+        @Override public void run() { if (activa) { cargarMensajes(); h.postDelayed(this, 8000); } }
+    };
+    private androidx.activity.result.ActivityResultLauncher<String> elegirFoto;
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         id = getIntent().getLongExtra("id", -1);
         p = Ui.pantalla(this, "Tu solicitud", "Nº " + id, true);
-        Ui.boton(this, p.inferior, "Actualizar", false).setOnClickListener(v -> cargar());
+        dinamico = new LinearLayout(this);
+        dinamico.setOrientation(LinearLayout.VERTICAL);
+        p.contenido.addView(dinamico);
+        chat = new LinearLayout(this);
+        chat.setOrientation(LinearLayout.VERTICAL);
+        p.contenido.addView(chat);
+        construirChat();
+        elegirFoto = registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.GetContent(), uri -> {
+            if (uri != null) subirFotoDetalle(uri);
+        });
+        Ui.boton(this, p.inferior, "Actualizar", false).setOnClickListener(v -> { cargar(); cargarMensajes(); });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        activa = true;
         cargar();
+        h.post(sondeo);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        activa = false;
+        h.removeCallbacks(sondeo);
+    }
+
+    // ── Mensajes con L&C (asociados a esta orden; reintentar no duplica) ──────────────────────────
+    private void construirChat() {
+        Ui.seccion(this, chat, "Mensajes con L&C");
+        listaMsgs = new LinearLayout(this);
+        listaMsgs.setOrientation(LinearLayout.VERTICAL);
+        chat.addView(listaMsgs);
+        cajaMsg = Ui.campo(this, chat, "Escribe tu mensaje",
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        Button enviar = Ui.boton(this, chat, "Enviar mensaje", true);
+        enviar.setOnClickListener(v -> enviarMensaje(enviar));
+    }
+
+    private void cargarMensajes() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Api.Respuesta r = Api.get(this, "/customer/requests/" + id + "/messages");
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                listaMsgs.removeAllViews();
+                JSONArray ms = r.ok() ? r.cuerpo.optJSONArray("mensajes") : null;
+                if (!r.ok()) { listaMsgs.addView(Ui.texto(this, r.error(), 14, R.color.lc_rojo, false)); return; }
+                if (ms == null || ms.length() == 0) {
+                    listaMsgs.addView(Ui.texto(this, "Aún no hay mensajes. Escríbenos aquí sobre esta solicitud.", 14, R.color.lc_sec, false));
+                    return;
+                }
+                for (int i = 0; i < ms.length(); i++) {
+                    JSONObject x = ms.optJSONObject(i);
+                    boolean mio = x.optBoolean("propio");
+                    LinearLayout burbuja = Ui.tarjeta(this, listaMsgs);
+                    burbuja.setGravity(mio ? android.view.Gravity.END : android.view.Gravity.START);
+                    if (mio) burbuja.getBackground().mutate().setTint(0xFFF1F2F3);
+                    burbuja.addView(Ui.texto(this, (mio ? "Tú" : "L&C") + " · " + Ui.fecha(x.optLong("ts")), 12, R.color.lc_sec, true));
+                    burbuja.addView(Ui.texto(this, x.optString("texto"), 15, R.color.lc_texto, false));
+                }
+            });
+        });
+    }
+
+    private void enviarMensaje(Button boton) {
+        String t = cajaMsg.getText().toString().trim();
+        if (t.isEmpty()) { cajaMsg.setError("Escribe un mensaje"); return; }
+        if (msgPendienteId == null) msgPendienteId = java.util.UUID.randomUUID().toString();   // mismo id al reintentar
+        final String cmid = msgPendienteId;
+        boton.setEnabled(false);
+        JSONObject body = new JSONObject();
+        try { body.put("texto", t).put("clientMsgId", cmid); } catch (Exception ignored) {}
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Api.Respuesta r = Api.post(this, "/customer/requests/" + id + "/messages", body);
+            runOnUiThread(() -> {
+                boton.setEnabled(true);
+                if (r.ok()) { cajaMsg.setText(""); msgPendienteId = null; cargarMensajes(); }
+                else cajaMsg.setError(r.error() + " · tu mensaje sigue aquí; vuelve a tocar «Enviar»");
+            });
+        });
+    }
+
+    // ── Fotos de la solicitud ───────────────────────────────────────────────────────────────────
+    private void seccionFotos(LinearLayout c) {
+        Ui.seccion(this, c, "Fotos");
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
+        LinearLayout tira = new LinearLayout(this);
+        tira.setOrientation(LinearLayout.HORIZONTAL);
+        hs.addView(tira);
+        c.addView(hs);
+        TextView estado = Ui.texto(this, "Cargando fotos…", 14, R.color.lc_sec, false);
+        c.addView(estado);
+        Button agregar = Ui.boton(this, c, "Agregar foto", false);
+        agregar.setOnClickListener(v -> elegirFoto.launch("image/*"));
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Api.Respuesta r = Api.get(this, "/customer/requests/" + id + "/photos");
+            JSONArray fs = r.ok() ? r.cuerpo.optJSONArray("fotos") : null;
+            java.util.List<android.graphics.Bitmap> bmps = new java.util.ArrayList<>();
+            java.util.List<String> urls = new java.util.ArrayList<>();
+            for (int i = 0; fs != null && i < fs.length(); i++) {
+                String u = fs.optJSONObject(i).optString("url");
+                if (u.isEmpty() || "null".equals(u)) continue;
+                try {
+                    java.net.HttpURLConnection con = (java.net.HttpURLConnection) new java.net.URL(u).openConnection();
+                    con.setConnectTimeout(10000); con.setReadTimeout(20000);
+                    android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+                    o.inSampleSize = 4;
+                    try (java.io.InputStream in = con.getInputStream()) { bmps.add(android.graphics.BitmapFactory.decodeStream(in, null, o)); }
+                    urls.add(u);
+                } catch (Exception ignored) {}
+            }
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                estado.setText(!r.ok() ? r.error() : urls.isEmpty() ? "Sin fotos todavía." : urls.size() + " foto(s) · toca una para ampliarla");
+                for (int i = 0; i < bmps.size(); i++) {
+                    if (bmps.get(i) == null) continue;
+                    ImageView iv = new ImageView(this);
+                    iv.setImageBitmap(bmps.get(i));
+                    iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.dp(this, 110), Ui.dp(this, 110));
+                    lp.rightMargin = Ui.dp(this, 8);
+                    final String u = urls.get(i);
+                    iv.setOnClickListener(v -> startActivity(new android.content.Intent(this, FotoActivity.class).putExtra("url", u)));
+                    tira.addView(iv, lp);
+                }
+            });
+        });
+    }
+
+    private void subirFotoDetalle(android.net.Uri uri) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            String mime = getContentResolver().getType(uri);
+            byte[] datos = null;
+            try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
+                java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n, total = 0;
+                while ((n = in.read(buf)) > 0) { total += n; if (total > 5 * 1024 * 1024) { bo = null; break; } bo.write(buf, 0, n); }
+                if (bo != null) datos = bo.toByteArray();
+            } catch (Exception ignored) {}
+            if (datos == null || (!"image/jpeg".equals(mime) && !"image/png".equals(mime))) {
+                runOnUiThread(() -> Toast.makeText(this, "Elige una foto JPG o PNG de hasta 5 MB", Toast.LENGTH_LONG).show());
+                return;
+            }
+            long cpid = 1 + Math.floorMod(new java.security.SecureRandom().nextLong(), 4_000_000_000_000_000_000L);
+            Api.Respuesta r = Api.subirFoto(this, id, datos, mime, "OTHER", cpid);
+            runOnUiThread(() -> {
+                Toast.makeText(this, r.ok() ? "Foto agregada" : r.error(), Toast.LENGTH_LONG).show();
+                if (r.ok()) cargar();
+            });
+        });
     }
 
     private void cargar() {
@@ -52,7 +207,7 @@ public class RequestDetailActivity extends AppCompatActivity {
     }
 
     private void mostrar(Api.Respuesta r) {
-        LinearLayout c = p.contenido;
+        LinearLayout c = dinamico;
         c.removeAllViews();
         if (!r.ok()) { c.addView(Ui.texto(this, r.error(), 15, R.color.lc_rojo, false)); return; }
         JSONObject j = r.cuerpo;
@@ -65,8 +220,7 @@ public class RequestDetailActivity extends AppCompatActivity {
         fila(card, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora");
         fila(card, "Técnico", j.optString("tecnicoNombre"));
         fila(card, "Dirección", j.optString("direccion"));
-        JSONArray fotos = j.optJSONArray("fotos");
-        fila(card, "Fotos", fotos != null ? String.valueOf(fotos.length()) : "0");
+        seccionFotos(c);
 
         // Fase 6: propuestas del técnico (Good/Better/Best). Se decide sobre la versión exacta mostrada (sha).
         JSONArray props = j.optJSONArray("propuestas");

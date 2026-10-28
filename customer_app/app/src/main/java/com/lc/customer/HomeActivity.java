@@ -31,6 +31,7 @@ public class HomeActivity extends AppCompatActivity {
     private String errorCarga = null;
     private final java.util.Map<Long, JSONObject> detalles = new java.util.HashMap<>();
     private String novedades = "";
+    private JSONArray avisos = new JSONArray();
 
     @Override
     protected void onCreate(Bundle b) {
@@ -83,8 +84,11 @@ public class HomeActivity extends AppCompatActivity {
                 Api.Respuesta d = Api.get(this, "/customer/requests/" + j.optLong("id"));
                 if (d.ok()) det.put(j.optLong("id"), d.cuerpo);
             }
+            Api.Respuesta av = Api.get(this, "/customer/notifications");
+            JSONArray avl = av.ok() ? av.cuerpo.optJSONArray("avisos") : null;
             runOnUiThread(() -> {
                 if (isFinishing()) return;
+                if (avl != null) avisos = avl;
                 if (r.ok()) { reqs = lista == null ? new JSONArray() : lista; errorCarga = null; calcularNovedades(); }
                 else errorCarga = r.error();
                 detalles.clear();
@@ -148,8 +152,20 @@ public class HomeActivity extends AppCompatActivity {
         android.widget.Button props = Ui.boton(this, c, "Mis propiedades y equipos", false);
         props.setOnClickListener(v -> startActivity(new Intent(this, PropertiesActivity.class)));
         Ui.seccion(this, c, "Avisos");
-        c.addView(Ui.texto(this, novedades.isEmpty() ? "Sin avisos por ahora." : novedades, 15,
-                novedades.isEmpty() ? R.color.lc_sec : R.color.lc_texto, !novedades.isEmpty()));
+        if (avisos.length() == 0 && novedades.isEmpty()) {
+            c.addView(Ui.texto(this, "Sin avisos por ahora.", 15, R.color.lc_sec, false));
+        }
+        for (int i = 0; i < avisos.length() && i < 4; i++) {
+            JSONObject a = avisos.optJSONObject(i);
+            LinearLayout t = Ui.tarjeta(this, c);
+            t.addView(Ui.texto(this, a.optString("titulo"), 15, R.color.lc_texto, true));
+            if (!a.optString("cuerpo").isEmpty() && !"null".equals(a.optString("cuerpo"))) {
+                t.addView(Ui.texto(this, a.optString("cuerpo"), 14, R.color.lc_sec, false));
+            }
+            long jid = a.optLong("job_id", 0);
+            if (jid > 0) t.setOnClickListener(v -> startActivity(new Intent(this, RequestDetailActivity.class).putExtra("id", jid)));
+        }
+        if (avisos.length() == 0 && !novedades.isEmpty()) c.addView(Ui.texto(this, novedades, 15, R.color.lc_texto, true));
         Ui.seccion(this, c, "Solicitudes activas");
         int n2 = tarjetas(c, 0);
         if (n2 == 0) c.addView(Ui.texto(this, "No tienes solicitudes activas.", 15, R.color.lc_sec, false));

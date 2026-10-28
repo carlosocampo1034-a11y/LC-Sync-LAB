@@ -137,7 +137,7 @@ final class Api {
 
     /** clientPhotoId > 0: el servidor no duplica la foto si se reintenta con el mismo número. */
     static Respuesta subirFoto(Context c, long jobId, byte[] datos, String mime, String categoria, long clientPhotoId) {
-        if (CloudApi.activo()) return CloudApi.noDisponible();  // lc-api QA aún no recibe fotos
+        if (CloudApi.activo()) return CloudApi.subirFoto(c, jobId, datos, mime, categoria, clientPhotoId);
         HttpURLConnection con = null;
         String limite = "----lc" + UUID.randomUUID();
         try {

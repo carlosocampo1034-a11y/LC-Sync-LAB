@@ -54,12 +54,37 @@ final class CloudApi {
                 return r.ok() ? new Api.Respuesta(200, aContrato(r.cuerpo)) : r;
             }
             if ("POST".equals(metodo) && "/customer/requests".equals(ruta)) return crearSolicitud(c, body);
+            // Mensajes, fotos y avisos de la orden (lc-api qa-8)
+            if (ruta.matches("/customer/requests/\\d+/(messages|photos)(\\?since=\\d+)?")) {
+                String[] parts = ruta.split("/");
+                String tipo = parts[4].replaceAll("\\?.*", "");
+                String q = ruta.contains("?") ? ruta.substring(ruta.indexOf('?')) : "";
+                Api.Respuesta r = lcApi(c, metodo, "/orders/" + parts[3] + "/" + tipo + q, body);
+                if (!r.ok() || !"GET".equals(metodo)) return r;
+                return new Api.Respuesta(200, new JSONObject().put("messages".equals(tipo) ? "mensajes" : "fotos", r.cuerpo.optJSONArray("items")));
+            }
+            if ("GET".equals(metodo) && "/customer/notifications".equals(ruta)) {
+                Api.Respuesta r = lcApi(c, "GET", "/notifications", null);
+                return r.ok() ? new Api.Respuesta(200, new JSONObject().put("avisos", r.cuerpo.optJSONArray("items"))) : r;
+            }
             // La propuesta del técnico se decide (aprobar con firma o rechazar) en lc-api; el servidor valida todo
             if ("POST".equals(metodo) && ruta.matches("/customer/proposals/\\d+/decide")) return lcApi(c, "POST", ruta, body);
         } catch (Exception e) {
             return new Api.Respuesta(-1, null);
         }
         return noDisponible();
+    }
+
+    /** Foto de la solicitud: JSON con base64 (≤5 MB). clientPhotoId>0 evita duplicados al reintentar. */
+    static Api.Respuesta subirFoto(Context c, long jobId, byte[] datos, String mime, String categoria, long clientPhotoId) {
+        try {
+            JSONObject b = new JSONObject().put("mime", mime).put("categoria", categoria)
+                    .put("datosBase64", android.util.Base64.encodeToString(datos, android.util.Base64.NO_WRAP));
+            if (clientPhotoId > 0) b.put("clientPhotoId", clientPhotoId);
+            return lcApi(c, "POST", "/orders/" + jobId + "/photos", b);
+        } catch (Exception e) {
+            return new Api.Respuesta(-1, null);
+        }
     }
 
     static Api.Respuesta noDisponible() {
@@ -172,7 +197,10 @@ final class CloudApi {
         o.put("descripcion", j.optString("descripcion"));
         o.put("direccion", j.optString("direccion"));
         o.put("equipo", j.optString("categoria"));
-        o.put("tecnicoNombre", j.isNull("technician_code") ? "" : j.optString("technician_code"));
+        o.put("tecnicoNombre", !j.isNull("tecnico_nombre") ? j.optString("tecnico_nombre")
+                : j.isNull("technician_code") ? "" : j.optString("technician_code"));
+        if (j.optJSONArray("historial") != null) o.put("historial", j.optJSONArray("historial"));
+        o.put("fotosCount", j.optInt("fotos_count", 0));
         if (!j.isNull("programado_para")) o.put("programadoPara", j.optLong("programado_para"));
         o.put("updatedAt", j.optLong("updated_at"));
         if (j.optJSONArray("propuestas") != null) o.put("propuestas", j.optJSONArray("propuestas"));   // Good/Better/Best
