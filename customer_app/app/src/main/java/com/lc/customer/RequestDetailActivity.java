@@ -216,6 +216,7 @@ public class RequestDetailActivity extends AppCompatActivity {
         LinearLayout card = Ui.tarjeta(this, c);
         fila(card, "Problema", j.optString("descripcion"));
         fila(card, "Equipo", j.optString("equipo"));
+        fila(card, "Servicio", etiquetaCategoria(j.optString("categoria")));
         long cita = j.optLong("programadoPara", 0);
         fila(card, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora");
         fila(card, "Técnico", j.optString("tecnicoNombre"));
@@ -408,6 +409,17 @@ public class RequestDetailActivity extends AppCompatActivity {
                 if (r.ok()) { d.dismiss(); cargar(); } else Toast.makeText(this, r.error(), Toast.LENGTH_LONG).show();
             });
         });
+    }
+
+    static String etiquetaCategoria(String c) {
+        switch (c) {
+            case "ELECTRODOMESTICOS": return "Electrodomésticos";
+            case "HVAC": return "Aire acondicionado / HVAC";
+            case "PLOMERIA": return "Plomería";
+            case "ELECTRICIDAD": return "Electricidad";
+            case "OTRO": return "Otro";
+            default: return c;
+        }
     }
 
     private static String estadoPropuesta(String e) {

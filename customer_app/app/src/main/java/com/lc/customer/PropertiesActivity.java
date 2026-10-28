@@ -57,8 +57,12 @@ public class PropertiesActivity extends AppCompatActivity {
                     JSONArray eq = pr.optJSONArray("equipos");
                     for (int k = 0; eq != null && k < eq.length(); k++) {
                         JSONObject e = eq.optJSONObject(k);
-                        c.addView(Ui.texto(this, "• " + e.optString("nombre") + (e.isNull("modelo") ? "" : " · " + e.optString("modelo")),
-                                14, R.color.lc_texto, false));
+                        StringBuilder linea = new StringBuilder("• ").append(e.optString("nombre"));
+                        for (String campo : new String[]{"marca", "modelo"}) {   // marca y modelo solo si existen
+                            String v = e.isNull(campo) ? "" : e.optString(campo).trim();
+                            if (!v.isEmpty()) linea.append(" · ").append(v);
+                        }
+                        c.addView(Ui.texto(this, linea.toString(), 14, R.color.lc_texto, false));
                     }
                     long pid = pr.optLong("id");
                     TextView add = Ui.texto(this, "+ Agregar equipo", 14, R.color.lc_rojo, true);

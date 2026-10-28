@@ -181,6 +181,17 @@ final class CloudApi {
                 .put("categoria", body.optString("categoria"));
         // con la propiedad ya en la nube, el Control ve tipo, acceso, instrucciones y mascotas de la orden
         if (prop.optBoolean("nube") && prop.optLong("id") > 0) orden.put("property_id", prop.optLong("id"));
+        // nombre del equipo elegido (el Control y el técnico lo ven en la orden)
+        if (body.has("equipmentId")) {
+            JSONArray eqs = prop.optJSONArray("equipos");
+            for (int i = 0; eqs != null && i < eqs.length(); i++) {
+                JSONObject e = eqs.optJSONObject(i);
+                if (e.optLong("id") == body.optLong("equipmentId")) {
+                    String marca = e.isNull("marca") ? "" : e.optString("marca").trim();
+                    orden.put("equipo", e.optString("nombre") + (marca.isEmpty() ? "" : " " + marca));
+                }
+            }
+        }
         if (!body.optString("ventanaPreferida").isEmpty()) orden.put("ventana_preferida", body.optString("ventanaPreferida"));
         if (body.has("fechaPreferida")) orden.put("ventana_preferida", String.valueOf(body.optLong("fechaPreferida")));
         String tel = local(c).getString("telefono", "");
@@ -196,7 +207,8 @@ final class CloudApi {
         o.put("estado", j.optString("estado"));
         o.put("descripcion", j.optString("descripcion"));
         o.put("direccion", j.optString("direccion"));
-        o.put("equipo", j.optString("categoria"));
+        o.put("equipo", j.isNull("equipo") ? "" : j.optString("equipo"));
+        o.put("categoria", j.isNull("categoria") ? "" : j.optString("categoria"));
         o.put("tecnicoNombre", !j.isNull("tecnico_nombre") ? j.optString("tecnico_nombre")
                 : j.isNull("technician_code") ? "" : j.optString("technician_code"));
         if (j.optJSONArray("historial") != null) o.put("historial", j.optJSONArray("historial"));
