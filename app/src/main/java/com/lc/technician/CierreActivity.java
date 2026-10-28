@@ -47,6 +47,9 @@ public class CierreActivity extends AppCompatActivity {
 
     private long jobId;
     private int diagLen, fotos;
+    private static final long TOPE_GUARDADO_MS = 8000;
+    private static final String AVISO_GUARDADO = "Guardado en el teléfono. Se enviará solo cuando vuelva la conexión.";
+    private boolean guardadoLocal;
     private boolean cierreRegistrado, publicando, enCola;
     private String resumenCierre = "";
 
@@ -151,7 +154,8 @@ public class CierreActivity extends AppCompatActivity {
         btnRepuesto.setEnabled(todo);
         btnCompletar.setAlpha(todo ? 1f : 0.35f);
         btnRepuesto.setAlpha(todo ? 1f : 0.35f);
-        if (!evidenciaOk()) aviso.setText("Vuelve a la orden, escribe el diagnóstico (mín. 50 caracteres) y agrega al menos una foto.");
+        if (guardadoLocal && !cierreRegistrado) aviso.setText(AVISO_GUARDADO);
+        else if (!evidenciaOk()) aviso.setText("Vuelve a la orden, escribe el diagnóstico (mín. 50 caracteres) y agrega al menos una foto.");
         else if (!cierreRegistrado) aviso.setText("Pídele al cliente su nombre completo y que firme con el dedo, o registra que no quiso firmar.");
         else aviso.setText("");
     }
@@ -239,19 +243,31 @@ public class CierreActivity extends AppCompatActivity {
         btnGuardar.setEnabled(false);
         btnNegativa.setEnabled(false);
         aviso.setText("Sincronizando con el servidor…");
+        final long t0 = System.currentTimeMillis();
+        final java.util.concurrent.atomic.AtomicBoolean decidido = new java.util.concurrent.atomic.AtomicBoolean(false);
+        final Runnable guardarEnCola = () -> {
+            if (!decidido.compareAndSet(false, true)) return;
+            ColaCierre.agregar(this, jobId, body);
+            publicando = false;
+            esperarEnvio();
+        };
+        // Sin red conocida: se guarda en el teléfono al instante; con red dudosa, a más tardar a los 8 s de pulsar Guardar.
+        if (Red.reconectando()) { guardarEnCola.run(); return; }
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(guardarEnCola, TOPE_GUARDADO_MS);
         OneTimeWorkRequest req = new OneTimeWorkRequest.Builder(SyncWorker.class).build();
         WorkManager wm = WorkManager.getInstance(this);
         wm.enqueue(req);
         final androidx.lifecycle.LiveData<WorkInfo> estadoTrabajo = wm.getWorkInfoByIdLiveData(req.getId());
         final Runnable seguir = () -> {
-            if (publicando) return;
+            if (publicando || !decidido.compareAndSet(false, true)) return;
             publicando = true;   // un solo envío aunque el observador se entregue otra vez o venza el tiempo
             estadoTrabajo.removeObservers(this);
+            final long resto = Math.max(1500, TOPE_GUARDADO_MS - (System.currentTimeMillis() - t0));
             Executors.newSingleThreadExecutor().execute(() -> {
-                // Tope de 20 s: con la red caída las renovaciones de sesión reintentan y tardarían minutos; pasado el tope el
-                // envío se guarda en la cola persistente y se envía solo al volver la conexión.
+                // Con la red caída las renovaciones de sesión reintentan y tardarían minutos; pasado el tope el envío
+                // se guarda en la cola persistente y se envía solo al volver la conexión.
                 java.util.concurrent.Future<?> f = Executors.newSingleThreadExecutor().submit(() -> publicar(body));
-                try { f.get(20, java.util.concurrent.TimeUnit.SECONDS); }
+                try { f.get(resto, java.util.concurrent.TimeUnit.MILLISECONDS); }
                 catch (java.util.concurrent.TimeoutException t) {
                     f.cancel(true);
                     ColaCierre.agregar(this, jobId, body);
@@ -309,7 +325,8 @@ public class CierreActivity extends AppCompatActivity {
     private void esperarEnvio() {
         btnGuardar.setEnabled(false);
         btnNegativa.setEnabled(false);
-        aviso.setText("Guardado en el teléfono. Se enviará solo cuando vuelva la conexión.");
+        guardadoLocal = true;
+        aviso.setText(AVISO_GUARDADO);
         final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
         h.postDelayed(new Runnable() {
             @Override public void run() {
