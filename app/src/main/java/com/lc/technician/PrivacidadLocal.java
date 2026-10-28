@@ -40,6 +40,10 @@ public final class PrivacidadLocal {
                     + "AND (cliente <> '' OR telefono <> '' OR direccion <> '' OR notas <> '' OR descripcion <> '')");
             db.execSQL("DELETE FROM contacts WHERE jobId IN (SELECT id FROM jobs WHERE synced = 1 AND estado IN ('COMPLETADO', 'CANCELADO'))");
             db.execSQL("DELETE FROM signatures WHERE jobId IN (SELECT id FROM jobs WHERE synced = 1 AND estado IN ('COMPLETADO', 'CANCELADO'))");
+            // clientes y propiedades locales que ya no usa ninguna orden abierta
+            String abiertas = "(SELECT customerId FROM jobs WHERE customerId IS NOT NULL AND estado NOT IN ('COMPLETADO', 'CANCELADO'))";
+            db.execSQL("DELETE FROM properties WHERE customerId NOT IN " + abiertas);
+            db.execSQL("DELETE FROM customers WHERE id NOT IN " + abiertas);
             borrarCarpeta(new File(c.getExternalFilesDir(null), "reportes"));   // los PDF llevan nombre y dirección
         } catch (Exception e) {
             Log.w(TAG, "purgarCerradas: " + e.getClass().getSimpleName());

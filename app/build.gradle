@@ -80,6 +80,19 @@ android {
             buildConfigField "String", "SUPABASE_AUTH_PASSWORD", "\"\""
             buildConfigField "boolean", "CLOUD_LOGIN", "true"
         }
+        // Prueba interna de Google Play (Orden 21): como release (R8, no depurable) pero contra Supabase QA y SIN firma aquí:
+        // el .aab se firma a mano con la llave de subida (la clave privada no sale del equipo de Carlos). Id definitivo.
+        internal {
+            initWith release
+            matchingFallbacks = ['release']
+            signingConfig null
+            buildConfigField "String", "PIN_TECNICO",            "\"\""
+            buildConfigField "String", "PIN_DISPATCHER",         "\"\""
+            buildConfigField "String", "PIN_ADMIN",              "\"\""
+            buildConfigField "String", "SUPABASE_AUTH_EMAIL",    "\"\""
+            buildConfigField "String", "SUPABASE_AUTH_PASSWORD", "\"\""
+            buildConfigField "boolean", "CLOUD_LOGIN", "true"
+        }
         release {
             minifyEnabled true
             shrinkResources true

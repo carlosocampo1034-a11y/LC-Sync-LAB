@@ -87,6 +87,13 @@ jobs:
         if: steps.qa.outputs.enabled == '1'
         working-directory: customer_app
         run: ./gradlew --no-daemon --stacktrace assembleQa
+      - name: Technician .aab para prueba interna de Play (com.lc.technician, sin firmar)
+        if: steps.qa.outputs.enabled == '1'
+        run: ./gradlew --no-daemon --stacktrace bundleInternal
+      - name: Customer .aab para prueba interna de Play (com.lc.cliente, sin firmar)
+        if: steps.qa.outputs.enabled == '1'
+        working-directory: customer_app
+        run: ./gradlew --no-daemon --stacktrace bundleInternal
       - name: Verificar APK QA (applicationId, firma, SHA-256, sin secretos)
         if: steps.qa.outputs.enabled == '1'
         run: |
@@ -105,6 +112,17 @@ jobs:
       - name: Resumen de APKs
         run: |
           find . -name "*.apk" \( -path "*debug*" -o -path "*/qa/*" \) -printf "%p %s bytes\n" | tee apks.txt
+      - uses: actions/upload-artifact@v4
+        if: steps.qa.outputs.enabled == '1'
+        with:
+          name: lc-aab-sin-firmar
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            app/build/outputs/bundle/internal/*.aab
+            customer_app/app/build/outputs/bundle/internal/*.aab
+            app/build/outputs/mapping/internal/mapping.txt
+            customer_app/app/build/outputs/mapping/internal/mapping.txt
       - uses: actions/upload-artifact@v4
         with:
           name: lab-apks

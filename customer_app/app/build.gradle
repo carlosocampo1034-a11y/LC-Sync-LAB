@@ -14,8 +14,8 @@ android {
         applicationId "com.lc.customer.lab"
         minSdk 24
         targetSdk 36
-        versionCode 7
-        versionName "0.4.0-qa"
+        versionCode 8
+        versionName "0.5.0"
         buildConfigField "String", "API_BASE", "\"http://127.0.0.1:5055/api/v2\""
         // Vacío fuera de QA: LAB y release siguen hablando con el backend de laboratorio.
         buildConfigField "String", "SUPABASE_URL", "\"\""
@@ -33,6 +33,7 @@ android {
         // QA aislada: com.lc.customer.qa (ver androidComponents abajo), sin HTTP en claro ni backend Flask.
         qa {
             initWith debug
+            versionNameSuffix '-qa'
             matchingFallbacks = ['debug']
             buildConfigField "String", "API_BASE", "\"\""
             // Supabase LC-Sync-QA: solo URL y clave publicable (la sesión es la de cada cliente).
@@ -43,6 +44,19 @@ android {
         }
         debug {
             if (localProps['KEYSTORE_FILE']) { signingConfig signingConfigs.release }
+        }
+        // Prueba interna de Google Play (Orden 21): optimizada, no depurable, contra Supabase QA, sin firma aquí
+        // (se firma con la llave de subida). El id definitivo se fija abajo y es permanente una vez subido a Play.
+        internal {
+            initWith release
+            matchingFallbacks = ['release']
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            signingConfig null
+            buildConfigField "String", "API_BASE", "\"\""
+            buildConfigField "String", "SUPABASE_URL", "\"${localProps['SUPABASE_URL'] ?: ''}\""
+            buildConfigField "String", "SUPABASE_ANON_KEY", "\"${localProps['SUPABASE_ANON_KEY'] ?: ''}\""
         }
     }
     buildFeatures { buildConfig true }
@@ -66,5 +80,8 @@ dependencies {
 androidComponents {
     onVariants(selector().withBuildType('qa')) { variant ->
         variant.applicationId.set('com.lc.cliente.qa')
+    }
+    onVariants(selector().withBuildType('internal')) { variant ->
+        variant.applicationId.set('com.lc.cliente')
     }
 }
