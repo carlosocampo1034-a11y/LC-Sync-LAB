@@ -37,13 +37,17 @@ public class InspectionActivity extends AppCompatActivity {
         "Condenser", "Electrical", "Refrigeration"
     };
 
-    private static final String[] TIPOS = {
-        "VOLTAGE", "AMPERAGE", "TEMPERATURE", "PRESSURE", "SUPERHEAT", "SUPERCOOL", "STATIC_PRESSURE"
-    };
-    private static final String[] UNIDADES = {"V", "A", "\u00b0F", "PSI"};
-    private static final String[] RESOLUCIONES = {
-        "\u2014", "Repair", "Replace", "Part Required", "Order Part", "Proposal", "No Fault Found"
-    };
+    // Listas editables desde Control (settings inspection_*.list); el respaldo coincide con el valor inicial de la tabla
+    private com.lc.technician.sync.Listas.Lista TIPOS, UNIDADES, RESOLUCIONES;
+
+    private void cargarListas() {
+        TIPOS = com.lc.technician.sync.Listas.lista(this, "inspection_types.list", new String[][]{{"VOLTAGE", "Voltaje"}, {"AMPERAGE", "Amperaje"},
+                {"TEMPERATURE", "Temperatura"}, {"PRESSURE", "Presi\u00f3n"}, {"SUPERHEAT", "Sobrecalentamiento"}, {"SUPERCOOL", "Subenfriamiento"},
+                {"STATIC_PRESSURE", "Presi\u00f3n est\u00e1tica"}}, null);
+        UNIDADES = com.lc.technician.sync.Listas.lista(this, "inspection_units.list", new String[][]{{"V", "V"}, {"A", "A"}, {"\u00b0F", "\u00b0F"}, {"PSI", "PSI"}}, null);
+        RESOLUCIONES = com.lc.technician.sync.Listas.lista(this, "inspection_resolutions.list", new String[][]{{"Repair", "Reparar"}, {"Replace", "Reemplazar"},
+                {"Part Required", "Requiere repuesto"}, {"Order Part", "Pedir repuesto"}, {"Proposal", "Propuesta"}, {"No Fault Found", "Sin falla"}}, "\u2014");
+    }
 
     private long jobId;
     // Maps: itemName -> InspectionItemEntity (in memory)
@@ -66,6 +70,8 @@ public class InspectionActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        com.lc.technician.sync.Listas.refrescar(this, true, null);
+        cargarListas();
         setContentView(R.layout.activity_inspection);
 
         jobId = getIntent().getLongExtra(EXTRA_JOB_ID, -1);
@@ -179,13 +185,12 @@ public class InspectionActivity extends AppCompatActivity {
 
         Spinner spResolucion = new Spinner(this);
         ArrayAdapter<String> resAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, RESOLUCIONES);
+                android.R.layout.simple_spinner_item, RESOLUCIONES.labels);
         resAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spResolucion.setAdapter(resAdapter);
         if (item.resolucion != null) {
-            for (int i = 0; i < RESOLUCIONES.length; i++) {
-                if (RESOLUCIONES[i].equals(item.resolucion)) { spResolucion.setSelection(i); break; }
-            }
+            int ri = RESOLUCIONES.indexOf(item.resolucion);
+            if (ri >= 0) spResolucion.setSelection(ri);
         }
         LinearLayout.LayoutParams spParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -296,12 +301,12 @@ public class InspectionActivity extends AppCompatActivity {
         EditText etNota = v.findViewById(R.id.etNota);
 
         ArrayAdapter<String> tipoAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, TIPOS);
+                android.R.layout.simple_spinner_item, TIPOS.labels);
         tipoAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spTipo.setAdapter(tipoAdapter);
 
         ArrayAdapter<String> unidadAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, UNIDADES);
+                android.R.layout.simple_spinner_item, UNIDADES.labels);
         unidadAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spUnidad.setAdapter(unidadAdapter);
 
@@ -322,10 +327,10 @@ public class InspectionActivity extends AppCompatActivity {
                     }
                     FieldMeasurementEntity m = new FieldMeasurementEntity();
                     m.jobId = jobId;
-                    m.tipo = TIPOS[spTipo.getSelectedItemPosition()];
+                    m.tipo = TIPOS.ids[spTipo.getSelectedItemPosition()];
                     m.ubicacion = etUbicacion.getText().toString().trim();
                     m.valor = valor;
-                    m.unidad = UNIDADES[spUnidad.getSelectedItemPosition()];
+                    m.unidad = UNIDADES.ids[spUnidad.getSelectedItemPosition()];
                     m.nota = etNota.getText().toString().trim();
                     if (m.nota.isEmpty()) m.nota = null;
                     JobRepository.get().addFieldMeasurementAsync(m, newId -> {
@@ -375,8 +380,9 @@ public class InspectionActivity extends AppCompatActivity {
                 InspectionItemEntity item = itemMap.get(name);
                 if (item != null && "ISSUE".equals(item.estado)) {
                     item.hallazgo = etHallazgo.getText().toString().trim();
-                    String res = (String) spResolucion.getSelectedItem();
-                    item.resolucion = "\u2014".equals(res) ? null : res;
+                    int rp = spResolucion.getSelectedItemPosition();
+                    String res = rp >= 0 && rp < RESOLUCIONES.ids.length ? RESOLUCIONES.ids[rp] : "";
+                    item.resolucion = res.isEmpty() ? null : res;
                 }
             }
         }

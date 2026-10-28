@@ -75,6 +75,7 @@ public class HomeActivity extends AppCompatActivity {
         super.onResume();
         if (!Api.conSesion(this)) { startActivity(new Intent(this, LoginActivity.class)); finish(); return; }
         visible = true;
+        Ajustes.refrescar(this, true, this::pintar);   // precios y listas editables (Control)
         hh.removeCallbacks(refresco);
         hh.post(refresco);   // lista y seguimiento se actualizan solos mientras la pantalla está abierta
     }
@@ -87,6 +88,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void cargar() {
+        Ajustes.refrescar(this, false, this::pintar);   // como máximo cada 30 s
         Executors.newSingleThreadExecutor().execute(() -> {
             Api.Respuesta r = Api.get(this, "/customer/requests");
             JSONArray lista = r.ok() ? r.cuerpo.optJSONArray("requests") : null;
@@ -126,7 +128,7 @@ public class HomeActivity extends AppCompatActivity {
             String est = j.optString("estado");
             String antes = vistos.getString(id, null);
             if (antes != null && !antes.equals(est)) {
-                sb.append("• Nº ").append(id).append(": ").append(Ui.estadoCliente(est)).append("\n");
+                sb.append("• Nº ").append(id).append(": ").append(Ui.estadoCliente(this, est)).append("\n");
             }
             ed.putString(id, est);
         }
@@ -223,7 +225,7 @@ public class HomeActivity extends AppCompatActivity {
             cab.setOrientation(LinearLayout.HORIZONTAL);
             cab.addView(Ui.texto(this, "Nº " + j.optLong("id"), 16, R.color.lc_texto, true),
                     new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-            cab.addView(Ui.badge(this, Ui.estadoCliente(j.optString("estado")).toUpperCase()));
+            cab.addView(Ui.badge(this, Ui.estadoCliente(this, j.optString("estado")).toUpperCase()));
             card.addView(cab);
             TextView d = Ui.texto(this, limpiarDescripcion(j.optString("descripcion")), 15, R.color.lc_texto, false);
             d.setPadding(0, Ui.dp(this, 6), 0, 0);

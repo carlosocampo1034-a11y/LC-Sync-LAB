@@ -21,8 +21,6 @@ import java.util.concurrent.Executors;
 /** Propiedades del cliente y sus equipos del hogar. */
 public class PropertiesActivity extends AppCompatActivity {
 
-    static final String[] TIPOS = {"Casa", "Apartamento", "Oficina", "Hotel", "Otro"};
-    static final String[] ACCESOS = {"Ninguno", "Código puerta", "Garaje", "Lockbox", "Vecino", "Llave escondida"};
     private LinearLayout lista;
 
     @Override
@@ -52,7 +50,7 @@ public class PropertiesActivity extends AppCompatActivity {
                     JSONObject pr = ps.optJSONObject(i);
                     LinearLayout c = Ui.tarjeta(this, lista);
                     c.addView(Ui.texto(this, pr.optString("direccion"), 16, R.color.lc_texto, true));
-                    c.addView(Ui.texto(this, pr.optString("tipoPropiedad", "") + " · acceso: " + pr.optString("tipoAcceso", "—")
+                    c.addView(Ui.texto(this, Ajustes.etiqueta(this, "property_types.list", Ajustes.TIPOS_PROPIEDAD, pr.optString("tipoPropiedad", "")) + " · acceso: " + Ajustes.etiqueta(this, "access_types.list", Ajustes.ACCESOS, pr.optString("tipoAcceso", "—"))
                             + (pr.optBoolean("tieneCodigoAcceso") ? " (código guardado)" : ""), 13, R.color.lc_sec, false));
                     JSONArray eq = pr.optJSONArray("equipos");
                     for (int k = 0; eq != null && k < eq.length(); k++) {
@@ -81,11 +79,18 @@ public class PropertiesActivity extends AppCompatActivity {
         f.setPadding(Ui.dp(this, 20), 0, Ui.dp(this, 20), 0);
         EditText dir = Ui.campo(this, f, "Dirección completa",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS);
+        // listas editables en Control (settings property_types.list / access_types.list)
+        final java.util.List<Ajustes.Opcion> tiposOp = Ajustes.lista(this, "property_types.list", Ajustes.TIPOS_PROPIEDAD, true);
+        final java.util.List<Ajustes.Opcion> accesosOp = Ajustes.lista(this, "access_types.list", Ajustes.ACCESOS, true);
         Spinner tipo = new Spinner(this);
-        tipo.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, TIPOS));
+        java.util.List<String> tiposTxt = new java.util.ArrayList<>();
+        for (Ajustes.Opcion o : tiposOp) tiposTxt.add(o.label);
+        tipo.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, tiposTxt));
         f.addView(tipo);
         Spinner acceso = new Spinner(this);
-        acceso.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ACCESOS));
+        java.util.List<String> accesosTxt = new java.util.ArrayList<>();
+        for (Ajustes.Opcion o : accesosOp) accesosTxt.add(o.label);
+        acceso.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, accesosTxt));
         f.addView(acceso);
         EditText codigo = Ui.campo(this, f, "Código de acceso (opcional, se guarda cifrado)",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
@@ -101,8 +106,8 @@ public class PropertiesActivity extends AppCompatActivity {
             v.setEnabled(false);
             JSONObject body = new JSONObject();
             try {
-                body.put("direccion", dir.getText().toString().trim()).put("tipoPropiedad", tipo.getSelectedItem())
-                        .put("tipoAcceso", acceso.getSelectedItem()).put("codigoAcceso", codigo.getText().toString().trim())
+                body.put("direccion", dir.getText().toString().trim()).put("tipoPropiedad", tiposOp.get(tipo.getSelectedItemPosition()).id)
+                        .put("tipoAcceso", accesosOp.get(acceso.getSelectedItemPosition()).id).put("codigoAcceso", codigo.getText().toString().trim())
                         .put("instrucciones", instr.getText().toString().trim()).put("mascota", masc.getText().toString().trim())
                         .put("contactoRespaldo", resp.getText().toString().trim());
             } catch (Exception ignored) {}

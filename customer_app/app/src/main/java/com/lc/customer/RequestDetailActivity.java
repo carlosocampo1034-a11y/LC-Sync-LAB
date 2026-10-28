@@ -229,12 +229,12 @@ public class RequestDetailActivity extends AppCompatActivity {
         c.removeAllViews();
         if (!r.ok()) { c.addView(Ui.texto(this, r.error(), 15, R.color.lc_rojo, false)); return; }
         JSONObject j = r.cuerpo;
-        TextView est = Ui.badge(this, Ui.estadoCliente(j.optString("estado")).toUpperCase());
+        TextView est = Ui.badge(this, Ui.estadoCliente(this, j.optString("estado")).toUpperCase());
         c.addView(est);
         LinearLayout card = Ui.tarjeta(this, c);
         fila(card, "Problema", j.optString("descripcion"));
         fila(card, "Equipo", j.optString("equipo"));
-        fila(card, "Servicio", etiquetaCategoria(j.optString("categoria")));
+        fila(card, "Servicio", Ajustes.etiqueta(this, "categories.list", Ajustes.CATEGORIAS, j.optString("categoria")));
         long cita = j.optLong("programadoPara", 0);
         fila(card, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora");
         fila(card, "Técnico", j.optString("tecnicoNombre"));
@@ -382,7 +382,7 @@ public class RequestDetailActivity extends AppCompatActivity {
         for (int i = 0; h != null && i < h.length(); i++) {
             JSONObject e = h.optJSONObject(i);
             String valor = e.optString("valor");
-            if ("Estado".equals(e.optString("campo"))) valor = Ui.estadoCliente(valor);
+            if ("Estado".equals(e.optString("campo"))) valor = Ui.estadoCliente(this, valor);
             else if ("Cita".equals(e.optString("campo"))) {
                 try { valor = Ui.fecha(Long.parseLong(valor)); } catch (Exception ignored) {}
             } else if ("Técnico asignado".equals(e.optString("campo"))) valor = "Asignado";
@@ -427,17 +427,6 @@ public class RequestDetailActivity extends AppCompatActivity {
                 if (r.ok()) { d.dismiss(); cargar(); } else Toast.makeText(this, r.error(), Toast.LENGTH_LONG).show();
             });
         });
-    }
-
-    static String etiquetaCategoria(String c) {
-        switch (c) {
-            case "ELECTRODOMESTICOS": return "Electrodomésticos";
-            case "HVAC": return "Aire acondicionado / HVAC";
-            case "PLOMERIA": return "Plomería";
-            case "ELECTRICIDAD": return "Electricidad";
-            case "OTRO": return "Otro";
-            default: return c;
-        }
     }
 
     private static String estadoPropuesta(String e) {

@@ -75,6 +75,10 @@ public interface SupabaseApi {
             @Body java.util.Map<String, Object> body);
 
     /** Propuesta Good/Better/Best del técnico (idempotente por dispositivo + localId + contenido). */
+    /** Configuración dinámica (precios y listas editables); since = epoch ms de la última descarga. */
+    @GET("functions/v1/lc-api/settings")
+    Call<ResponseBody> settings(@Header("Authorization") String authorization, @Query("since") String since);
+
     /** Foto de evidencia de la orden (lc-api qa-8). clientPhotoId evita duplicados al reintentar. */
     @Headers("Content-Type: application/json")
     @POST("functions/v1/lc-api/orders/{id}/photos")

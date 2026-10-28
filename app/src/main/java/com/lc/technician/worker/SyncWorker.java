@@ -160,6 +160,7 @@ public class SyncWorker extends Worker {
                     upsertSyncState(db, "PULL_JOB", now);
                     android.util.Log.i(TAG, "pull: " + pulledJobs + " jobs ← Supabase");
                     if (com.lc.technician.BuildConfig.CLOUD_LOGIN) pulledJobs += marcarReasignadas(db, sb);
+                    if (com.lc.technician.BuildConfig.CLOUD_LOGIN) com.lc.technician.sync.Listas.refrescar(getApplicationContext(), false, null);
                     if (com.lc.technician.BuildConfig.CLOUD_LOGIN) {
                         try {   // evidencias nuevas → Storage (el cliente y el Control las ven); nunca borra nada local
                             int fotos = com.lc.technician.sync.PhotoSync.sincronizarNuevas(getApplicationContext(), db, sb);

@@ -63,6 +63,9 @@ final class CloudApi {
                 if (!r.ok() || !"GET".equals(metodo)) return r;
                 return new Api.Respuesta(200, new JSONObject().put("messages".equals(tipo) ? "mensajes" : "fotos", r.cuerpo.optJSONArray("items")));
             }
+            if ("GET".equals(metodo) && ruta.startsWith("/customer/settings")) {   // precios y listas editables
+                return lcApi(c, "GET", "/settings" + (ruta.contains("?") ? ruta.substring(ruta.indexOf('?')) : ""), null);
+            }
             if ("GET".equals(metodo) && "/customer/notifications".equals(ruta)) {
                 Api.Respuesta r = lcApi(c, "GET", "/notifications", null);
                 return r.ok() ? new Api.Respuesta(200, new JSONObject().put("avisos", r.cuerpo.optJSONArray("items"))) : r;

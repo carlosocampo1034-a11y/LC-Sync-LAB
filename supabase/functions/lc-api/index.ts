@@ -21,8 +21,8 @@ function salida(req: Request): { H: Record<string, string>; out: Out } {
   if (ORIGEN_OK.test(o)) {
     Object.assign(H, {
       "access-control-allow-origin": o,
-      "access-control-allow-headers": "authorization,apikey,x-client-info,content-type",
-      "access-control-allow-methods": "OPTIONS,GET,POST,PATCH",
+      "access-control-allow-headers": "authorization,apikey,x-client-info,content-type,if-none-match",
+      "access-control-allow-methods": "OPTIONS,GET,POST,PATCH,PUT",
       "access-control-max-age": "600",
     });
   }
@@ -282,12 +282,12 @@ Deno.serve(async (req) => {
   const route = (url.pathname.split("/lc-api").pop() || "/").replace(/\/+$/, "") || "/";
   try {
     if (route === "/health" && req.method === "GET") {
-      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-8" });
+      return out(200, { status: "ok", environment: "LC-Sync-QA", version: "qa-9" });
     }
     const user = await authenticate(req, out);
     if (user instanceof Response) return user;
     const staff = STAFF.includes(user.role);
-    const body = req.method === "POST" || req.method === "PATCH" ? await req.json().catch(() => null) : null;
+    const body = req.method === "POST" || req.method === "PATCH" || req.method === "PUT" ? await req.json().catch(() => null) : null;
 
     if (route === "/auth/me" && req.method === "GET") {
       const { data: p } = await db.from("profiles").select("display_name,technician_code,must_change_password")
@@ -567,6 +567,63 @@ Deno.serve(async (req) => {
       if (Object.keys(c).length === 0) return out(422, { error: "nothing_to_update" });
       const { error } = await db.from("dispatch_config").update({ ...c, updated_at: Date.now() }).eq("id", 1);
       return error ? out(500, { error: "update_failed" }) : out(200, c);
+    }
+
+    // ── Configuración dinámica (settings) · qa-9 ───────────────────────────────────────────────────────
+    // Lectura: cualquier usuario con sesión (STAFF solo para staff). Escritura: lc_setting_set valida rol, tipo, rango,
+    // piso de precios, secretos y versión, y audita en la misma transacción. Los secretos NO viven aquí.
+    const mset = route.match(/^\/settings(?:\/([A-Za-z0-9_.]+))?(?:\/(reset))?$/);
+    if (mset) {
+      const arg = mset[1] || "";
+      const COLS_SET = "key,value,type,category,description,editable_by,visibility,constraints,default_value,version,updated_at";
+      if (req.method === "GET" && arg === "audit" && !mset[2]) {
+        if (user.role !== "ADMIN") return out(403, { error: "Solo un administrador ve el historial." });
+        const lim = Math.min(200, Math.max(1, Number(url.searchParams.get("limit")) || 50));
+        let q = db.from("settings_audit").select("id,setting_key,old_value,new_value,changed_by,changed_at,ip_address,user_agent,via,reason,setting_version")
+          .order("changed_at", { ascending: false }).limit(lim);
+        const k = url.searchParams.get("key"); if (k) q = q.eq("setting_key", k);
+        const before = url.searchParams.get("before"); if (before && !isNaN(Date.parse(before))) q = q.lt("changed_at", before);
+        const { data, error } = await q;
+        if (error) return out(500, { error: "list_failed" });
+        const quien = await nombres((data || []).map((r) => r.changed_by));
+        return out(200, (data || []).map((r) => ({ ...r, changed_by_name: r.changed_by ? quien[r.changed_by] ?? null : null })));
+      }
+      if (req.method === "GET" && !mset[2]) {
+        let q = db.from("settings").select(COLS_SET).order("key");
+        if (!staff) q = q.in("visibility", ["PUBLIC", "AUTH"]);
+        if (arg && arg !== "audit") {
+          if (arg.includes(".")) q = q.eq("key", arg); else q = q.eq("category", arg);
+        }
+        const since = url.searchParams.get("since");
+        if (since !== null) {
+          if (!/^\d{1,15}$/.test(since)) return out(422, { error: "invalid_since" });
+          q = q.gt("updated_at", new Date(Number(since)).toISOString());
+        }
+        const { data, error } = await q;
+        if (error) return out(500, { error: "list_failed" });
+        const filas = (data || []).map((r) => ({ ...r, updated_at: Date.parse(r.updated_at as string) }));
+        const maxU = filas.reduce((m, r) => Math.max(m, r.updated_at as number), 0);
+        const etag = `W/"${user.role}-${filas.length}-${maxU}-${since ?? ""}-${arg}"`;
+        const H2 = { ...H, "cache-control": "private, max-age=30", etag, vary: "authorization, origin" };
+        if (req.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers: H2 });
+        return new Response(JSON.stringify({ settings: filas, serverTime: Date.now() }), { status: 200, headers: H2 });
+      }
+      if (req.method === "PUT" && arg.includes(".") && !mset[2]) {
+        if (!staff) return out(403, { error: "role_denied" });
+        if (!body || typeof body !== "object" || !("value" in body)) return out(422, { error: "value_required" });
+        const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || null;
+        const { data, error } = await db.rpc("lc_setting_set", { p_actor: user.id, p_key: arg, p_value: body.value,
+          p_expected_version: Number.isInteger(body.expectedVersion) ? body.expectedVersion : null,
+          p_reason: typeof body.reason === "string" ? body.reason : null, p_ip: ip, p_ua: req.headers.get("user-agent"), p_via: "api" });
+        return error ? out(500, { error: "update_failed" }) : fromRpc(data, out);
+      }
+      if (req.method === "POST" && arg.includes(".") && mset[2] === "reset") {
+        if (!staff) return out(403, { error: "role_denied" });
+        const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || null;
+        const { data, error } = await db.rpc("lc_setting_reset", { p_actor: user.id, p_key: arg, p_ip: ip, p_ua: req.headers.get("user-agent") });
+        return error ? out(500, { error: "reset_failed" }) : fromRpc(data, out);
+      }
+      return out(405, { error: "method_not_allowed" });
     }
 
     // ── Propuestas ───────────────────────────────────────────────────────────────────────────

@@ -353,12 +353,17 @@ public class InvoiceActivity extends AppCompatActivity {
 
     /** El técnico registra lo que el cliente dijo pagar; la factura no pasa a PAGADA hasta que despacho lo confirma. */
     private void dialogoPagoReportado() {
-        final String[] metodos = {"EFECTIVO", "CHEQUE", "TARJETA", "ZELLE", "TRANSFERENCIA", "OTRO"};
+        // métodos de pago: lista editable desde Control (settings payment_methods.list)
+        com.lc.technician.sync.Listas.refrescar(this, false, null);
+        final com.lc.technician.sync.Listas.Lista metodosL = com.lc.technician.sync.Listas.lista(this, "payment_methods.list",
+                new String[][]{{"EFECTIVO", "Efectivo"}, {"CHEQUE", "Cheque"}, {"TARJETA", "Tarjeta"}, {"ZELLE", "Zelle"},
+                        {"TRANSFERENCIA", "Transferencia"}, {"OTRO", "Otro"}}, null);
+        final String[] metodos = metodosL.ids;
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setPadding(48, 16, 48, 0);
         android.widget.Spinner sp = new android.widget.Spinner(this);
-        sp.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_item, metodos));
+        sp.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_item, metodosL.labels));
         c.addView(sp);
         android.widget.EditText monto = new android.widget.EditText(this);
         monto.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -486,7 +491,8 @@ public class InvoiceActivity extends AppCompatActivity {
     }
 
     private void mostrarDialogoPago() {
-        String[] metodos = {"Efectivo", "Cheque", "Tarjeta de crédito", "Zelle"};
+        String[] metodos = com.lc.technician.sync.Listas.lista(this, "payment_methods.list",
+                new String[][]{{"EFECTIVO", "Efectivo"}, {"CHEQUE", "Cheque"}, {"TARJETA", "Tarjeta de crédito"}, {"ZELLE", "Zelle"}}, null).labels;
         new AlertDialog.Builder(this)
                 .setTitle("Método de pago")
                 .setItems(metodos, (dialog, which) -> registrarPago(metodos[which]))

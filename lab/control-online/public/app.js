@@ -519,6 +519,156 @@
     });
   }
 
+
+  // ── CONFIGURACIÓN: precios y valores (settings) ───────────────────────────────────────────────
+  // Todo valor editable vive en public.settings; lc-api valida rol, tipo, rango, piso de precios y versión, y audita.
+  const ES_ROL_EDITA = (s) => yo && (yo.role === "ADMIN" || String(s.editable_by).includes(yo.role));
+  const NOMBRES_OFICIO = { hvac: "A/C y Calefacción (HVAC)", plumbing: "Plomería", electricity: "Electricidad", general: "General (electrodomésticos y otros)" };
+  const NOMBRES_CONCEPTO = { diagnostic: "Visita de diagnóstico (USD)", hourly: "Precio por hora (USD)", emergency_multiplier: "Multiplicador de emergencia (×)" };
+  const fmtVal = (v) => (typeof v === "number" ? (Number.isInteger(v) ? v.toFixed(1) : String(v)) : esc(JSON.stringify(v)));
+
+  async function vistaConfig(mensaje) {
+    cabecera("Precios y configuración", "Los cambios llegan a las apps en menos de un minuto", "config");
+    const r = await api("GET", "/settings/pricing");
+    if (r.status !== 200) return errorVista(r);
+    const filas = r.body.settings;
+    const porOficio = {};
+    for (const s of filas) {
+      const m = s.key.match(/^pricing\.([a-z_]+)\.([a-z_]+)$/);
+      if (m) (porOficio[m[1]] ||= []).push({ s, concepto: m[2] });
+    }
+    const generales = filas.filter((s) => !/^pricing\.[a-z_]+\.[a-z_]+$/.test(s.key));
+    const fila = (s, nombre) => {
+      const puede = ES_ROL_EDITA(s);
+      return `<tr data-key="${esc(s.key)}" data-version="${s.version}">
+        <td class="fw-semibold">${esc(nombre)}<div class="text-muted" style="font-size:.72rem">${esc(s.key)}</div></td>
+        <td style="width:170px"><input class="form-control form-control-sm cfg-input" type="number" step="0.01" min="${s.constraints?.min ?? 0}"
+            ${s.constraints?.max != null ? `max="${s.constraints.max}"` : ""} value="${esc(s.value)}" ${puede ? "" : "disabled"} aria-label="${esc(nombre)}"></td>
+        <td class="text-muted" style="font-size:.82rem">${fmtVal(s.default_value)}</td>
+        <td class="text-muted" style="font-size:.78rem">${esc(fecha(s.updated_at))} · v${s.version}</td>
+        <td class="text-end" style="white-space:nowrap">
+          ${puede ? `<button class="btn btn-accent btn-sm cfg-guardar">Guardar</button>` : `<span class="text-muted" style="font-size:.75rem"><i class="bi bi-lock"></i> Solo administrador</span>`}
+          ${yo.role === "ADMIN" ? `<button class="btn btn-outline-secondary btn-sm cfg-reset" title="Volver al valor inicial">↺</button>
+          <button class="btn btn-outline-secondary btn-sm cfg-hist" title="Historial">Historial</button>` : ""}
+        </td></tr>
+        <tr class="cfg-msg" data-for="${esc(s.key)}" hidden><td colspan="5"></td></tr>`;
+    };
+    const tabla = (titulo, subt, items) => `<div class="lc-card mb-4"><div class="p-3 pb-0"><div class="fw-bold">${esc(titulo)}</div>
+        ${subt ? `<div class="text-muted" style="font-size:.78rem">${esc(subt)}</div>` : ""}</div>
+        <div class="table-responsive"><table class="lc-table w-100"><thead><tr><th>Concepto</th><th>Valor</th><th>Inicial</th><th>Última modificación</th><th></th></tr></thead>
+        <tbody>${items.join("")}</tbody></table></div></div>`;
+    const orden = ["hvac", "plumbing", "electricity", "general"];
+    $("lcBody").innerHTML = `
+      ${mensaje ? `<div class="alert alert-success mb-3">${esc(mensaje)}</div>` : ""}
+      <div class="alert alert-light border mb-4" style="font-size:.85rem"><i class="bi bi-info-circle me-1"></i>
+        Regla Broward County / Florida: <b>$10 menos que la competencia, sin bajar del piso</b>. El servidor rechaza cualquier diagnóstico u hora
+        por debajo de <b>${money(filas.find((x) => x.key === "pricing.service_call_floor")?.value ?? 50)}</b>.</div>
+      ${tabla("Piso y margen", "Valores generales de precios", generales.map((s) => fila(s,
+        s.key === "pricing.service_call_floor" ? "Piso mínimo de visita y hora (USD)" : s.key === "pricing.markup_percent" ? "Margen por defecto en propuestas (%)" : s.description)))}
+      ${orden.filter((o) => porOficio[o]).map((o) => tabla(NOMBRES_OFICIO[o] || o, null,
+        porOficio[o].map(({ s, concepto }) => fila(s, NOMBRES_CONCEPTO[concepto] || concepto)))).join("")}
+      <div id="cfgHist" class="lc-card p-3 mb-4" hidden></div>`;
+    const msg = (k, texto, ok) => { const r = document.querySelector(`tr.cfg-msg[data-for="${CSS.escape(k)}"]`); if (!r) return;
+      r.hidden = !texto; r.firstElementChild.innerHTML = texto ? `<div class="alert alert-${ok ? "success" : "danger"} py-1 px-2 mb-1" style="font-size:.8rem">${esc(texto)}</div>` : ""; };
+    $("lcBody").querySelectorAll("tr[data-key]").forEach((tr) => {
+      const k = tr.dataset.key, inp = tr.querySelector(".cfg-input");
+      tr.querySelector(".cfg-guardar")?.addEventListener("click", async (e) => {
+        const v = Number(inp.value);
+        if (!Number.isFinite(v)) return msg(k, "Escribe un número", false);
+        e.target.disabled = true;
+        const rr = await api("PUT", "/settings/" + k, { value: v, expectedVersion: Number(tr.dataset.version), reason: "Control Web" });
+        e.target.disabled = false;
+        if (rr.status === 200) { tr.dataset.version = rr.body.version; msg(k, `Guardado: ${fmtVal(rr.body.value)} (versión ${rr.body.version})`, true);
+          tr.children[3].innerHTML = `${esc(fecha(Date.now()))} · v${rr.body.version}`; }
+        else msg(k, rr.body?.mensaje || rr.body?.error || `No se guardó (${rr.status})`, false);
+      });
+      tr.querySelector(".cfg-reset")?.addEventListener("click", async () => {
+        const rr = await api("POST", `/settings/${k}/reset`, {});
+        if (rr.status === 200) vistaConfig(`Restablecido: ${k}`); else msg(k, rr.body?.error || "No se pudo restablecer", false);
+      });
+      tr.querySelector(".cfg-hist")?.addEventListener("click", async () => {
+        const rr = await api("GET", `/settings/audit?key=${encodeURIComponent(k)}&limit=20`);
+        const box = $("cfgHist"); box.hidden = false;
+        box.innerHTML = rr.status !== 200 ? `<div class="text-danger">No se pudo cargar el historial</div>` : `<div class="fw-bold mb-2">Historial · ${esc(k)}</div>
+          <table class="lc-table w-100"><thead><tr><th>Cuándo</th><th>Quién</th><th>Antes</th><th>Después</th><th>Origen</th></tr></thead><tbody>
+          ${rr.body.map((a) => `<tr><td>${esc(fecha(Date.parse(a.changed_at)))}</td><td>${esc(a.changed_by_name || "—")}</td>
+            <td>${fmtVal(a.old_value)}</td><td>${fmtVal(a.new_value)}</td><td>${esc(a.via)}</td></tr>`).join("") || `<tr><td colspan="5">Sin cambios</td></tr>`}
+          </tbody></table>`;
+        box.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+  }
+
+  // ── LISTAS EDITABLES (desplegables de las apps) ───────────────────────────────────────────────────
+  // Agregar, renombrar y desactivar opciones. Nunca se borran (órdenes históricas). Los estados tienen ids fijos.
+  const NOMBRES_LISTA = { "categories.list": "Categorías de servicio (Cliente)", "specialties.list": "Especialidades del técnico",
+    "order_states.list": "Estados de la orden (solo textos)", "property_types.list": "Tipos de propiedad (Cliente)", "access_types.list": "Formas de acceso (Cliente)",
+    "refrigerants.list": "Refrigerantes (Técnico)", "voltages.list": "Voltajes (Técnico)", "phases.list": "Fases eléctricas (Técnico)",
+    "system_roles.list": "Parte del sistema (Técnico)", "lifecycle_statuses.list": "Ciclo de vida del equipo (Técnico)",
+    "inspection_types.list": "Tipos de medición (Técnico)", "inspection_units.list": "Unidades (Técnico)", "inspection_resolutions.list": "Resoluciones de hallazgo (Técnico)",
+    "finding_areas.list": "Áreas de hallazgo (Técnico)", "payment_methods.list": "Métodos de pago (Técnico)" };
+  const idDesde = (texto, listaKey) => {
+    const base = texto.trim();
+    return ["categories.list", "specialties.list"].includes(listaKey)
+      ? base.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "") : base;
+  };
+  async function vistaListas(clave, mensaje) {
+    cabecera("Listas editables", "Los cambios aparecen en las apps sin recompilar", "listas");
+    const r = await api("GET", "/settings");
+    if (r.status !== 200) return errorVista(r);
+    const listas = r.body.settings.filter((s) => s.key.endsWith(".list"));
+    const s = listas.find((x) => x.key === clave) || listas.find((x) => x.key === "categories.list") || listas[0];
+    if (!s) { $("lcBody").innerHTML = `<div class="empty-state">Sin listas</div>`; return; }
+    const fijo = !!s.constraints?.fixedIds, puede = ES_ROL_EDITA(s);
+    let opciones = JSON.parse(JSON.stringify(s.value));
+    const tieneCust = opciones.some((o) => "customer_label" in o);
+    const tienePG = opciones.some((o) => "price_group" in o);   // categorías: de qué grupo de precios cobra
+    const GRUPOS = [["hvac", "A/C y Calefacción"], ["plumbing", "Plomería"], ["electricity", "Electricidad"], ["general", "General"]];
+    const pintar = (err) => {
+      $("lcBody").innerHTML = `
+        ${mensaje ? `<div class="alert alert-success mb-3">${esc(mensaje)}</div>` : ""}
+        <div class="lc-card p-3 mb-4">
+          <label class="form-label fw-semibold" for="selLista">Lista</label>
+          <select id="selLista" class="form-select" style="max-width:420px">${listas.map((l) => `<option value="${esc(l.key)}" ${l.key === s.key ? "selected" : ""}>${esc(NOMBRES_LISTA[l.key] || l.key)}</option>`).join("")}</select>
+          <div class="text-muted mt-2" style="font-size:.8rem">${esc(s.description)} · versión ${s.version}.
+            ${fijo ? "<b>Ids fijos</b>: solo se editan los textos." : "Las opciones <b>no se borran</b>: se desactivan para no romper órdenes históricas."}</div>
+        </div>
+        <div class="lc-card mb-4"><div class="table-responsive"><table class="lc-table w-100">
+          <thead><tr><th>Id (fijo)</th><th>Texto que ve la app</th>${tieneCust ? "<th>Texto para el cliente</th>" : ""}${tienePG ? "<th>Grupo de precio</th>" : ""}<th class="text-center">Activa</th></tr></thead>
+          <tbody>${opciones.map((o, i) => `<tr data-i="${i}"><td class="text-muted" style="font-size:.8rem">${esc(o.id)}</td>
+            <td><input class="form-control form-control-sm op-label" maxlength="80" value="${esc(o.label)}" ${puede ? "" : "disabled"} aria-label="Texto de ${esc(o.id)}"></td>
+            ${tieneCust ? `<td><input class="form-control form-control-sm op-cust" maxlength="80" value="${esc(o.customer_label || "")}" ${puede ? "" : "disabled"}></td>` : ""}
+            ${tienePG ? `<td><select class="form-select form-select-sm op-pg" ${puede ? "" : "disabled"} aria-label="Grupo de precio de ${esc(o.id)}">${GRUPOS.map(([v, t]) => `<option value="${v}" ${o.price_group === v ? "selected" : ""}>${t}</option>`).join("")}</select></td>` : ""}
+            <td class="text-center"><div class="form-check form-switch d-inline-block"><input class="form-check-input op-act" type="checkbox" ${o.active === false ? "" : "checked"} ${puede && !fijo ? "" : "disabled"} aria-label="Activa ${esc(o.id)}"></div></td></tr>`).join("")}
+          </tbody></table></div></div>
+        ${puede && !fijo ? `<div class="lc-card p-3 mb-3" style="max-width:640px"><div class="fw-bold mb-2">Agregar opción</div>
+          <div class="row g-2"><div class="col-sm-7"><input id="nuevoLabel" class="form-control" maxlength="80" placeholder="Ej: Piscinas" aria-label="Nombre de la nueva opción"></div>
+          <div class="col-sm-5"><button id="btnAgregar" class="btn btn-outline-secondary w-100">+ Agregar a la lista</button></div></div></div>` : ""}
+        ${err ? `<div class="alert alert-danger" id="listaErr">${esc(err)}</div>` : ""}
+        ${puede ? `<button id="btnGuardarLista" class="btn btn-accent"><i class="bi bi-check2 me-1"></i> Guardar lista</button>` : `<div class="text-muted"><i class="bi bi-lock"></i> Solo un administrador edita esta lista.</div>`}`;
+      $("selLista").addEventListener("change", (e) => vistaListas(e.target.value));
+      const leer = () => $("lcBody").querySelectorAll("tr[data-i]").forEach((tr) => { const o = opciones[+tr.dataset.i];
+        o.label = tr.querySelector(".op-label").value.trim(); if (tieneCust) o.customer_label = tr.querySelector(".op-cust").value.trim();
+        if (tienePG) o.price_group = tr.querySelector(".op-pg").value;
+        if (!fijo) o.active = tr.querySelector(".op-act").checked; });
+      $("btnAgregar")?.addEventListener("click", () => {
+        leer(); const t = $("nuevoLabel").value.trim();
+        if (!t) return pintar("Escribe el nombre de la nueva opción");
+        const id = idDesde(t, s.key);
+        if (!id) return pintar("El nombre debe tener letras o números");
+        if (opciones.some((o) => o.id === id)) return pintar(`Ya existe una opción con id «${id}»`);
+        opciones.push(tienePG ? { id, label: t, active: true, price_group: "general" } : { id, label: t, active: true }); pintar();
+      });
+      $("btnGuardarLista")?.addEventListener("click", async (e) => {
+        leer(); e.target.disabled = true;
+        const rr = await api("PUT", "/settings/" + s.key, { value: opciones, expectedVersion: s.version, reason: "Listas editables (Control Web)" });
+        if (rr.status === 200) vistaListas(s.key, `Lista guardada (versión ${rr.body.version}). Las apps la mostrarán en menos de un minuto.`);
+        else { e.target.disabled = false; pintar(rr.body?.mensaje || rr.body?.error || `No se guardó (${rr.status})`); }
+      });
+    };
+    pintar();
+  }
+
   function errorVista(r) {
     $("lcBody").innerHTML = `<div class="empty-state"><i class="bi bi-wifi-off"></i><p>No se pudo cargar (${r.status} ${esc(r.body?.error || "")}).<br>
       <a href="#" id="reintentar">Reintentar</a></p></div>`;
@@ -619,6 +769,9 @@
     else if (h === "/nueva") { vistaActual = null; return vistaNueva(); }
     else if (h === "/clientes") { cargando(); vistaActual = () => vistaClientes(); }
     else if (h === "/tecnicos") { cargando(); vistaActual = () => vistaTecnicos(); }
+    // pantallas de edición: sin repintado en tiempo real (borraría lo que se está escribiendo)
+    else if (h === "/config") { cargando(); vistaActual = null; return vistaConfig(); }
+    else if (h === "/listas") { cargando(); vistaActual = null; return vistaListas(); }
     else { cargando(); vistaActual = () => vistaTablero(); }
     vistaActual();
   }

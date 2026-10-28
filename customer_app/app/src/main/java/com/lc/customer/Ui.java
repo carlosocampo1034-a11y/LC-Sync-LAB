@@ -153,21 +153,9 @@ final class Ui {
         return b;
     }
 
-    /** Texto legible para el cliente a partir del estado interno. */
-    static String estadoCliente(String e) {
-        if (e == null) return "—";
-        switch (e) {
-            case "PENDIENTE": return "Recibida";
-            case "EN RUTA": return "Técnico en camino";
-            case "LLEGUÉ": return "Técnico en el lugar";
-            case "EN REPARACIÓN": return "En reparación";
-            case "ESPERANDO APROBACIÓN": return "Esperando tu aprobación";
-            case "PART HOLD": return "Esperando repuesto";
-            case "PAUSADO": return "Pausada";
-            case "COMPLETADO": return "Completada";
-            case "CANCELADO": return "Cancelada";
-            default: return e;
-        }
+    /** Texto legible para el cliente a partir del estado interno (lista editable order_states.list). */
+    static String estadoCliente(android.content.Context c, String e) {
+        return Ajustes.estadoCliente(c, e);
     }
 
     static String fecha(long ms) {

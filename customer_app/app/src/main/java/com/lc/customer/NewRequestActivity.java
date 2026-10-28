@@ -35,12 +35,12 @@ import java.util.concurrent.Executors;
 /** Solicitar servicio: propiedad, equipo, descripción, fecha preferida y foto. */
 public class NewRequestActivity extends AppCompatActivity {
 
-    static final String[] CATEGORIAS = {"ELECTRODOMESTICOS", "HVAC", "PLOMERIA", "ELECTRICIDAD", "OTRO"};
-    private static final String[] CATEGORIAS_TXT = {"Electrodomésticos", "Aire acondicionado / HVAC", "Plomería", "Electricidad", "Otro"};
     private static final int PASOS = 4;
 
     private final List<JSONObject> props = new ArrayList<>();
     private Spinner spProp, spEquipo, spCat;
+    private List<Ajustes.Opcion> cats = new ArrayList<>();   // categorías: lista editable (settings categories.list)
+    private TextView tvPrecio;
     private EditText desc, ventana;
     private TextView tvFecha, tvFoto, error, errProp, errDesc, tvPaso, resumen;
     private Button enviar, siguiente, atras;
@@ -87,8 +87,15 @@ public class NewRequestActivity extends AppCompatActivity {
         // Paso 2: servicio y problema
         Ui.seccion(this, paso[1], "Tipo de servicio");
         spCat = new Spinner(this);
-        spCat.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, CATEGORIAS_TXT));
         paso[1].addView(spCat);
+        tvPrecio = Ui.texto(this, "", 13, R.color.lc_sec, false);
+        tvPrecio.setPadding(0, Ui.dp(this, 6), 0, 0);
+        paso[1].addView(tvPrecio);
+        spCat.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> a, android.view.View v, int pos, long id) { actualizarPrecio(); }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> a) {}
+        });
+        cargarCategorias(null);
         Ui.seccion(this, paso[1], "Describe el problema");
         desc = Ui.campo(this, paso[1], "Ej. La nevera no enfría desde ayer",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -156,7 +163,42 @@ public class NewRequestActivity extends AppCompatActivity {
         });
         mostrarPaso(actual);
         cargarPropiedades();
+        // la lista y los precios pueden haber cambiado en Control: se actualizan sin recompilar
+        Ajustes.refrescar(this, true, () -> { if (!isFinishing()) cargarCategorias(idCategoriaSel()); });
     }
+
+    private void cargarCategorias(String idSel) {
+        cats = Ajustes.lista(this, "categories.list", Ajustes.CATEGORIAS, true);
+        List<String> nombres = new ArrayList<>();
+        int sel = 0;
+        for (int i = 0; i < cats.size(); i++) {
+            nombres.add(cats.get(i).label);
+            if (idSel != null && cats.get(i).id.equals(idSel)) sel = i;
+        }
+        spCat.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, nombres));
+        spCat.setSelection(sel);
+        actualizarPrecio();
+    }
+
+    private Ajustes.Opcion categoriaSel() {
+        if (cats.isEmpty()) return null;
+        return cats.get(Math.max(0, Math.min(spCat.getSelectedItemPosition(), cats.size() - 1)));
+    }
+
+    private String idCategoriaSel() { Ajustes.Opcion o = categoriaSel(); return o == null ? "OTRO" : o.id; }
+
+    /** Precio de referencia del grupo de precios de la categoría elegida (settings pricing.*). */
+    private String textoPrecio() {
+        Ajustes.Opcion o = categoriaSel();
+        if (o == null) return "";
+        String g = o.grupo == null || o.grupo.isEmpty() ? "general" : o.grupo;
+        double diag = Ajustes.precio(this, g, "diagnostic"), hora = Ajustes.precio(this, g, "hourly"), mult = Ajustes.precio(this, g, "emergency_multiplier");
+        String t = String.format(java.util.Locale.US, "Precio de referencia: visita de diagnóstico $%.2f · por hora $%.2f", diag, hora);
+        if (mult > 1.0) t += String.format(java.util.Locale.US, " · emergencias ×%.1f", mult);
+        return t + ". El técnico confirma el precio antes de trabajar.";
+    }
+
+    private void actualizarPrecio() { if (tvPrecio != null) tvPrecio.setText(textoPrecio()); }
 
     private TextView errorCampo(LinearLayout dest) {
         TextView t = Ui.texto(this, "", 13, R.color.lc_rojo, true);
@@ -205,7 +247,9 @@ public class NewRequestActivity extends AppCompatActivity {
         }
         Object eq = spEquipo.getSelectedItem();
         sb.append("Equipo: ").append(eq == null ? "Sin especificar" : eq).append("\n");
-        sb.append("Servicio: ").append(CATEGORIAS_TXT[Math.max(0, spCat.getSelectedItemPosition())]).append("\n");
+        Ajustes.Opcion cs = categoriaSel();
+        sb.append("Servicio: ").append(cs == null ? "—" : cs.label).append("\n");
+        sb.append(textoPrecio()).append("\n");
         sb.append("Problema: ").append(desc.getText().toString().trim()).append("\n");
         sb.append(fechaPreferida > 0 ? "Fecha preferida: " + Ui.fecha(fechaPreferida) + " (por confirmar)" : "Sin fecha preferida");
         String v = ventana.getText().toString().trim();
@@ -284,7 +328,7 @@ public class NewRequestActivity extends AppCompatActivity {
         JSONObject body = new JSONObject();
         try {
             body.put("propertyId", prop.optLong("id")).put("descripcion", d)
-                    .put("categoria", CATEGORIAS[Math.max(0, spCat.getSelectedItemPosition())]).put("clientRequestId", clientRequestId)
+                    .put("categoria", idCategoriaSel()).put("clientRequestId", clientRequestId)
                     .put("zonaHoraria", java.util.TimeZone.getDefault().getID());
             int ie = spEquipo.getSelectedItemPosition();
             JSONArray eqs = prop.optJSONArray("equipos");

@@ -72,20 +72,25 @@ public class EquipmentActivity extends AppCompatActivity {
 
     // ── Spinner option arrays ────────────────────────────────────────────────
 
-    private static final String[] REFRIGERANTES =
-            {"— Sin especificar —", "R-410A", "R-22", "R-32", "R-454B", "Otro"};
-    private static final String[] VOLTAJES =
-            {"— Sin especificar —", "115V", "208/230V", "220V", "230V", "460V", "Otro"};
-    private static final String[] FASES =
-            {"— Sin especificar —", "Monofásico", "Trifásico"};
-    private static final String[] SYSTEM_ROLES =
-            {"Sin asignar", "INDOOR", "OUTDOOR"};
-    private static final String[] LIFECYCLE_STATUSES =
-            {"ACTIVE", "REPLACED", "RETIRED"};
+    // Listas editables desde Control (settings *.list); el respaldo coincide con el valor inicial de la tabla
+    private com.lc.technician.sync.Listas.Lista REFRIGERANTES, VOLTAJES, FASES, SYSTEM_ROLES, LIFECYCLE_STATUSES;
+
+    private void cargarListas() {
+        REFRIGERANTES = com.lc.technician.sync.Listas.lista(this, "refrigerants.list", new String[][]{{"R-410A", "R-410A"}, {"R-22", "R-22"},
+                {"R-32", "R-32"}, {"R-454B", "R-454B"}, {"Otro", "Otro"}}, "— Sin especificar —");
+        VOLTAJES = com.lc.technician.sync.Listas.lista(this, "voltages.list", new String[][]{{"115V", "115V"}, {"208/230V", "208/230V"},
+                {"220V", "220V"}, {"230V", "230V"}, {"460V", "460V"}, {"Otro", "Otro"}}, "— Sin especificar —");
+        FASES = com.lc.technician.sync.Listas.lista(this, "phases.list", new String[][]{{"Monofásico", "Monofásico"}, {"Trifásico", "Trifásico"}},
+                "— Sin especificar —");
+        SYSTEM_ROLES = com.lc.technician.sync.Listas.lista(this, "system_roles.list", new String[][]{{"INDOOR", "Interior (INDOOR)"}, {"OUTDOOR", "Exterior (OUTDOOR)"}}, "Sin asignar");
+        LIFECYCLE_STATUSES = com.lc.technician.sync.Listas.lista(this, "lifecycle_statuses.list", new String[][]{{"ACTIVE", "Activo"}, {"REPLACED", "Reemplazado"}, {"RETIRED", "Retirado"}}, null);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        com.lc.technician.sync.Listas.refrescar(this, true, null);
+        cargarListas();
         setContentView(R.layout.activity_equipment);
         // Edge-to-edge (Android 15+): cabecera bajo la barra de estado, último equipo visible sobre la navegación
         InsetsHelper.padTop(findViewById(R.id.header));
@@ -216,7 +221,7 @@ public class EquipmentActivity extends AppCompatActivity {
                     if (eq.manufactureDate.isEmpty()) eq.manufactureDate = null;
                     eq.ubicacion     = emptyToNull(etUbicacion.getText().toString().trim());
                     eq.heatPump      = cbHeatPump.isChecked();
-                    eq.systemRole    = spinnerValueOrNull(spSystemRole, SYSTEM_ROLES, "Sin asignar");
+                    eq.systemRole    = spinnerValueOrNull(spSystemRole, SYSTEM_ROLES, "");
                     eq.lifecycleStatus = spinnerValue(spLifecycle, LIFECYCLE_STATUSES);
                     if (eq.scanStatus == null) eq.scanStatus = "MANUAL";
 
@@ -322,34 +327,31 @@ public class EquipmentActivity extends AppCompatActivity {
 
     // ── Spinner helpers ──────────────────────────────────────────────────────
 
-    private void initSpinner(Spinner spinner, String[] items) {
+    private void initSpinner(Spinner spinner, com.lc.technician.sync.Listas.Lista items) {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, items);
+                this, android.R.layout.simple_spinner_item, items.labels);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
     }
 
-    private void setSpinnerValue(Spinner spinner, String[] items, String value) {
+    private void setSpinnerValue(Spinner spinner, com.lc.technician.sync.Listas.Lista items, String value) {
         if (value == null) return;
-        for (int i = 0; i < items.length; i++) {
-            if (items[i].equals(value)) {
-                spinner.setSelection(i);
-                return;
-            }
-        }
+        int i = items.indexOf(value);
+        if (i >= 0) spinner.setSelection(i);
     }
 
     /** Returns the selected spinner value, or null if it equals the first "empty" option. */
-    private String spinnerValue(Spinner spinner, String[] items) {
+    private String spinnerValue(Spinner spinner, com.lc.technician.sync.Listas.Lista items) {
         int pos = spinner.getSelectedItemPosition();
-        if (pos <= 0) return null;
-        return items[pos];
+        if (pos <= 0 || pos >= items.ids.length) return null;
+        return items.ids[pos];
     }
 
     /** Returns null when selected item matches the sentinel string. */
-    private String spinnerValueOrNull(Spinner spinner, String[] items, String nullSentinel) {
+    private String spinnerValueOrNull(Spinner spinner, com.lc.technician.sync.Listas.Lista items, String nullSentinel) {
         int pos = spinner.getSelectedItemPosition();
-        String val = items[pos];
+        if (pos < 0 || pos >= items.ids.length) return null;
+        String val = items.ids[pos];
         return val.equals(nullSentinel) ? null : val;
     }
 

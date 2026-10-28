@@ -33,14 +33,14 @@ public class FindingDetailActivity extends AppCompatActivity {
     public static final String EXTRA_FINDING_ID = "EXTRA_FINDING_ID";
 
     // Closed enum for area
-    private static final String[] AREAS = {
-        "HVAC_INDOOR", "HVAC_OUTDOOR", "ELECTRICAL", "PLUMBING",
-        "APPLIANCE", "DUCTWORK", "CONTROLS", "OTHER"
-    };
-    private static final String[] AREA_LABELS = {
-        "HVAC Interior", "HVAC Exterior", "Eléctrico", "Plomería",
-        "Electrodoméstico", "Ductos", "Controles", "Otro"
-    };
+    // Áreas del hallazgo: lista editable desde Control (settings finding_areas.list); el respaldo coincide con la tabla
+    private com.lc.technician.sync.Listas.Lista AREAS;
+
+    private void cargarListas() {
+        AREAS = com.lc.technician.sync.Listas.lista(this, "finding_areas.list", new String[][]{{"HVAC_INDOOR", "HVAC Interior"},
+                {"HVAC_OUTDOOR", "HVAC Exterior"}, {"ELECTRICAL", "El\u00e9ctrico"}, {"PLUMBING", "Plomer\u00eda"}, {"APPLIANCE", "Electrodom\u00e9stico"},
+                {"DUCTWORK", "Ductos"}, {"CONTROLS", "Controles"}, {"OTHER", "Otro"}}, null);
+    }
 
     private long jobId;
     private long findingId;
@@ -73,6 +73,8 @@ public class FindingDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        com.lc.technician.sync.Listas.refrescar(this, true, null);
+        cargarListas();
         setContentView(R.layout.activity_finding_detail);
         // Edge-to-edge (targetSdk 36): el contenido no queda bajo las barras del sistema ni el teclado
         InsetsHelper.padSystemBarsAndIme(findViewById(android.R.id.content));
@@ -114,7 +116,7 @@ public class FindingDetailActivity extends AppCompatActivity {
 
     private void setupArea() {
         ArrayAdapter<String> areaAdapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, AREA_LABELS);
+                this, android.R.layout.simple_spinner_item, AREAS.labels);
         areaAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerArea.setAdapter(areaAdapter);
     }
@@ -211,9 +213,8 @@ public class FindingDetailActivity extends AppCompatActivity {
     private void prefill() {
         FindingEntity f = existingFinding;
         // Area
-        for (int i = 0; i < AREAS.length; i++) {
-            if (AREAS[i].equals(f.area)) { spinnerArea.setSelection(i); break; }
-        }
+        int ai = AREAS.indexOf(f.area);
+        if (ai >= 0) spinnerArea.setSelection(ai);
         etComponent.setText(f.component);
         etProblem.setText(f.problem);
         if (f.diagnosis != null) etDiagnosis.setText(f.diagnosis);
@@ -242,12 +243,12 @@ public class FindingDetailActivity extends AppCompatActivity {
             etProblem.requestFocus();
             return;
         }
-        if (areaPos < 0 || areaPos >= AREAS.length) {
+        if (areaPos < 0 || areaPos >= AREAS.ids.length) {
             Toast.makeText(this, "Seleccione un área", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String area       = AREAS[areaPos];
+        String area       = AREAS.ids[areaPos];
         String diagnosis  = etDiagnosis.getText().toString().trim();
         String resolution = etResolution.getText().toString().trim();
         String notes      = etTechnicianNotes.getText().toString().trim();
