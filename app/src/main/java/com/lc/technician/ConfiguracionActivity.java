@@ -1148,23 +1148,39 @@ public class ConfiguracionActivity extends AppCompatActivity {
             }
             if (cuerpo.getChildCount() == 0) continue;
             final boolean abierto = !"AVANZADO".equals(g[0]);
-            final TextView cab = new TextView(this);
-            cab.setTextColor(0xFF62666A);
-            cab.setTextSize(13f);
-            cab.setTypeface(null, android.graphics.Typeface.BOLD);
-            cab.setLetterSpacing(0.08f);
-            cab.setPadding(0, dpPx(18), 0, dpPx(12));
-            cab.setText((abierto ? "▾  " : "▸  ") + g[0]);
+            // Tarjeta de sección como la maqueta: ícono, título en negrita y chevron; se pliega al tocarla
+            final LinearLayout cab = new LinearLayout(this);
+            cab.setOrientation(LinearLayout.HORIZONTAL);
+            cab.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            cab.setBackgroundResource(R.drawable.bg_card_f5);
+            cab.setPadding(dpPx(16), dpPx(14), dpPx(16), dpPx(14));
+            android.widget.ImageView ic = new android.widget.ImageView(this);
+            int[] ics = {R.drawable.m_gear, R.drawable.m_person, R.drawable.m_db, R.drawable.m_wrench};
+            ic.setImageResource(ics[java.util.Arrays.asList("OPERACIÓN", "ADMINISTRACIÓN", "DATOS", "AVANZADO").indexOf(g[0])]);
+            ic.setColorFilter(0xFF0A0A0A);
+            cab.addView(ic, new LinearLayout.LayoutParams(dpPx(24), dpPx(24)));
+            final TextView tit = new TextView(this);
+            tit.setText(g[0].substring(0, 1) + g[0].substring(1).toLowerCase(java.util.Locale.ROOT).replace("ministración", "min"));
+            tit.setTextColor(0xFF0A0A0A);
+            tit.setTextSize(17f);
+            tit.setTypeface(null, android.graphics.Typeface.BOLD);
+            tit.setPadding(dpPx(14), 0, 0, 0);
+            cab.addView(tit, new LinearLayout.LayoutParams(0, -2, 1f));
+            final TextView chev = new TextView(this);
+            chev.setTextColor(0xFF62666A);
+            chev.setTextSize(18f);
+            chev.setText(abierto ? "⌃" : "⌄");
+            cab.addView(chev);
             cuerpo.setVisibility(abierto ? View.VISIBLE : View.GONE);
             cab.setOnClickListener(v -> {
                 boolean ver = cuerpo.getVisibility() != View.VISIBLE;
                 cuerpo.setVisibility(ver ? View.VISIBLE : View.GONE);
-                cab.setText((ver ? "▾  " : "▸  ") + g[0]);
+                chev.setText(ver ? "⌃" : "⌄");
             });
-            View linea = new View(this);
-            linea.setBackgroundColor(0xFFE4E4E4);
-            col.addView(cab);
-            col.addView(linea, new LinearLayout.LayoutParams(-1, 1));
+            LinearLayout.LayoutParams lcab = new LinearLayout.LayoutParams(-1, -2);
+            lcab.topMargin = dpPx(12);
+            lcab.bottomMargin = dpPx(4);
+            col.addView(cab, lcab);
             col.addView(cuerpo);
         }
     }
