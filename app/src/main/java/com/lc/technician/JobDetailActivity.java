@@ -784,7 +784,13 @@ public class JobDetailActivity extends AppCompatActivity {
             setBotonPrincipal(bg, "FACTURA", 0xFFE91605, btnFactura != null);   // trabajo completado: la factura es lo siguiente
         }
         // «Más acciones» agrupa todo lo demás (acciones de excepción y utilidades) en un solo botón
-        botonSecundario.setText("CAMBIAR ESTADO  ▴");
+        botonSecundario.setText("Cambiar estado  ⌃");
+        GradientDrawable rojo = new GradientDrawable();
+        rojo.setCornerRadius(dp(12));
+        rojo.setColor(0xFFE91605);
+        botonSecundario.setBackground(rojo);
+        botonSecundario.setTextColor(0xFFFFFFFF);
+        botonPrincipal.setVisibility(View.GONE);
         actualizarBadgeEstado();
         botonSecundario.setVisibility(View.VISIBLE);
     }
@@ -825,7 +831,8 @@ public class JobDetailActivity extends AppCompatActivity {
         cabeceraArmada = true;
         android.widget.LinearLayout header = findViewById(R.id.header);
         TextView cli = findViewById(R.id.detalleCliente);
-        if (cli != null) cli.setText("#" + job.id + "  " + job.cliente);
+        if (cli != null) cli.setText("#" + job.id);
+        if (estadoView != null) estadoView.setVisibility(View.GONE);   // el estado ya va en la píldora de la cabecera
         tvBadgeEstado = new TextView(this);
         tvBadgeEstado.setTextColor(0xFFFFFFFF);
         tvBadgeEstado.setTextSize(12f);
@@ -841,15 +848,41 @@ public class JobDetailActivity extends AppCompatActivity {
         android.widget.LinearLayout acciones = new android.widget.LinearLayout(this);
         acciones.setOrientation(android.widget.LinearLayout.HORIZONTAL);
         acciones.setPadding(0, dp(4), 0, dp(8));
-        addAccion(acciones, "☎", "Llamar", v -> {
+        addAccion(acciones, R.drawable.m_phone, "Llamar", v -> {
             if (job.telefono != null && !job.telefono.isEmpty())
                 startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + job.telefono)));
         });
-        addAccion(acciones, "✉", "Mensajes", v -> startActivity(new Intent(this, ChatActivity.class)
+        addAccion(acciones, R.drawable.m_chat, "Mensajes", v -> startActivity(new Intent(this, ChatActivity.class)
                 .putExtra("job", job.id).putExtra("cliente", job.cliente)));
-        addAccion(acciones, "➤", "GPS", v -> { if (job.direccion != null && !job.direccion.isEmpty()) abrirMapa(job.direccion); });
-        addAccion(acciones, "☺", "Cliente", v -> irASeccion(sv, col, "CONTACTOS"));
+        addAccion(acciones, R.drawable.m_nav, "GPS", v -> { if (job.direccion != null && !job.direccion.isEmpty()) abrirMapa(job.direccion); });
+        addAccion(acciones, R.drawable.m_person, "Cliente", v -> irASeccion(sv, col, "CONTACTOS"));
         col.addView(acciones, 0);
+        TextView nombre = new TextView(this);
+        nombre.setText(job.cliente);
+        nombre.setTextSize(24f);
+        nombre.setTypeface(null, android.graphics.Typeface.BOLD);
+        nombre.setTextColor(0xFF0A0A0A);
+        nombre.setPadding(0, dp(4), 0, dp(8));
+        col.addView(nombre, 0);
+        View eq = findViewById(R.id.detalleEquipo);
+        if (eq != null && eq.getParent() instanceof android.view.ViewGroup && job.direccion != null && !job.direccion.isEmpty()) {
+            android.view.ViewGroup pg = (android.view.ViewGroup) eq.getParent();
+            TextView maps = new TextView(this);
+            maps.setText("Abrir en Google Maps");
+            maps.setGravity(android.view.Gravity.CENTER);
+            maps.setTextColor(0xFFE91605);
+            maps.setTextSize(14f);
+            maps.setTypeface(null, android.graphics.Typeface.BOLD);
+            GradientDrawable mb = new GradientDrawable();
+            mb.setCornerRadius(dp(12));
+            mb.setStroke(dp(1), 0xFFE91605);
+            mb.setColor(0xFFFFFFFF);
+            maps.setBackground(mb);
+            maps.setOnClickListener(v -> abrirMapa(job.direccion));
+            android.view.ViewGroup.MarginLayoutParams mlp = pg instanceof android.widget.LinearLayout
+                    ? new android.widget.LinearLayout.LayoutParams(-1, dp(52)) : null;
+            if (mlp != null) { mlp.topMargin = dp(16); pg.addView(maps, pg.indexOfChild(eq) + 1, mlp); }
+        }
 
         // Pestañas: Info · Fotos · Mediciones · Partes (llevan a la sección correspondiente de esta misma pantalla)
         android.widget.LinearLayout tabs = new android.widget.LinearLayout(this);
@@ -878,17 +911,19 @@ public class JobDetailActivity extends AppCompatActivity {
         col.addView(tabs, 1);
     }
 
-    private void addAccion(android.widget.LinearLayout fila, String icono, String texto, View.OnClickListener ir) {
+    private void addAccion(android.widget.LinearLayout fila, int icono, String texto, View.OnClickListener ir) {
         android.widget.LinearLayout b = new android.widget.LinearLayout(this);
         b.setOrientation(android.widget.LinearLayout.VERTICAL);
         b.setGravity(android.view.Gravity.CENTER);
         b.setPadding(0, dp(10), 0, dp(10));
         b.setBackgroundResource(R.drawable.bg_surface);
-        TextView i = new TextView(this);
-        i.setText(icono); i.setTextSize(20f); i.setGravity(android.view.Gravity.CENTER); i.setTextColor(0xFFE91605);
+        android.widget.ImageView i = new android.widget.ImageView(this);
+        i.setImageResource(icono);
+        i.setColorFilter(0xFF0A0A0A);
         TextView t = new TextView(this);
         t.setText(texto); t.setTextSize(12f); t.setGravity(android.view.Gravity.CENTER); t.setTextColor(0xFF0A0A0A);
-        b.addView(i); b.addView(t);
+        b.addView(i, new android.widget.LinearLayout.LayoutParams(dp(24), dp(24)));
+        b.addView(t);
         b.setOnClickListener(ir);
         android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(0, -2, 1f);
         lp.setMargins(dp(4), 0, dp(4), 0);
@@ -964,6 +999,28 @@ public class JobDetailActivity extends AppCompatActivity {
             {"Cliente No Está", "Cliente no disponible en la dirección", 0xFFF59E0B, abierta, "NO_ACCESS"},
             {"Cancelar", "Trabajo cancelado", 0xFFE91605, abierta, "CLIENT_CANCELLED"},
             {"Nueva Orden", "Crear nueva orden desde este cliente", 0xFF62666A, abierta, "NEED_ORDER"}};
+        // Siguiente paso del flujo (llegué, iniciar reparación, cerrar trabajo, factura…): sigue disponible, ahora dentro de la hoja
+        final String idPrincipal = idAccionPrincipal();
+        final String textoPrincipal = idPrincipal == null ? "Factura" : ("COMPLETE".equals(idPrincipal) ? "Cerrar trabajo" : acc(idPrincipal).substring(0, 1) + acc(idPrincipal).substring(1).toLowerCase(java.util.Locale.ROOT));
+        {
+            android.widget.LinearLayout f0 = new android.widget.LinearLayout(this);
+            f0.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            f0.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            f0.setPadding(0, dp(10), 0, dp(10));
+            TextView p0 = new TextView(this);
+            p0.setText("●"); p0.setTextSize(26f); p0.setTextColor(0xFFE91605); p0.setPadding(0, 0, dp(14), 0);
+            f0.addView(p0);
+            android.widget.LinearLayout t0 = new android.widget.LinearLayout(this);
+            t0.setOrientation(android.widget.LinearLayout.VERTICAL);
+            TextView a0 = new TextView(this);
+            a0.setText(textoPrincipal); a0.setTextSize(16f); a0.setTypeface(null, android.graphics.Typeface.BOLD); a0.setTextColor(0xFF0A0A0A);
+            TextView b0 = new TextView(this);
+            b0.setText("Siguiente paso del trabajo"); b0.setTextSize(13f); b0.setTextColor(0xFF62666A);
+            t0.addView(a0); t0.addView(b0);
+            f0.addView(t0);
+            f0.setOnClickListener(v -> { dlg.dismiss(); accionPrincipal(); });
+            filas.addView(f0);
+        }
         for (final Object[] o : op) {
             final boolean on = (Boolean) o[3];
             android.widget.LinearLayout f = new android.widget.LinearLayout(this);
