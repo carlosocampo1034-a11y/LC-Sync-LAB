@@ -1028,7 +1028,7 @@ public class JobDetailActivity extends AppCompatActivity {
         dv.setPadding(0, dp(6), 0, 0);
         desc.addView(dt); desc.addView(dv);
         boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty() && !"Por asignar".equals(job.equipo.trim());
-        boolean hayPr = job.prioridad != null && !job.prioridad.trim().isEmpty() && !"NORMAL".equalsIgnoreCase(job.prioridad.trim());
+        boolean hayPr = Job.etiquetaPrioridad(job.prioridad) != null;
         String textoCat = com.lc.technician.ui.adapter.JobAdapter.etiquetaCategoria(com.lc.technician.sync.Listas.categoriaDe(this, job.id));
         if (textoCat != null || hayEq || hayPr) {
             android.widget.LinearLayout tg = new android.widget.LinearLayout(this);
@@ -1036,7 +1036,7 @@ public class JobDetailActivity extends AppCompatActivity {
             tg.setPadding(0, dp(10), 0, 0);
             if (textoCat != null) tg.addView(etiqueta(textoCat, 0xFF0A0A0A));
             if (hayEq) tg.addView(etiqueta(job.equipo.trim(), 0xFF0A0A0A));
-            if (hayPr) tg.addView(etiqueta("Prioridad " + job.prioridad.trim().toLowerCase(java.util.Locale.ROOT), 0xFFE91605));
+            if (hayPr) tg.addView(etiqueta(Job.etiquetaPrioridad(job.prioridad), Job.colorPrioridad(job.prioridad)));
             desc.addView(tg);
         }
         android.widget.LinearLayout.LayoutParams dlp = new android.widget.LinearLayout.LayoutParams(-1, -2);

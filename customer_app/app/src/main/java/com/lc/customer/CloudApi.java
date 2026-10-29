@@ -75,6 +75,9 @@ final class CloudApi {
                 if (!r.ok() || !"GET".equals(metodo)) return r;
                 return new Api.Respuesta(200, new JSONObject().put("messages".equals(tipo) ? "mensajes" : "fotos", r.cuerpo.optJSONArray("items")));
             }
+            if ("POST".equals(metodo) && "/customer/feature-interest".equals(ruta)) {   // «Notifícame cuando esté listo»
+                return lcApi(c, "POST", "/feature-interest", body);
+            }
             if ("GET".equals(metodo) && ruta.startsWith("/customer/settings")) {   // precios y listas editables
                 return lcApi(c, "GET", "/settings" + (ruta.contains("?") ? ruta.substring(ruta.indexOf('?')) : ""), null);
             }

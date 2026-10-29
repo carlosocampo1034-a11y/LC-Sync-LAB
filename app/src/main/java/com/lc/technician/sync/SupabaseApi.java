@@ -57,6 +57,13 @@ public interface SupabaseApi {
             @Query("select")     String selectCols,
             @Query("limit")      int    limit);
 
+    /** «Notifícame cuando esté listo» (orden 68): guarda el interés en una función aún no disponible. */
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/feature-interest")
+    Call<ResponseBody> featureInterest(
+            @Header("Authorization") String authorization,
+            @Body java.util.Map<String, Object> body);
+
     /** Pago en efectivo confirmado por el técnico (Orden 65): crea el pago CASH y marca la factura pagada. */
     @Headers("Content-Type: application/json")
     @POST("functions/v1/lc-api/orders/{id}/pay-cash")

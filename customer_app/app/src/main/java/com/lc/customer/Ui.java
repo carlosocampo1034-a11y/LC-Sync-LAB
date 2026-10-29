@@ -367,6 +367,22 @@ final class Ui {
         }
     }
 
+    /** Aviso «Próximamente» con «Notifícame cuando esté listo», que guarda el interés en Supabase (feature_interest). */
+    static void avisoProximamente(final Activity a, String titulo, String texto, final String feature) {
+        new androidx.appcompat.app.AlertDialog.Builder(a)
+                .setTitle(titulo)
+                .setMessage(texto)
+                .setPositiveButton("Notifícame cuando esté listo", (d, w) -> java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+                    org.json.JSONObject cuerpo = new org.json.JSONObject();
+                    try { cuerpo.put("feature", feature); } catch (Exception ignored) { }
+                    Api.Respuesta r = Api.post(a, "/customer/feature-interest", cuerpo);
+                    final String msg = r.ok() ? "Listo: te avisaremos cuando esté disponible"
+                            : r.codigo == -1 ? "Sin conexión: inténtalo de nuevo cuando tengas red" : "No se pudo guardar. Inténtalo de nuevo";
+                    a.runOnUiThread(() -> { if (!a.isFinishing()) android.widget.Toast.makeText(a, msg, android.widget.Toast.LENGTH_LONG).show(); });
+                }))
+                .setNegativeButton("Cerrar", null).show();
+    }
+
     /** Soporte de L&C: llamar o escribir (contacto publicado en el sitio de L&C). */
     static void dialogoSoporte(Activity a) {
         new androidx.appcompat.app.AlertDialog.Builder(a)

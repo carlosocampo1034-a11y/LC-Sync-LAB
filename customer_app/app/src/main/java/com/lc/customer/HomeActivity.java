@@ -266,10 +266,8 @@ public class HomeActivity extends AppCompatActivity {
         // Asistente IA · Ofertas · Avisos
         LinearLayout fila2 = filaAccesos(c);
         acceso(fila2, R.drawable.ic_assistant, 0xFFE91605, "Asistente IA", null, v -> startActivity(new Intent(this, AsistenteActivity.class)));
-        acceso(fila2, R.drawable.ic_offer, 0xFFE91605, "Ofertas", null, v -> new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Ofertas")
-                .setMessage("Aquí verás las ofertas y promociones de L&C cuando estén disponibles.")
-                .setPositiveButton("Entendido", null).show());
+        acceso(fila2, R.drawable.ic_offer, 0xFFE91605, "Ofertas", null, v -> Ui.avisoProximamente(this, "Ofertas",
+                "Próximamente: descuentos y ofertas exclusivas para clientes L&C. Síguenos para más novedades.", "OFERTAS"));
         final int nAvisos = avisos.length() + (novedades.isEmpty() ? 0 : 1);
         acceso(fila2, R.drawable.ic_bell, 0xFFE91605, nAvisos == 0 ? "Avisos" : "Avisos (" + nAvisos + ")", null, v -> {
             if (tituloAvisos != null) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, tituloAvisos.getTop());
@@ -632,11 +630,8 @@ public class HomeActivity extends AppCompatActivity {
         c.addView(menu, mlp);
         filaMenu(menu, R.drawable.ic_home, "Mis propiedades", v -> startActivity(new Intent(this, PropertiesActivity.class)));
         filaMenu(menu, R.drawable.ic_list, "Mis solicitudes", v -> { filtro = 1; tab = 1; pintar(); });
-        filaMenu(menu, R.drawable.ic_card, "Métodos de pago", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Métodos de pago")
-                .setMessage("Por ahora los pagos son de prueba y se hacen desde cada solicitud con «Pagar (prueba)». "
-                        + "Aquí podrás guardar tus tarjetas cuando se active el cobro real.")
-                .setPositiveButton("Entendido", null).show());
+        filaMenu(menu, R.drawable.ic_card, "Métodos de pago", v -> Ui.avisoProximamente(this, "Métodos de pago",
+                "Próximamente: integraremos métodos de pago seguros (tarjeta, Zelle, efectivo). Por ahora, el pago se coordina con el técnico al finalizar el servicio.", "PAGOS"));
         filaMenu(menu, R.drawable.ic_bell, "Notificaciones", v -> startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())));
         filaMenu(menu, R.drawable.ic_help_q, "Soporte", v -> new androidx.appcompat.app.AlertDialog.Builder(this)

@@ -733,6 +733,14 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "pay_failed" }) : fromRpc(data, out);
     }
 
+    // ── «Notifícame cuando esté listo» (Orden 68): guarda el interés en funciones aún no disponibles ──────────────────
+    if (route === "/feature-interest" && req.method === "POST") {
+      const f = txt((body as Record<string, unknown> | null)?.feature, 20).toUpperCase();
+      if (!["PAGOS", "OFERTAS", "DOCUMENTOS"].includes(f)) return out(422, { error: "feature_invalida" });
+      const { error } = await db.from("feature_interest").upsert({ user_id: user.id, feature: f }, { onConflict: "user_id,feature", ignoreDuplicates: true });
+      return error ? out(500, { error: "interest_failed" }) : out(200, { ok: true, feature: f });
+    }
+
     // ── Pago en EFECTIVO (Orden 65): lo confirma el técnico de la orden (o despacho) cuando recibe el dinero ──────────
     const mcash = route.match(/^\/(?:orders|jobs)\/(\d+)\/pay-cash$/);
     if (mcash && req.method === "POST") {

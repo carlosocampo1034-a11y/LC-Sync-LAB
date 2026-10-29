@@ -69,12 +69,17 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         String textoCat = etiquetaCategoria(cat);
         if (textoCat == null && job.equipo != null && !job.equipo.trim().isEmpty() && !"Por asignar".equals(job.equipo.trim())) textoCat = job.equipo.trim();
         boolean hayEq = textoCat != null;
-        boolean hayPr = job.prioridad != null && !job.prioridad.trim().isEmpty() && !"NORMAL".equalsIgnoreCase(job.prioridad.trim());
+        String textoPr = Job.etiquetaPrioridad(job.prioridad);
+        boolean hayPr = textoPr != null;
         h.filaTags.setVisibility(hayEq || hayPr ? View.VISIBLE : View.GONE);
         h.tagEquipo.setVisibility(hayEq ? View.VISIBLE : View.GONE);
         if (hayEq) h.tagEquipo.setText(textoCat);
         h.tagPrioridad.setVisibility(hayPr ? View.VISIBLE : View.GONE);
-        if (hayPr) h.tagPrioridad.setText("Prioridad " + job.prioridad.trim().toLowerCase(java.util.Locale.ROOT));
+        if (hayPr) {
+            h.tagPrioridad.setText(textoPr);
+            h.tagPrioridad.setTextColor(Job.colorPrioridad(job.prioridad));
+            h.tagPrioridad.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Job.colorPrioridad(job.prioridad)));
+        }
         h.estado.setText(com.lc.technician.sync.Listas.etiquetaEstado(h.estado.getContext(), job.estado));
 
         int color;

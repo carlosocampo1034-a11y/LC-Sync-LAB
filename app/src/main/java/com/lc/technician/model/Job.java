@@ -60,6 +60,24 @@ public class Job {
         return estado != null && !estado.isEmpty() && !STATUS_PENDING.equals(estado) && !esCompletado(estado) && !STATUS_CANCELLED.equals(estado);
     }
 
+    /** «Prioridad alta/media/baja»; null (oculta) si la orden no tiene prioridad definida (o es la antigua NORMAL). */
+    public static String etiquetaPrioridad(String p) {
+        if (p == null) return null;
+        switch (p.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "ALTA": case "URGENTE": return "Prioridad alta";
+            case "MEDIA": return "Prioridad media";
+            case "BAJA": return "Prioridad baja";
+            default: return null;
+        }
+    }
+
+    public static int colorPrioridad(String p) {
+        String e = etiquetaPrioridad(p);
+        if ("Prioridad alta".equals(e)) return 0xFFE91605;
+        if ("Prioridad media".equals(e)) return 0xFFB45309;
+        return 0xFF62666A;
+    }
+
     /** Trabajo terminado: completado o ya pagado. */
     public static boolean esCompletado(String estado) {
         return STATUS_DONE.equals(estado) || STATUS_PAID.equals(estado);

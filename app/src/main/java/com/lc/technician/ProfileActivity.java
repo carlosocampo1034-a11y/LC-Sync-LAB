@@ -163,6 +163,24 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
+    /** Guarda en Supabase el interés del usuario en una función aún no disponible (tabla feature_interest). */
+    private void registrarInteres(final String feature) {
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+            String msg;
+            try {
+                com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
+                java.util.Map<String, Object> cuerpo = new java.util.HashMap<>();
+                cuerpo.put("feature", feature);
+                retrofit2.Response<okhttp3.ResponseBody> r = sb.api().featureInterest(sb.authHeader(), cuerpo).execute();
+                msg = r.isSuccessful() ? "Listo: te avisaremos cuando esté disponible" : "No se pudo guardar (" + r.code() + "). Inténtalo de nuevo";
+            } catch (Exception e) {
+                msg = "Sin conexión: inténtalo de nuevo cuando tengas red";
+            }
+            final String fm = msg;
+            runOnUiThread(() -> { if (!isFinishing()) Toast.makeText(this, fm, Toast.LENGTH_LONG).show(); });
+        });
+    }
+
     private void colorearKpi(int idNumero, int color) {
         TextView num = findViewById(idNumero);
         if (num == null) return;
@@ -206,14 +224,22 @@ public class ProfileActivity extends AppCompatActivity {
         int pn = posicionConTag(box, "notif");
         if (docsV != null && pn >= 0) { box.removeView(docsV); box.addView(docsV, posicionConTag(box, "notif") + 1); }
         box.findViewWithTag("docs").setOnClickListener(v -> {
-            if (acciones.isEmpty()) {
-                new android.app.AlertDialog.Builder(this).setTitle("Documentos")
-                        .setMessage("Aquí verás tus documentos (licencia, seguro, certificaciones).")
-                        .setPositiveButton("Entendido", null).show();
-                return;
-            }
-            new android.app.AlertDialog.Builder(this).setTitle("Documentos")
-                    .setItems(nombres.toArray(new String[0]), (d, which) -> acciones.get(which).performClick())
+            // Título con el aviso «Próximamente»; la lista conserva las funciones movidas aquí y termina en «Notifícame»
+            final String aviso = "Próximamente: podrás subir y consultar documentos de trabajo (certificados, facturas, reportes) desde aquí.";
+            LinearLayout titulo = new LinearLayout(this);
+            titulo.setOrientation(LinearLayout.VERTICAL);
+            int pad = Math.round(20 * getResources().getDisplayMetrics().density);
+            titulo.setPadding(pad, pad, pad, Math.round(8 * getResources().getDisplayMetrics().density));
+            TextView t1 = new TextView(this); t1.setText("Documentos"); t1.setTextSize(20f); t1.setTypeface(null, android.graphics.Typeface.BOLD); t1.setTextColor(0xFF0A0A0A);
+            TextView t2 = new TextView(this); t2.setText(aviso); t2.setTextSize(14f); t2.setTextColor(0xFF62666A); t2.setPadding(0, Math.round(6 * getResources().getDisplayMetrics().density), 0, 0);
+            titulo.addView(t1); titulo.addView(t2);
+            final java.util.List<String> items = new java.util.ArrayList<>(nombres);
+            items.add("🔔  Notifícame cuando esté listo");
+            new android.app.AlertDialog.Builder(this).setCustomTitle(titulo)
+                    .setItems(items.toArray(new String[0]), (d, which) -> {
+                        if (which < acciones.size()) acciones.get(which).performClick();
+                        else registrarInteres("DOCUMENTOS");
+                    })
                     .setNegativeButton("Cerrar", null).show();
         });
     }
