@@ -412,85 +412,32 @@
                 android:visibility="gone"
                 android:text="NORMAL"/>
 
-            <!-- TIEMPOS DEL TÉCNICO — movido arriba para acceso rápido DoorDash-style -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                android:text="\u23F1  REGISTRO DE TIEMPOS"
-                android:textColor="@color/lc_text_tertiary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08" />
-
+            <!-- Orden 67: «Tiempos registrados», solo lectura (las horas las deja la hoja «Cambiar estado») -->
             <LinearLayout
+                android:id="@+id/layoutTiemposRegistrados"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal"
-                android:weightSum="3">
+                android:layout_marginTop="20dp"
+                android:orientation="vertical"
+                android:visibility="gone">
 
-                <Button
-                    android:id="@+id/btnTimeOnMyWay"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="4dp"
-                    android:text="EN CAMINO"
-                    android:textColor="#FFFFFF"
-                    android:textSize="11sp"
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="TIEMPOS REGISTRADOS"
+                    android:textColor="@color/lc_text_tertiary"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:stateListAnimator="@null" />
+                    android:letterSpacing="0.08" />
 
-                <Button
-                    android:id="@+id/btnTimeArrived"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:text="LLEGUÉ"
-                    android:textColor="#FFFFFF"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:stateListAnimator="@null" />
-
-                <Button
-                    android:id="@+id/btnTimeOffSite"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="ME VOY"
-                    android:textColor="#FFFFFF"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:stateListAnimator="@null" />
+                <TextView
+                    android:id="@+id/tvTiemposRegistrados"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/lc_text"
+                    android:textSize="14sp" />
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvResumenTiempos"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="Sin eventos de tiempo registrados"
-                android:textColor="@color/lc_text_tertiary"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/tvHorasTiempos"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/lc_text_tertiary"
-                android:textSize="12sp"
-                android:visibility="gone" />
 
             <TextView
                 android:layout_width="match_parent"

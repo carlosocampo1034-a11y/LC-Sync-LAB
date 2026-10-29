@@ -529,7 +529,23 @@ public class HomeActivity extends AppCompatActivity {
         if (n == 0) c.addView(Ui.texto(this, "Cuando tengas una solicitud activa verás aquí cada etapa.", 15, R.color.lc_sec, false));
     }
 
-    /** Línea de tiempo del cliente: {texto, done|current|todo}; solo con campos reales del servidor. */
+    /** Hora (texto corto) del cambio a alguno de {@code estados} según el historial; la primera vez o la más reciente. null si no hubo. */
+    static String horaDeEstado(JSONObject d, boolean masReciente, String... estados) {
+        JSONArray h = d.optJSONArray("historial");
+        long mejor = 0;
+        for (int i = 0; h != null && i < h.length(); i++) {
+            JSONObject e = h.optJSONObject(i);
+            if (e == null || !"Estado".equals(e.optString("campo"))) continue;
+            boolean coincide = false;
+            for (String x : estados) if (x.equals(e.optString("valor"))) coincide = true;
+            long ts = e.optLong("ts", 0);
+            if (!coincide || ts <= 0) continue;
+            if (mejor == 0 || (masReciente ? ts > mejor : ts < mejor)) mejor = ts;
+        }
+        return mejor == 0 ? null : Ui.fechaCorta(mejor);
+    }
+
+    /** Línea de tiempo del cliente: {texto, done|current|todo, hora}; solo con campos reales del servidor. */
     static List<String[]> lineaTiempo(JSONObject d) {
         String est = d.optString("estado");
         boolean asignado = !d.optString("tecnicoNombre").isEmpty() && !"null".equals(d.optString("tecnicoNombre"));
@@ -541,14 +557,22 @@ public class HomeActivity extends AppCompatActivity {
         boolean reparacion = "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est) || "PART HOLD".equals(est) || "PAUSADO".equals(est)
                 || "REQUIERE GERENTE".equals(est) || "REPUESTO PRECARGADO".equals(est) || "COMPLETADO".equals(est) || "PAGADO".equals(est);
         boolean fin = "COMPLETADO".equals(est) || "PAGADO".equals(est);
-        String[] nombres = {"Solicitada", "En revisión", "Asignada", "En camino", "En el lugar", "En reparación", "Completado"};
-        boolean[] hecho = {true, enRevision, asignado, enRuta, enSitio, reparacion, fin};
+        // Orden 67: cada etapa lleva la hora real del cambio de estado (historial del servidor). «Técnico salió del sitio»
+        // aparece cuando el técnico dejó el sitio: completó, pidió repuesto, el cliente no estaba, se canceló o requirió gerente.
+        String hEnCamino = horaDeEstado(d, false, "EN RUTA");
+        String hLlegue = horaDeEstado(d, false, "LLEGUÉ");
+        String hSalida = horaDeEstado(d, true, "COMPLETADO", "PAGADO", "PART HOLD", "CLIENTE NO ESTÁ", "CANCELADO", "REQUIERE GERENTE");
+        String hFin = horaDeEstado(d, false, "COMPLETADO", "PAGADO");
         List<String[]> l = new ArrayList<>();
+        String[] nombres = {"Solicitada", "En revisión", "Asignada", "En camino", "En el lugar", "En reparación", "Técnico salió del sitio", "Completado"};
+        boolean[] hecho = {true, enRevision, asignado, enRuta, enSitio, reparacion, hSalida != null, fin};
+        String[] horas = {"", "", "", hEnCamino, hLlegue, "", hSalida, hFin};
         boolean actualMarcada = false;
         for (int i = 0; i < nombres.length; i++) {
+            if (i == 6 && hSalida == null) continue;   // la etapa extra solo existe si hubo salida
             String st = hecho[i] ? "done" : (!actualMarcada ? "current" : "todo");
             if (!hecho[i]) actualMarcada = true;
-            l.add(new String[]{nombres[i], st});
+            l.add(new String[]{nombres[i], st, horas[i] == null ? "" : horas[i]});
         }
         return l;
     }

@@ -299,7 +299,7 @@ final class Ui {
                 col.addView(linea, new LinearLayout.LayoutParams(dp(a, 2), dp(a, 8)));
             }
             fila.addView(col, new LinearLayout.LayoutParams(dp(a, 22), ViewGroup.LayoutParams.WRAP_CONTENT));
-            TextView t = texto(a, e[0], 13, "todo".equals(e[1]) ? R.color.lc_sec : R.color.lc_texto, !"todo".equals(e[1]));
+            TextView t = texto(a, e[0] + (e.length > 2 && !e[2].isEmpty() ? " · " + e[2] : ""), 13, "todo".equals(e[1]) ? R.color.lc_sec : R.color.lc_texto, !"todo".equals(e[1]));
             t.setPadding(dp(a, 6), 0, 0, 0);
             fila.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             card.addView(fila);
@@ -360,7 +360,7 @@ final class Ui {
                 col.addView(linea, new LinearLayout.LayoutParams(dp(a, 2), dp(a, 22)));
             }
             fila.addView(col, new LinearLayout.LayoutParams(dp(a, 28), ViewGroup.LayoutParams.WRAP_CONTENT));
-            TextView t = texto(a, e[0], 15, "todo".equals(e[1]) ? R.color.lc_sec : R.color.lc_texto, !"todo".equals(e[1]));
+            TextView t = texto(a, e[0] + (e.length > 2 && !e[2].isEmpty() ? " · " + e[2] : ""), 15, "todo".equals(e[1]) ? R.color.lc_sec : R.color.lc_texto, !"todo".equals(e[1]));
             t.setPadding(dp(a, 8), dp(a, 1), 0, 0);
             fila.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             card.addView(fila);

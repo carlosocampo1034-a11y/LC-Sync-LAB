@@ -126,11 +126,6 @@ public class JobDetailActivity extends AppCompatActivity {
     private Button btnRecordatorio;
     private Button btnVerComoCliente;
 
-    private Button btnTimeOnMyWay;
-    private Button btnTimeArrived;
-    private Button btnTimeOffSite;
-    private TextView tvResumenTiempos;
-    private TextView tvHorasTiempos;
 
     private File tempFotoFile;
 
@@ -202,6 +197,8 @@ public class JobDetailActivity extends AppCompatActivity {
         if (job == null) { finish(); return; }
 
         estadoView      = findViewById(R.id.detalleEstado);
+        layoutTiemposRegistrados = findViewById(R.id.layoutTiemposRegistrados);
+        tvTiemposRegistrados = findViewById(R.id.tvTiemposRegistrados);
         updatedAtView   = findViewById(R.id.detalleUpdatedAt);
         botonPrincipal       = findViewById(R.id.btnPrincipal);
         botonSecundario      = findViewById(R.id.btnSecundario);
@@ -230,11 +227,6 @@ public class JobDetailActivity extends AppCompatActivity {
         btnFirmaCliente     = findViewById(R.id.btnFirmaCliente); // Fase 49
         btnFirmaTecnico     = findViewById(R.id.btnFirmaTecnico); // Fase 55
         btnAvisarCliente    = findViewById(R.id.btnAvisarCliente);
-        btnTimeOnMyWay   = findViewById(R.id.btnTimeOnMyWay);
-        btnTimeArrived   = findViewById(R.id.btnTimeArrived);
-        btnTimeOffSite   = findViewById(R.id.btnTimeOffSite);
-        tvResumenTiempos = findViewById(R.id.tvResumenTiempos);
-        tvHorasTiempos   = findViewById(R.id.tvHorasTiempos);
         layoutRepuestos  = findViewById(R.id.layoutRepuestos);
         tvSinRepuestos   = findViewById(R.id.tvSinRepuestos);
         layoutSolicitudes = findViewById(R.id.layoutSolicitudes);
@@ -408,9 +400,6 @@ public class JobDetailActivity extends AppCompatActivity {
         findViewById(R.id.btnAgregarFoto).setOnLongClickListener(v -> { mostrarOpcionesFoto(); return true; });
         findViewById(R.id.btnAgregarContacto).setOnClickListener(v -> mostrarDialogoNuevoContacto());
         btnAvisarCliente.setOnClickListener(v -> mostrarOpcionesAvisarCliente());
-        btnTimeOnMyWay.setOnClickListener(v -> confirmarTimeEvent("ON_MY_WAY"));
-        btnTimeArrived.setOnClickListener(v -> confirmarTimeEvent("ARRIVED"));
-        btnTimeOffSite.setOnClickListener(v -> confirmarTimeEvent("OFF_SITE"));
         findViewById(R.id.btnAgregarRepuesto).setOnClickListener(v -> mostrarDialogoAgregarRepuesto());
         findViewById(R.id.btnSolicitarRepuesto).setOnClickListener(v -> mostrarDialogoSolicitudRepuesto());
         btnCompartirReporte.setOnClickListener(v -> compartirReporte());
@@ -806,6 +795,10 @@ public class JobDetailActivity extends AppCompatActivity {
         // «En camino» registra la salida y «Llegué» la llegada, una sola vez por orden.
         if (Job.STATUS_EN_ROUTE.equals(next)) registrarTiempoAuto("ON_MY_WAY");
         else if (Job.STATUS_ARRIVED.equals(next)) registrarTiempoAuto("ARRIVED");
+        else if (esSalidaDelSitio(next)) {
+            // «Salida del sitio» en los cinco casos de cierre; cada salida deja su propia hora (la última es la que cuenta)
+            JobRepository.get().registrarTimeEvent(job.id, "OFF_SITE", null, () -> { cargarTiempos(); cargarHistorial(); });
+        }
         Toast.makeText(this, toast, Toast.LENGTH_SHORT).show();
         pintarEstado();
         mostrarUpdatedAt();
@@ -918,6 +911,8 @@ public class JobDetailActivity extends AppCompatActivity {
     // ── Diseño premium: cabecera #ID + badge, acciones rápidas, pestañas y hoja «Cambiar estado» ──────────────────────
 
     private TextView tvBadgeEstado;
+    private View layoutTiemposRegistrados;
+    private TextView tvTiemposRegistrados;
     private boolean cabeceraArmada;
 
     private void actualizarBadgeEstado() {
@@ -2419,23 +2414,11 @@ public class JobDetailActivity extends AppCompatActivity {
 
     // ── Tiempos del técnico ───────────────────────────────────────────────────
 
-    private void confirmarTimeEvent(String tipo) {
-        JobRepository.get().getLatestTimeEventAsync(job.id, tipo, existing -> {
-            if (existing != null) {
-                String hora = FMT_HORA.format(new Date(existing.timestamp));
-                new AlertDialog.Builder(this)
-                        .setTitle("Evento ya registrado")
-                        .setMessage("Ya registraste este momento a las " + hora + ". ¿Quieres reemplazarlo?")
-                        .setPositiveButton("Sí", (d, w) -> {
-                            JobRepository.get().eliminarTimeEvent(existing.id, job.id);
-                            registrarYRefrescar(tipo);
-                        })
-                        .setNegativeButton("No", null)
-                        .show();
-            } else {
-                registrarYRefrescar(tipo);
-            }
-        });
+
+    /** Estados en los que el técnico deja el sitio: completar, necesita repuesto, cliente no está, cancelar y requiere gerente. */
+    private static boolean esSalidaDelSitio(String estado) {
+        return Job.STATUS_DONE.equals(estado) || Job.STATUS_PART_HOLD.equals(estado) || Job.STATUS_NOT_HOME.equals(estado)
+                || Job.STATUS_CANCELLED.equals(estado) || Job.STATUS_MANAGER.equals(estado);
     }
 
     /** Registra la hora de un cambio de estado solo si esa orden aún no tiene ese evento (no pisa lo marcado a mano). */
@@ -2450,17 +2433,6 @@ public class JobDetailActivity extends AppCompatActivity {
         });
     }
 
-    private void registrarYRefrescar(String tipo) {
-        String label = "ON_MY_WAY".equals(tipo) ? "Salida"
-                     : "ARRIVED".equals(tipo)    ? "Llegada"
-                     :                             "Salida del sitio";
-        Toast.makeText(this, label + " registrada a las " + FMT_HORA.format(new Date()),
-                Toast.LENGTH_SHORT).show();
-        JobRepository.get().registrarTimeEvent(job.id, tipo, null, () -> {
-            cargarTiempos();
-            cargarHistorial();
-        });
-    }
 
     // ── Work Items ────────────────────────────────────────────────────────────
 
@@ -2785,64 +2757,21 @@ public class JobDetailActivity extends AppCompatActivity {
         });
     }
 
+    /** «Tiempos registrados»: solo lectura, y solo si hay al menos una hora. Las horas las deja el cambio de estado. */
     private void cargarTiempos() {
+        if (layoutTiemposRegistrados == null || tvTiemposRegistrados == null) return;
         JobRepository.get().calcularTiemposAsync(job.id, stats -> {
-            updateTimeButton(btnTimeOnMyWay, stats.onMyWay, "EN CAMINO", 0xFF171717);
-            updateTimeButton(btnTimeArrived, stats.arrived, "LLEGUÉ",    0xFF171717);
-            updateTimeButton(btnTimeOffSite, stats.offSite, "ME VOY",    0xFFE91605);
-
-            boolean hayAlguno = stats.onMyWay != null || stats.arrived != null || stats.offSite != null;
-            if (!hayAlguno) {
-                tvResumenTiempos.setText("Sin eventos de tiempo registrados");
-                tvHorasTiempos.setVisibility(View.GONE);
-                return;
-            }
-
-            StringBuilder sb = new StringBuilder();
-            if (stats.tiempoViajeMinutos >= 0) {
-                sb.append("Viaje: ").append(formatDuration(stats.tiempoViajeMinutos));
-            }
-            if (stats.tiempoEnSitioMinutos >= 0) {
-                if (sb.length() > 0) sb.append(" · ");
-                sb.append("En sitio: ").append(formatDuration(stats.tiempoEnSitioMinutos));
-            }
-            if (stats.tiempoTotalMinutos >= 0) {
-                if (sb.length() > 0) sb.append(" · ");
-                sb.append("Total: ").append(formatDuration(stats.tiempoTotalMinutos));
-            }
-            tvResumenTiempos.setText(sb.length() > 0 ? sb.toString() : "Sin eventos de tiempo registrados");
-
-            StringBuilder horas = new StringBuilder();
-            if (stats.onMyWay != null) horas.append(FMT_HORA.format(new Date(stats.onMyWay.timestamp)));
-            if (stats.arrived != null) {
-                if (horas.length() > 0) horas.append(" → ");
-                horas.append(FMT_HORA.format(new Date(stats.arrived.timestamp)));
-            }
+            java.util.List<String> partes = new java.util.ArrayList<>();
+            if (stats.onMyWay != null) partes.add("En camino: " + FMT_HORA.format(new Date(stats.onMyWay.timestamp)));
+            if (stats.arrived != null) partes.add("Llegué: " + FMT_HORA.format(new Date(stats.arrived.timestamp)));
             if (stats.offSite != null) {
-                if (horas.length() > 0) horas.append(" → ");
-                horas.append(FMT_HORA.format(new Date(stats.offSite.timestamp)));
+                partes.add((Job.esCompletado(job.estado) ? "Completado: " : "Salida del sitio: ") + FMT_HORA.format(new Date(stats.offSite.timestamp)));
             }
-            if (horas.length() > 0) {
-                tvHorasTiempos.setText(horas.toString());
-                tvHorasTiempos.setVisibility(View.VISIBLE);
-            } else {
-                tvHorasTiempos.setVisibility(View.GONE);
-            }
+            layoutTiemposRegistrados.setVisibility(partes.isEmpty() ? View.GONE : View.VISIBLE);
+            tvTiemposRegistrados.setText(android.text.TextUtils.join("  |  ", partes));
         });
     }
 
-    private void updateTimeButton(Button btn, TimeEventEntity event, String label, int activeColor) {
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dpToPx(20));
-        if (event != null) {
-            btn.setText("✓ " + label);
-            bg.setColor(activeColor);
-        } else {
-            btn.setText(label);
-            bg.setColor(0xFFBBBBBB);
-        }
-        btn.setBackground(bg);
-    }
 
     private int dpToPx(int dp) {
         return Math.round(dp * getResources().getDisplayMetrics().density);
