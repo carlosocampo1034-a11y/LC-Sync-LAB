@@ -230,8 +230,9 @@ public class HomeActivity extends AppCompatActivity {
             fila.addView(campana, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
             p.cabecera.addView(fila);
         } else {
-            String[] t = {"", "Mis solicitudes", "Seguimiento", "Perfil"};
-            p.cabecera.addView(Ui.texto(this, t[tab], 28, R.color.lc_texto, true));
+            String[] t = {"", "Mis solicitudes", "Seguimiento", ""};
+            if (tab != 3) p.cabecera.addView(Ui.texto(this, t[tab], 28, R.color.lc_texto, true));
+            else p.cabecera.addView(new View(this), new LinearLayout.LayoutParams(1, Ui.dp(this, 8)));   // la maqueta no lleva título
         }
     }
 
@@ -350,22 +351,24 @@ public class HomeActivity extends AppCompatActivity {
             chip.setOrientation(LinearLayout.HORIZONTAL);
             chip.setGravity(Gravity.CENTER);
             chip.setMinimumHeight(Ui.dp(this, 44));
-            chip.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), 0);
+            chip.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
             GradientDrawable bg = new GradientDrawable();
             bg.setCornerRadius(Ui.dp(this, 22));
             bg.setColor(on ? 0xFFE91605 : 0xFFF5F5F7);
             chip.setBackground(bg);
-            chip.addView(Ui.texto(this, nombres[i], 14, on ? android.R.color.white : R.color.lc_texto, true));
-            TextView num = Ui.texto(this, String.valueOf(cuenta[i]), 12, on ? R.color.lc_rojo : R.color.lc_sec, true);
+            TextView nombreChip = Ui.texto(this, nombres[i], 13, on ? android.R.color.white : R.color.lc_texto, true);
+            nombreChip.setSingleLine(true);
+            chip.addView(nombreChip);
+            TextView num = Ui.texto(this, String.valueOf(cuenta[i]), 11, on ? R.color.lc_rojo : R.color.lc_sec, true);
             num.setGravity(Gravity.CENTER);
-            num.setMinWidth(Ui.dp(this, 22));
-            num.setMinHeight(Ui.dp(this, 22));
+            num.setMinWidth(Ui.dp(this, 20));
+            num.setMinHeight(Ui.dp(this, 20));
             GradientDrawable cg = new GradientDrawable();
             cg.setShape(GradientDrawable.OVAL);
             cg.setColor(on ? 0xFFFFFFFF : 0xFFE5E5E8);
             num.setBackground(cg);
             LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(-2, -2);
-            nlp.leftMargin = Ui.dp(this, 6);
+            nlp.leftMargin = Ui.dp(this, 4);
             chip.addView(num, nlp);
             chip.setOnClickListener(v -> { filtro = m; pintar(); });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -408,7 +411,8 @@ public class HomeActivity extends AppCompatActivity {
             cab.addView(idv);
             cab.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
             long cita = j.optLong("programadoPara", 0);
-            cab.addView(Ui.texto(this, cita > 0 ? Ui.fechaCorta(cita) : "Por confirmar", 12, R.color.lc_texto, cita > 0));
+            long fechaTarjeta = cita > 0 ? cita : (!act ? j.optLong("updatedAt", 0) : 0);   // cerradas: fecha del último cambio
+            cab.addView(Ui.texto(this, fechaTarjeta > 0 ? Ui.fechaCorta(fechaTarjeta) : "Por confirmar", 12, R.color.lc_texto, fechaTarjeta > 0));
             card.addView(cab);
             // Fila 2: título, dirección y descripción a la izquierda · foto 80×80 y flecha a la derecha
             LinearLayout cuerpo = new LinearLayout(this);
@@ -610,7 +614,7 @@ public class HomeActivity extends AppCompatActivity {
                 .setPositiveButton("Entendido", null).show());
         filaMenu(menu, R.drawable.ic_bell, "Notificaciones", v -> startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())));
-        filaMenu(menu, R.drawable.ic_help, "Soporte", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+        filaMenu(menu, R.drawable.ic_help_q, "Soporte", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Soporte L&C")
                 .setItems(new String[]{"Llamar · 786-922-7383", "Escribir un correo"}, (dlg, which) -> {
                     if (which == 0) startActivity(new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:+17869227383")));
@@ -621,16 +625,21 @@ public class HomeActivity extends AppCompatActivity {
         String ver = "";
         try { ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) { }
         final String verF = ver;
-        filaMenu(menu, R.drawable.ic_pin, "Acerca de", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+        filaMenu(menu, R.drawable.ic_info, "Acerca de", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("L&C Cliente").setMessage("Versión " + verF + "\nL&C Home Services")
                 .setPositiveButton("Cerrar", null).show());
         if (!CloudApi.activo()) {   // herramienta técnica solo en el laboratorio con servidor propio
             filaMenu(menu, R.drawable.ic_list, "Diagnóstico de conexión", v -> startActivity(new Intent(this, DiagnosticoActivity.class)));
         }
-        TextView salir = Ui.texto(this, "Cerrar sesión", 16, R.color.lc_rojo, true);
+        LinearLayout salir = new LinearLayout(this);
+        salir.setOrientation(LinearLayout.HORIZONTAL);
         salir.setGravity(Gravity.CENTER);
-        salir.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_logout, 0, 0, 0);
-        salir.setCompoundDrawablePadding(Ui.dp(this, 10));
+        ImageView salirIc = new ImageView(this);
+        salirIc.setImageResource(R.drawable.ic_logout);
+        salir.addView(salirIc, new LinearLayout.LayoutParams(Ui.dp(this, 22), Ui.dp(this, 22)));
+        TextView salirTx = Ui.texto(this, "Cerrar sesión", 16, R.color.lc_rojo, true);
+        salirTx.setPadding(Ui.dp(this, 10), 0, 0, 0);
+        salir.addView(salirTx);
         GradientDrawable sb = new GradientDrawable();
         sb.setCornerRadius(Ui.dp(this, 12));
         sb.setColor(0xFFFFFFFF);

@@ -200,7 +200,7 @@ public class ProfileActivity extends AppCompatActivity {
                     .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())));
             View acerca = getLayoutInflater().inflate(R.layout.item_menu, box, false);
             acerca.setTag("acerca");
-            ((ImageView) acerca.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_doc);
+            ((ImageView) acerca.findViewById(R.id.menuIcon)).setImageResource(R.drawable.ic_info);
             ((TextView) acerca.findViewById(R.id.menuLabel)).setText("Acerca de");
             acerca.setOnClickListener(v -> {
                 String ver = "";
@@ -209,7 +209,7 @@ public class ProfileActivity extends AppCompatActivity {
                         .setMessage("Versión " + ver + "\nL&C Home Services").setPositiveButton("Cerrar", null).show();
             });
             View soporte = getLayoutInflater().inflate(R.layout.item_menu, box, false);
-            ((ImageView) soporte.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_chat);
+            ((ImageView) soporte.findViewById(R.id.menuIcon)).setImageResource(R.drawable.ic_help_q);
             ((TextView) soporte.findViewById(R.id.menuLabel)).setText("Soporte");
             soporte.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
                     .setTitle("Soporte L&C")
@@ -252,6 +252,14 @@ public class ProfileActivity extends AppCompatActivity {
         cb.setStroke(Math.round(1.5f * getResources().getDisplayMetrics().density), 0xFFE91605);
         cb.setColor(0xFFFFFFFF);
         cerrar.setBackground(cb);
+        // como la maqueta: ícono y texto juntos y centrados, sin flecha
+        if (cerrar instanceof LinearLayout) {
+            ((LinearLayout) cerrar).setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams ll = (LinearLayout.LayoutParams) tvCerrar.getLayoutParams();
+            if (ll != null) { ll.weight = 0; ll.width = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; tvCerrar.setLayoutParams(ll); }
+            View ultimo = ((LinearLayout) cerrar).getChildAt(((LinearLayout) cerrar).getChildCount() - 1);
+            if (ultimo != tvCerrar && ultimo != cerrar.findViewById(R.id.menuIcon)) ultimo.setVisibility(View.GONE);
+        }
         ((ImageView) cerrar.findViewById(R.id.menuIcon)).setColorFilter(0xFFE91605);
         tvCerrar.setTypeface(null, android.graphics.Typeface.BOLD);
         if (cerrar.getLayoutParams() instanceof android.view.ViewGroup.MarginLayoutParams) {

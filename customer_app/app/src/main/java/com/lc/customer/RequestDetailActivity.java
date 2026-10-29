@@ -499,7 +499,7 @@ public class RequestDetailActivity extends AppCompatActivity {
             ImageView av = new ImageView(this);   // sin foto del técnico en el servidor: placeholder
             av.setImageResource(R.drawable.ic_avatar_placeholder_suave);
             av.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-            filaInfo(card, R.drawable.ic_person, "Técnico asignado", tec + "\nTécnico L&C", av);
+            filaInfo(card, R.drawable.ic_person, "Técnico asignado", tec, av);
         }
         // Estado: línea de tiempo compacta
         LinearLayout tl = new LinearLayout(this);
