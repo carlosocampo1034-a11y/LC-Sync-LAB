@@ -367,6 +367,68 @@ final class Ui {
         }
     }
 
+    /**
+     * Línea de tiempo de Seguimiento (maqueta C9): nodo verde (hecho) / rojo (actual) / gris (pendiente), título, hora real
+     * y subtítulo. {@code etapas} = {texto, done|current|todo, hora}. {@code tarjetaTecnico} (puede ser null) se inserta
+     * dentro de la línea, bajo «Asignada». Los subtítulos son textos fijos; las horas y el nombre salen del servidor.
+     */
+    static void lineaTiempoC9(Activity a, LinearLayout card, java.util.List<String[]> etapas, String tecnico, View tarjetaTecnico) {
+        for (int k = 0; k < etapas.size(); k++) {
+            String[] e = etapas.get(k);
+            boolean hecho = "done".equals(e[1]), actual = "current".equals(e[1]);
+            boolean ultima = k == etapas.size() - 1;
+            LinearLayout fila = new LinearLayout(a);
+            fila.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout col = new LinearLayout(a);
+            col.setOrientation(LinearLayout.VERTICAL);
+            col.setGravity(Gravity.CENTER_HORIZONTAL);
+            TextView punto = texto(a, hecho ? "✓" : "", 13, android.R.color.white, true);
+            punto.setGravity(Gravity.CENTER);
+            android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+            g.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            if (hecho) g.setColor(ContextCompat.getColor(a, R.color.lc_ok));
+            else if (actual) { g.setColor(ContextCompat.getColor(a, R.color.lc_rojo)); g.setStroke(dp(a, 6), 0xFFFFFFFF); }
+            else { g.setColor(0xFFF5F5F7); g.setStroke(dp(a, 2), ContextCompat.getColor(a, R.color.lc_borde)); }
+            punto.setBackground(g);
+            col.addView(punto, new LinearLayout.LayoutParams(dp(a, 26), dp(a, 26)));
+            if (!ultima) {
+                View linea = new View(a);
+                linea.setBackgroundColor(ContextCompat.getColor(a, hecho ? R.color.lc_ok : actual ? R.color.lc_rojo : R.color.lc_borde));
+                col.addView(linea, new LinearLayout.LayoutParams(dp(a, 3), 0, 1f));
+            }
+            fila.addView(col, new LinearLayout.LayoutParams(dp(a, 34), ViewGroup.LayoutParams.MATCH_PARENT));
+            LinearLayout der = new LinearLayout(a);
+            der.setOrientation(LinearLayout.VERTICAL);
+            der.setPadding(dp(a, 6), 0, 0, dp(a, 14));
+            der.addView(texto(a, e[0], 16, hecho || actual ? R.color.lc_texto : R.color.lc_sec, hecho || actual));
+            if (e.length > 2 && !e[2].isEmpty()) der.addView(texto(a, e[2], 13, R.color.lc_sec, false));
+            String sub = subtituloEtapa(e[0], e[1], tecnico);
+            if (!sub.isEmpty()) der.addView(texto(a, sub, 13, R.color.lc_sec, false));
+            if ("Asignada".equals(e[0]) && tarjetaTecnico != null) {
+                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                tl.topMargin = dp(a, 8);
+                der.addView(tarjetaTecnico, tl);
+            }
+            fila.addView(der, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            card.addView(fila);
+        }
+    }
+
+    private static String subtituloEtapa(String etapa, String estado, String tecnico) {
+        if ("todo".equals(estado)) return "Pendiente";
+        switch (etapa) {
+            case "Solicitada": return "Tu solicitud ha sido recibida.";
+            case "En revisión": return "Estamos revisando tu solicitud.";
+            case "Asignada": return tecnico == null || tecnico.isEmpty() ? "" : "Asignada a " + tecnico + ".";
+            case "En camino": return "Tu técnico va en camino.";
+            case "En el lugar": return "Tu técnico llegó al sitio.";
+            case "En reparación": return "Tu técnico está trabajando en el servicio.";
+            case "Técnico salió del sitio": return "Tu técnico terminó su visita.";
+            case "Completado": return "Trabajo terminado.";
+            default: return "";
+        }
+    }
+
     /** Aviso «Próximamente» con «Notifícame cuando esté listo», que guarda el interés en Supabase (feature_interest). */
     static void avisoProximamente(final Activity a, String titulo, String texto, final String feature) {
         new androidx.appcompat.app.AlertDialog.Builder(a)

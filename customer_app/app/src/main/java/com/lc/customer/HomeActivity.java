@@ -488,50 +488,94 @@ public class HomeActivity extends AppCompatActivity {
             n++;
             JSONObject d = detalles.containsKey(j.optLong("id")) ? detalles.get(j.optLong("id")) : j;
             final long jid = j.optLong("id");
-            Ui.seccion(this, c, "Solicitud #" + jid);
+            TextView encab = Ui.texto(this, "#" + jid + " · " + etiquetaCategoria(j.optString("categoria")), 18, R.color.lc_texto, true);
+            encab.setPadding(0, Ui.dp(this, 16), 0, 0);
+            c.addView(encab);
             c.addView(Ui.texto(this, limpiarDescripcion(j.optString("descripcion")), 14, R.color.lc_sec, false));
-            LinearLayout card = Ui.tarjeta(this, c);
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(0, Ui.dp(this, 12), 0, 0);
+            c.addView(card);
             List<String[]> etapas = lineaTiempo(d);
-            Ui.lineaTiempo(this, card, etapas);
             String tec = d.optString("tecnicoNombre");
-            if (!tec.isEmpty() && !"null".equals(tec)) {
-                LinearLayout tc = Ui.tarjeta(this, c);
-                LinearLayout fila = new LinearLayout(this);
-                fila.setOrientation(LinearLayout.HORIZONTAL);
-                fila.setGravity(Gravity.CENTER_VERTICAL);
-                TextView av = Ui.texto(this, tec.substring(0, 1).toUpperCase(), 20, android.R.color.white, true);
-                av.setGravity(Gravity.CENTER);
-                GradientDrawable ag = new GradientDrawable();
-                ag.setShape(GradientDrawable.OVAL);
-                ag.setColor(getResources().getColor(R.color.lc_rojo));
-                av.setBackground(ag);
-                fila.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-                LinearLayout tx = new LinearLayout(this);
-                tx.setOrientation(LinearLayout.VERTICAL);
-                tx.setPadding(Ui.dp(this, 12), 0, 0, 0);
-                tx.addView(Ui.texto(this, tec, 16, R.color.lc_texto, true));
-                tx.addView(Ui.texto(this, "Técnico asignado · L&C", 13, R.color.lc_sec, false));
-                fila.addView(tx);
-                tc.addView(fila);
-                LinearLayout bs = new LinearLayout(this);
-                bs.setOrientation(LinearLayout.HORIZONTAL);
-                android.widget.Button llamar = Ui.boton(this, bs, "Llamar", false);
-                llamar.setAllCaps(false);
-                llamar.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:+17869227383"))));
-                android.widget.Button msg = Ui.boton(this, bs, "Mensaje", true);
-                msg.setAllCaps(false);
-                msg.setOnClickListener(v -> startActivity(new Intent(this, RequestDetailActivity.class).putExtra("id", jid)));
-                for (int q = 0; q < bs.getChildCount(); q++) {
-                    LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) bs.getChildAt(q).getLayoutParams();
-                    lp.width = 0;
-                    lp.weight = 1f;
-                    lp.rightMargin = q == 0 ? Ui.dp(this, 8) : 0;
-                }
-                tc.addView(bs);
-            }
+            boolean hayTec = !tec.isEmpty() && !"null".equals(tec);
+            // «Carlos Mendoza (Técnico HVAC)»: nombre y especialidad reales; sin paréntesis solo se muestra «Técnico asignado»
+            String nombreTec = tec, rolTec = "Técnico asignado · L&C";
+            int pi = tec.indexOf(" (");
+            if (pi > 0 && tec.endsWith(")")) { nombreTec = tec.substring(0, pi); rolTec = tec.substring(pi + 2, tec.length() - 1); }
+            View tarjetaTec = null;
+            if (hayTec) tarjetaTec = tarjetaTecnico(nombreTec, rolTec, jid);
+            Ui.lineaTiempoC9(this, card, etapas, hayTec ? nombreTec : "", tarjetaTec);
             card.setOnClickListener(v -> startActivity(new Intent(this, RequestDetailActivity.class).putExtra("id", jid)));
         }
         if (n == 0) c.addView(Ui.texto(this, "Cuando tengas una solicitud activa verás aquí cada etapa.", 15, R.color.lc_sec, false));
+    }
+
+    /** Tarjeta del técnico asignado (maqueta C9): inicial real sobre rojo suave, nombre, especialidad y Llamar / Mensaje. */
+    private View tarjetaTecnico(String nombre, String rol, final long jid) {
+        LinearLayout tc = new LinearLayout(this);
+        tc.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable fondo = new GradientDrawable();
+        fondo.setColor(0xFFFFFFFF);
+        fondo.setCornerRadius(Ui.dp(this, 14));
+        fondo.setStroke(Ui.dp(this, 1), 0xFFEDEDF0);
+        tc.setBackground(fondo);
+        tc.setElevation(Ui.dp(this, 2));
+        tc.setPadding(Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12));
+        LinearLayout fila = new LinearLayout(this);
+        fila.setOrientation(LinearLayout.HORIZONTAL);
+        fila.setGravity(Gravity.CENTER_VERTICAL);
+        TextView av = Ui.texto(this, nombre.substring(0, 1).toUpperCase(), 20, R.color.lc_rojo, true);
+        av.setGravity(Gravity.CENTER);
+        GradientDrawable ag = new GradientDrawable();
+        ag.setShape(GradientDrawable.OVAL);
+        ag.setColor(0xFFFFE5E2);
+        av.setBackground(ag);
+        fila.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        LinearLayout tx = new LinearLayout(this);
+        tx.setOrientation(LinearLayout.VERTICAL);
+        tx.setPadding(Ui.dp(this, 12), 0, 0, 0);
+        tx.addView(Ui.texto(this, nombre, 16, R.color.lc_texto, true));
+        tx.addView(Ui.texto(this, rol, 13, R.color.lc_sec, false));
+        fila.addView(tx);
+        tc.addView(fila);
+        LinearLayout bs = new LinearLayout(this);
+        bs.setOrientation(LinearLayout.HORIZONTAL);
+        bs.setPadding(0, Ui.dp(this, 10), 0, 0);
+        String[] txt = {"Llamar", "Mensaje"};
+        int[] ico = {R.drawable.ic_phone, R.drawable.ic_chat};
+        for (int q = 0; q < 2; q++) {
+            final int qq = q;
+            TextView b = Ui.texto(this, txt[q], 15, R.color.lc_rojo, true);
+            b.setGravity(Gravity.CENTER);
+            b.setBackgroundResource(R.drawable.bg_boton_outline_rojo);
+            b.setCompoundDrawablesWithIntrinsicBounds(ico[q], 0, 0, 0);
+            b.setCompoundDrawablePadding(Ui.dp(this, 6));
+            b.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(0xFFE91605));
+            b.setPadding(Ui.dp(this, 8), 0, Ui.dp(this, 8), 0);
+            b.setOnClickListener(v -> {
+                if (qq == 0) startActivity(new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:+17869227383")));   // L&C (el teléfono del técnico no se expone)
+                else startActivity(new Intent(this, RequestDetailActivity.class).putExtra("id", jid));
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f);
+            lp.rightMargin = q == 0 ? Ui.dp(this, 8) : 0;
+            bs.addView(b, lp);
+        }
+        tc.addView(bs);
+        return tc;
+    }
+
+    /** Hora del primer evento del historial con ese campo (campo null = el primer evento de todos); null si no hubo. */
+    static String horaDeCampo(JSONObject d, String campo) {
+        JSONArray h = d.optJSONArray("historial");
+        long mejor = 0;
+        for (int i = 0; h != null && i < h.length(); i++) {
+            JSONObject e = h.optJSONObject(i);
+            if (e == null || (campo != null && !campo.equals(e.optString("campo")))) continue;
+            long ts = e.optLong("ts", 0);
+            if (ts > 0 && (mejor == 0 || ts < mejor)) mejor = ts;
+        }
+        return mejor == 0 ? null : Ui.fechaCorta(mejor);
     }
 
     /** Hora (texto corto) del cambio a alguno de {@code estados} según el historial; la primera vez o la más reciente. null si no hubo. */
@@ -568,10 +612,13 @@ public class HomeActivity extends AppCompatActivity {
         String hLlegue = horaDeEstado(d, false, "LLEGUÉ");
         String hSalida = horaDeEstado(d, true, "COMPLETADO", "PAGADO", "PART HOLD", "CLIENTE NO ESTÁ", "CANCELADO", "REQUIERE GERENTE");
         String hFin = horaDeEstado(d, false, "COMPLETADO", "PAGADO");
+        String hRep = horaDeEstado(d, false, "EN REPARACIÓN");
+        String hAsig = horaDeCampo(d, "Técnico asignado");
+        String hSolic = horaDeCampo(d, null);
         List<String[]> l = new ArrayList<>();
         String[] nombres = {"Solicitada", "En revisión", "Asignada", "En camino", "En el lugar", "En reparación", "Técnico salió del sitio", "Completado"};
         boolean[] hecho = {true, enRevision, asignado, enRuta, enSitio, reparacion, hSalida != null, fin};
-        String[] horas = {"", "", "", hEnCamino, hLlegue, "", hSalida, hFin};
+        String[] horas = {hSolic, "", hAsig, hEnCamino, hLlegue, hRep, hSalida, hFin};
         boolean actualMarcada = false;
         for (int i = 0; i < nombres.length; i++) {
             if (i == 6 && hSalida == null) continue;   // la etapa extra solo existe si hubo salida
