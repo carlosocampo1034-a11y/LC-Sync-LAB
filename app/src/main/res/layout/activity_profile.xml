@@ -13,8 +13,8 @@
         android:gravity="center_vertical"
         android:paddingStart="8dp"
         android:paddingEnd="20dp"
-        android:paddingTop="14dp"
-        android:paddingBottom="14dp">
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
         <ImageView
             android:id="@+id/btnAtras"
@@ -68,8 +68,8 @@
 
                 <TextView
                     android:id="@+id/avatar"
-                    android:layout_width="88dp"
-                    android:layout_height="88dp"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
                     android:background="@drawable/bg_avatar_rojo_suave"
                     android:gravity="center"
                     android:text="Q"
@@ -127,7 +127,7 @@
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
-                    android:padding="16dp"
+                    android:padding="10dp"
                     android:background="@drawable/bg_surface">
 
                     <TextView
@@ -157,7 +157,7 @@
                     android:layout_marginEnd="10dp"
                     android:orientation="vertical"
                     android:gravity="center"
-                    android:padding="16dp"
+                    android:padding="10dp"
                     android:background="@drawable/bg_surface">
 
                     <TextView
@@ -185,7 +185,7 @@
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
-                    android:padding="16dp"
+                    android:padding="10dp"
                     android:background="@drawable/bg_surface">
 
                     <TextView

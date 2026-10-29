@@ -194,6 +194,13 @@ public class ProfileActivity extends AppCompatActivity {
             if (et != null && v.getVisibility() == View.VISIBLE) { acciones.add(v); nombres.add(et.getText().toString()); }
             v.setVisibility(View.GONE);   // fuera del menú visible
         }
+        // Filas de 48 dp para que los cinco ítems y «Cerrar sesión» quepan en una pantalla, como la referencia
+        for (int i = 0; i < box.getChildCount(); i++) {
+            View fila = box.getChildAt(i);
+            if (fila.findViewById(R.id.menuLabel) != null && fila.getLayoutParams() != null) {
+                fila.getLayoutParams().height = Math.round(48 * getResources().getDisplayMetrics().density);
+            }
+        }
         // Orden de la maqueta: Mi información · Notificaciones · Documentos · Soporte · Acerca de
         View docsV = box.findViewWithTag("docs");
         int pn = posicionConTag(box, "notif");
@@ -323,7 +330,8 @@ public class ProfileActivity extends AppCompatActivity {
         if (cerrar.getLayoutParams() instanceof android.view.ViewGroup.MarginLayoutParams) {
             android.view.ViewGroup.MarginLayoutParams mp = (android.view.ViewGroup.MarginLayoutParams) cerrar.getLayoutParams();
             int m = Math.round(16 * getResources().getDisplayMetrics().density);
-            mp.setMargins(m, m, m, m);
+            int mv = Math.round(8 * getResources().getDisplayMetrics().density);
+            mp.setMargins(m, mv, m, mv);
             cerrar.setLayoutParams(mp);
         }
     }
