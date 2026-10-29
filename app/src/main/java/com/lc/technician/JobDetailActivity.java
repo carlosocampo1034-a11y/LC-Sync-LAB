@@ -942,9 +942,9 @@ public class JobDetailActivity extends AppCompatActivity {
         TextView cli = findViewById(R.id.detalleCliente);
         if (cli != null) {
             cli.setText("#" + job.id);
-            cli.setTextSize(14f);
-            cli.setTypeface(null, android.graphics.Typeface.NORMAL);
-            cli.setTextColor(0xFF62666A);
+            cli.setTextSize(24f);
+            cli.setTypeface(null, android.graphics.Typeface.BOLD);
+            cli.setTextColor(0xFF0A0A0A);
         }
         if (estadoView != null) estadoView.setVisibility(View.GONE);   // el estado ya va en la píldora de la cabecera
         tvBadgeEstado = new TextView(this);
@@ -1028,12 +1028,14 @@ public class JobDetailActivity extends AppCompatActivity {
         dv.setText(job.descripcion == null ? "" : job.descripcion); dv.setTextSize(14f); dv.setTextColor(0xFF62666A);
         dv.setPadding(0, dp(6), 0, 0);
         desc.addView(dt); desc.addView(dv);
-        boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty();
+        boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty() && !"Por asignar".equals(job.equipo.trim());
         boolean hayPr = job.prioridad != null && !job.prioridad.trim().isEmpty() && !"NORMAL".equalsIgnoreCase(job.prioridad.trim());
-        if (hayEq || hayPr) {
+        String textoCat = com.lc.technician.ui.adapter.JobAdapter.etiquetaCategoria(com.lc.technician.sync.Listas.categoriaDe(this, job.id));
+        if (textoCat != null || hayEq || hayPr) {
             android.widget.LinearLayout tg = new android.widget.LinearLayout(this);
             tg.setOrientation(android.widget.LinearLayout.HORIZONTAL);
             tg.setPadding(0, dp(10), 0, 0);
+            if (textoCat != null) tg.addView(etiqueta(textoCat, 0xFF0A0A0A));
             if (hayEq) tg.addView(etiqueta(job.equipo.trim(), 0xFF0A0A0A));
             if (hayPr) tg.addView(etiqueta("Prioridad " + job.prioridad.trim().toLowerCase(java.util.Locale.ROOT), 0xFFE91605));
             desc.addView(tg);
@@ -1062,6 +1064,12 @@ public class JobDetailActivity extends AppCompatActivity {
                 mlp.topMargin = dp(12);
                 pg.addView(maps, pg.indexOfChild(eq) + 1, mlp);
                 // Tarjeta de mapa: placeholder con pin hasta tener la API key de Google Maps (pendiente documentado)
+                TextView tituloDir = new TextView(this);
+                tituloDir.setText("Dirección");
+                tituloDir.setTextSize(16f); tituloDir.setTypeface(null, android.graphics.Typeface.BOLD); tituloDir.setTextColor(0xFF0A0A0A);
+                android.widget.LinearLayout.LayoutParams tdl = new android.widget.LinearLayout.LayoutParams(-1, -2);
+                tdl.topMargin = dp(16);
+                pg.addView(tituloDir, pg.indexOfChild(eq) + 1, tdl);
                 android.widget.FrameLayout mapa = new android.widget.FrameLayout(this);
                 GradientDrawable mg = new GradientDrawable();
                 mg.setCornerRadius(dp(12));
@@ -1081,8 +1089,8 @@ public class JobDetailActivity extends AppCompatActivity {
                 mapa.addView(dir, new android.widget.FrameLayout.LayoutParams(-1, -2, android.view.Gravity.BOTTOM));
                 mapa.setOnClickListener(v -> abrirMapa(job.direccion));
                 android.widget.LinearLayout.LayoutParams mpl = new android.widget.LinearLayout.LayoutParams(-1, dp(140));
-                mpl.topMargin = dp(16);
-                pg.addView(mapa, pg.indexOfChild(eq) + 1, mpl);
+                mpl.topMargin = dp(8);
+                pg.addView(mapa, pg.indexOfChild(tituloDir) + 1, mpl);
             }
         }
 
@@ -1243,10 +1251,12 @@ public class JobDetailActivity extends AppCompatActivity {
     private View iconoEstado(int color, String nombre) {
         int glifo;
         switch (nombre) {
-            case "En camino": glifo = R.drawable.m_nav; break;
+            case "En camino": glifo = R.drawable.m_car; break;
             case "Completar": case "Siguiente": glifo = R.drawable.m_check; break;
-            case "Requiere Gerente": case "Cliente No Está": glifo = R.drawable.m_person; break;
-            case "Necesita Repuesto": case "Repuesto Pre-cargado": glifo = R.drawable.m_doc; break;
+            case "Requiere Gerente": glifo = R.drawable.m_person; break;
+            case "Cliente No Está": glifo = R.drawable.m_door; break;
+            case "Necesita Repuesto": glifo = R.drawable.m_wrench; break;
+            case "Repuesto Pre-cargado": glifo = R.drawable.m_box; break;
             case "Cancelar": glifo = R.drawable.m_x; break;
             case "Nueva Orden": glifo = R.drawable.m_plus; break;
             default: glifo = -1;

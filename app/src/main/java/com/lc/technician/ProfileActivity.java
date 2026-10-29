@@ -194,6 +194,10 @@ public class ProfileActivity extends AppCompatActivity {
             if (et != null && v.getVisibility() == View.VISIBLE) { acciones.add(v); nombres.add(et.getText().toString()); }
             v.setVisibility(View.GONE);   // fuera del menú visible
         }
+        // Orden de la maqueta: Mi información · Notificaciones · Documentos · Soporte · Acerca de
+        View docsV = box.findViewWithTag("docs");
+        int pn = posicionConTag(box, "notif");
+        if (docsV != null && pn >= 0) { box.removeView(docsV); box.addView(docsV, posicionConTag(box, "notif") + 1); }
         box.findViewWithTag("docs").setOnClickListener(v -> {
             if (acciones.isEmpty()) {
                 new android.app.AlertDialog.Builder(this).setTitle("Documentos")

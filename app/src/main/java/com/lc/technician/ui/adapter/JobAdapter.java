@@ -113,7 +113,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
     @Override public int getItemCount() { return jobs.size(); }
 
     /** Texto corto de la etiqueta como la maqueta («HVAC»); null si la orden no trae categoría. */
-    private static String etiquetaCategoria(String id) {
+    public static String etiquetaCategoria(String id) {
         if (id == null || id.trim().isEmpty() || "null".equals(id)) return null;
         switch (id) {
             case "HVAC": return "HVAC";
