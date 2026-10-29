@@ -385,7 +385,7 @@ public class RequestDetailActivity extends AppCompatActivity {
         ((TextView) p.cabecera.getChildAt(1)).setText("#" + id);
         ((TextView) p.cabecera.getChildAt(2)).setText(Ajustes.etiqueta(this, "categories.list", Ajustes.CATEGORIAS, j.optString("categoria")));
         TextView est = Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado")));
-        c.addView(est);
+        c.addView(est, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         agregarAccesos(c, j);
         agregarPestanas(c);
         LinearLayout card = Ui.tarjeta(this, c);
