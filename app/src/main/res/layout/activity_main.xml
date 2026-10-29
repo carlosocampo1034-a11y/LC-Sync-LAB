@@ -37,6 +37,17 @@
                 android:layout_marginTop="6dp"
                 android:textColor="@color/lc_text_secondary"
                 android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/tvAlcance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:textColor="#E91605"
+                android:textSize="13sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <ImageView
@@ -207,48 +218,51 @@
         android:text="Sin resultados"
         android:visibility="gone" />
 
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefresh"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/listaTrabajos"
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefresh"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingTop="6dp"
-            android:paddingBottom="8dp" />
+            android:layout_height="match_parent">
 
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/listaTrabajos"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingTop="6dp"
+                android:paddingBottom="88dp" />
 
-    <!-- Botón SOLICITAR SERVICIO — ancho completo en la parte inferior -->
-    <!-- id bottomBar: MainActivity llama InsetsHelper.padBottom(findViewById(R.id.bottomBar));
-         sin id el botón quedaba bajo la barra de navegación del sistema. -->
-    <LinearLayout
-        android:id="@+id/bottomBar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="16dp"
-        android:background="@color/lc_bg">
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-        <Button
-            android:id="@+id/btnSolicitarServicio"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:background="@drawable/bg_button_primary"
-            android:text="+ SOLICITAR SERVICIO"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:letterSpacing="0.03"
-            android:elevation="2dp"
-            android:stateListAnimator="@null" />
-    </LinearLayout>
+        <!-- Botón flotante «+»: solicitar servicio. Con la lista vacía se extiende y muestra el texto completo. -->
+        <LinearLayout
+            android:id="@+id/bottomBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="16dp"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/btnSolicitarServicio"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_button_primary"
+                android:contentDescription="Solicitar servicio"
+                android:text="+"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="28sp"
+                android:padding="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:elevation="6dp"
+                android:stateListAnimator="@null" />
+        </LinearLayout>
+    </FrameLayout>
 
 </LinearLayout>

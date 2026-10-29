@@ -104,6 +104,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_configuracion);
+        reorganizarSecciones();
         // Edge-to-edge (Android 15+): cabecera bajo la barra de estado, Dispatch / Cola visible sobre la navegación
         InsetsHelper.padTop(findViewById(R.id.header));
         InsetsHelper.padBottom(findViewById(R.id.scrollConfig));
@@ -1104,4 +1105,81 @@ public class ConfiguracionActivity extends AppCompatActivity {
             default:           return LoginActivity.KEY_PIN_TECNICO;
         }
     }
+
+    /**
+     * Agrupa las secciones de Ajustes en cuatro bloques plegables (Operación, Administración, Datos y Avanzado, este último
+     * cerrado). No se elimina ni se mueve de lugar ninguna vista de su dueño: solo cambia el contenedor, así los ids y los
+     * listeners siguen funcionando.
+     */
+    private void reorganizarSecciones() {
+        android.widget.ScrollView sv = null;
+        View raiz = findViewById(android.R.id.content);
+        sv = encontrarScroll(raiz);
+        if (sv == null || !(sv.getChildAt(0) instanceof LinearLayout)) return;
+        final LinearLayout col = (LinearLayout) sv.getChildAt(0);
+        final String[][] grupos = {
+                {"OPERACIÓN", "SINCRONIZACIÓN"},
+                {"ADMINISTRACIÓN", "ADMINISTRACIÓN"},
+                {"DATOS", "MANTENIMIENTO", "RENDIMIENTO", "ADMINISTRAR DATOS LOCALES"},
+                {"AVANZADO", "COBERTURAS", "PROPUESTAS", "MEMBRESÍAS", "VINCULAR DISPOSITIVO"}};
+        java.util.List<View> hijos = new java.util.ArrayList<>();
+        for (int i = 0; i < col.getChildCount(); i++) hijos.add(col.getChildAt(i));
+        // trozos: cada encabezado de sección arrastra los hijos que le siguen hasta el próximo encabezado
+        java.util.LinkedHashMap<String, java.util.List<View>> trozos = new java.util.LinkedHashMap<>();
+        java.util.List<View> cabeza = new java.util.ArrayList<>();
+        java.util.List<View> actual = cabeza;
+        for (View v : hijos) {
+            if (v instanceof TextView && ((TextView) v).getId() == View.NO_ID) {
+                String t = ((TextView) v).getText().toString();
+                boolean esEncabezado = false;
+                for (String[] g : grupos) for (int k = 1; k < g.length; k++) if (g[k].equals(t)) esEncabezado = true;
+                if (esEncabezado) { actual = new java.util.ArrayList<>(); trozos.put(t, actual); }
+            }
+            actual.add(v);
+        }
+        col.removeAllViews();
+        for (View v : cabeza) col.addView(v);   // «SISTEMA» y la versión quedan arriba
+        for (final String[] g : grupos) {
+            final LinearLayout cuerpo = new LinearLayout(this);
+            cuerpo.setOrientation(LinearLayout.VERTICAL);
+            for (int k = 1; k < g.length; k++) {
+                java.util.List<View> l = trozos.get(g[k]);
+                if (l != null) for (View v : l) cuerpo.addView(v);
+            }
+            if (cuerpo.getChildCount() == 0) continue;
+            final boolean abierto = !"AVANZADO".equals(g[0]);
+            final TextView cab = new TextView(this);
+            cab.setTextColor(0xFF62666A);
+            cab.setTextSize(13f);
+            cab.setTypeface(null, android.graphics.Typeface.BOLD);
+            cab.setLetterSpacing(0.08f);
+            cab.setPadding(0, dpPx(18), 0, dpPx(12));
+            cab.setText((abierto ? "▾  " : "▸  ") + g[0]);
+            cuerpo.setVisibility(abierto ? View.VISIBLE : View.GONE);
+            cab.setOnClickListener(v -> {
+                boolean ver = cuerpo.getVisibility() != View.VISIBLE;
+                cuerpo.setVisibility(ver ? View.VISIBLE : View.GONE);
+                cab.setText((ver ? "▾  " : "▸  ") + g[0]);
+            });
+            View linea = new View(this);
+            linea.setBackgroundColor(0xFFE4E4E4);
+            col.addView(cab);
+            col.addView(linea, new LinearLayout.LayoutParams(-1, 1));
+            col.addView(cuerpo);
+        }
+    }
+
+    private android.widget.ScrollView encontrarScroll(View v) {
+        if (v instanceof android.widget.ScrollView) return (android.widget.ScrollView) v;
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                android.widget.ScrollView r = encontrarScroll(g.getChildAt(i));
+                if (r != null) return r;
+            }
+        }
+        return null;
+    }
+
+    private int dpPx(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
 }

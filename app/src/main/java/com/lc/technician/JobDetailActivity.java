@@ -445,9 +445,8 @@ public class JobDetailActivity extends AppCompatActivity {
         // Fase 49: Customer signature button
         if (btnFirmaCliente != null) {
             btnFirmaCliente.setOnClickListener(v -> {
-                Intent i = new Intent(this, CustomerSignatureActivity.class);
-                i.putExtra(CustomerSignatureActivity.EXTRA_JOB_ID, job.id);
-                startActivityForResult(i, REQUEST_CUSTOMER_SIGN);
+                // La firma oficial es la de «Cerrar trabajo» (candado en el servidor). CustomerSignatureActivity queda en el código, sin uso visible.
+                abrirCierre();
             });
         }
 

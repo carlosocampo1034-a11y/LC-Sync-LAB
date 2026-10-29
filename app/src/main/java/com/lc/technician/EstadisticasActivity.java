@@ -38,6 +38,8 @@ public class EstadisticasActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_estadisticas);
+        simplificarVista();
+        BottomNav.attach(this, BottomNav.ESTADISTICAS);
         // Edge-to-edge (targetSdk 36): el contenido no queda bajo las barras del sistema ni el teclado
         InsetsHelper.padSystemBarsAndIme(findViewById(android.R.id.content));
 
@@ -678,5 +680,58 @@ public class EstadisticasActivity extends AppCompatActivity {
         long kpiTiempo;
         int kpiRecurrentes;
         double kpiFacturacionMes;
+    }
+
+    /** Vista inicial corta: KPIs, resumen y gráfica de 7 días; el resto (ingresos, tiempos, tops, CSV) se abre con «Ver detalle completo». */
+    private void simplificarVista() {
+        android.widget.ScrollView sv = encontrarScroll(findViewById(android.R.id.content));
+        if (sv == null || !(sv.getChildAt(0) instanceof android.widget.LinearLayout)) return;
+        android.widget.LinearLayout col = (android.widget.LinearLayout) sv.getChildAt(0);
+        java.util.Set<String> detalle = new java.util.HashSet<>(java.util.Arrays.asList(
+                "INGRESOS ESTIMADOS", "TRABAJOS POR ESTADO", "TIEMPOS PROMEDIO", "TOP CLIENTES",
+                "TOP CLIENTES POR FACTURACIÓN", "INGRESOS ÚLTIMAS 4 SEMANAS", "EQUIPOS MÁS ATENDIDOS"));
+        final java.util.List<android.view.View> ocultos = new java.util.ArrayList<>();
+        boolean enDetalle = false;
+        int primero = -1;
+        for (int i = 0; i < col.getChildCount(); i++) {
+            android.view.View v = col.getChildAt(i);
+            if (v instanceof android.widget.TextView && v.getId() == android.view.View.NO_ID) {
+                String t = ((android.widget.TextView) v).getText().toString();
+                if (detalle.contains(t)) enDetalle = true;
+                else if (t.equals(t.toUpperCase(java.util.Locale.ROOT)) && t.length() > 8) enDetalle = false;
+            }
+            if (enDetalle || v.getId() == R.id.btnExportarCSV) {
+                if (primero < 0) primero = i;
+                ocultos.add(v);
+                v.setVisibility(android.view.View.GONE);
+            }
+        }
+        if (primero < 0) return;
+        final android.widget.TextView btn = new android.widget.TextView(this);
+        btn.setText("Ver detalle completo  ▾");
+        btn.setGravity(android.view.Gravity.CENTER);
+        btn.setTextColor(0xFFE91605);
+        btn.setTextSize(14f);
+        btn.setTypeface(null, android.graphics.Typeface.BOLD);
+        int pad = Math.round(16 * getResources().getDisplayMetrics().density);
+        btn.setPadding(pad, pad, pad, pad);
+        btn.setOnClickListener(v -> {
+            boolean abrir = ocultos.get(0).getVisibility() != android.view.View.VISIBLE;
+            for (android.view.View o : ocultos) o.setVisibility(abrir ? android.view.View.VISIBLE : android.view.View.GONE);
+            btn.setText(abrir ? "Ocultar detalle  ▴" : "Ver detalle completo  ▾");
+        });
+        col.addView(btn, primero);
+    }
+
+    private android.widget.ScrollView encontrarScroll(android.view.View v) {
+        if (v instanceof android.widget.ScrollView) return (android.widget.ScrollView) v;
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                android.widget.ScrollView r = encontrarScroll(g.getChildAt(i));
+                if (r != null) return r;
+            }
+        }
+        return null;
     }
 }

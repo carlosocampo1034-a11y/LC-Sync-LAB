@@ -39,7 +39,9 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
     public void onBindViewHolder(@NonNull VH h, int position) {
         final Job job = jobs.get(position);
         // Las órdenes cerradas ya no guardan datos del cliente en el teléfono (PrivacidadLocal): se muestra el número
-        h.cliente.setText(job.cliente == null || job.cliente.isEmpty() ? "Orden Nº " + job.id : job.cliente);
+        boolean sinCliente = job.cliente == null || job.cliente.isEmpty();
+        h.cliente.setText(sinCliente ? "Orden Nº " + job.id + " · cerrada" : job.cliente);
+        h.cliente.setTextColor(sinCliente ? 0xFF62666A : 0xFF171717);
         h.direccion.setText(job.direccion);
         h.hora.setText(job.horaConFecha());
         h.descripcion.setText(job.descripcion);

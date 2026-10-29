@@ -95,7 +95,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Edge-to-edge (Android 15+): cabecera bajo la barra de estado, SOLICITAR SERVICIO sobre la navegación
         InsetsHelper.marginTop(findViewById(R.id.header));
-        InsetsHelper.padBottom(findViewById(R.id.bottomBar));
 
         // FASE 22: Notificaciones locales
         NotificationHelper.ensureChannels(this);
@@ -126,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
         runOneTimeSeeds(prefs);
 
         buildChips();
+        BottomNav.attach(this, BottomNav.TRABAJOS);
 
         etBusqueda.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
@@ -393,6 +393,8 @@ public class MainActivity extends AppCompatActivity {
         return (a, b) -> {
             boolean ca = cerrada(a), cb = cerrada(b);
             if (ca != cb) return ca ? 1 : -1;
+            boolean sa = a.cliente == null || a.cliente.isEmpty(), sb = b.cliente == null || b.cliente.isEmpty();
+            if (sa != sb) return sa ? 1 : -1;   // tarjetas sin cliente (cerradas y purgadas) al final
             int c = Long.compare(claveHora(a), claveHora(b));
             return c != 0 ? c : Long.compare(a.id, b.id);
         };
@@ -505,40 +507,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void buildChips() {
         layoutChips.removeAllViews();
-        int dp6 = dp(6); int dp16 = dp(16); int dp32 = dp(32); int dp36 = dp(36);
+        int dp6 = dp(4); int dp16 = dp(12); int dp32 = dp(32); int dp36 = dp(36);
 
-        // "Mis Jobs" toggle chip — only visible for TECNICO role or when ADMIN/DISPATCHER choose
-        String role = SessionManager.get(this).getRole();
-        boolean mostrarToggle = true; // show for all roles
-        if (mostrarToggle) {
-            TextView chipMis = new TextView(this);
-            chipMis.setText(filtroMisJobs ? "Mis Jobs" : "Todos");
-            chipMis.setTextSize(13f);
-            chipMis.setGravity(android.view.Gravity.CENTER);
-            chipMis.setPadding(dp16, dp6, dp16, dp6);
-            chipMis.setSingleLine(true);
-            LinearLayout.LayoutParams lpMis = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
-            lpMis.setMarginEnd(dp(12));
-            chipMis.setLayoutParams(lpMis);
-            actualizarChipMisJobs(chipMis, filtroMisJobs);
-            chipMis.setOnClickListener(v -> {
+        // El alcance (mis trabajos / todos) ya no es un chip más: vive en la cabecera, para que solo haya UN chip activo.
+        TextView alcance = findViewById(R.id.tvAlcance);
+        if (alcance != null) {
+            alcance.setText(filtroMisJobs ? "Solo mis trabajos · ver todos" : "Todos los técnicos · ver solo míos");
+            alcance.setOnClickListener(v -> {
                 filtroMisJobs = !filtroMisJobs;
-                chipMis.setText(filtroMisJobs ? "Mis Jobs" : "Todos");
-                actualizarChipMisJobs(chipMis, filtroMisJobs);
+                buildChips();
                 aplicarFiltros();
             });
-            layoutChips.addView(chipMis);
-
-            // Separator view
-            View sep = new View(this);
-            LinearLayout.LayoutParams lpSep = new LinearLayout.LayoutParams(1, dp(20));
-            lpSep.setMarginEnd(dp(12));
-            lpSep.gravity = android.view.Gravity.CENTER_VERTICAL;
-            sep.setLayoutParams(lpSep);
-            sep.setBackgroundColor(0xFFE4E4E4);
-            layoutChips.addView(sep);
         }
 
         for (int i = 0; i < ESTADOS_CHIPS.length; i++) {
@@ -546,7 +525,7 @@ public class MainActivity extends AppCompatActivity {
             TextView chip = new TextView(this);
             chip.setText(i == 0 ? LABELS_CHIPS[0]
                     : com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", ESTADOS_CHIPS[i], LABELS_CHIPS[i]));
-            chip.setTextSize(13f);
+            chip.setTextSize(12f);
             chip.setGravity(Gravity.CENTER);
             chip.setPadding(dp16, dp6, dp16, dp6);
             chip.setSingleLine(true);
@@ -597,6 +576,16 @@ public class MainActivity extends AppCompatActivity {
             else pendientes++;
         }
         contador.setText(pendientes + " pendientes · " + completados + " completados");
+        android.widget.Button fab = findViewById(R.id.btnSolicitarServicio);
+        if (fab != null) {
+            boolean vacio = pendientes == 0;
+            fab.setText(vacio ? "+ SOLICITAR SERVICIO" : "+");
+            fab.setTextSize(vacio ? 14f : 28f);
+            android.view.ViewGroup.LayoutParams lp = fab.getLayoutParams();
+            lp.width = vacio ? android.view.ViewGroup.LayoutParams.WRAP_CONTENT : dp(56);
+            fab.setPadding(vacio ? dp(24) : 0, 0, vacio ? dp(24) : 0, 0);
+            fab.setLayoutParams(lp);
+        }
     }
 
     private int dp(int v) {

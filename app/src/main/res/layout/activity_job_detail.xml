@@ -417,7 +417,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
-                android:text="TIEMPOS DEL TÉCNICO"
+                android:text="\u23F1  REGISTRO DE TIEMPOS"
                 android:textColor="@color/lc_text_tertiary"
                 android:textSize="12sp"
                 android:textStyle="bold"
