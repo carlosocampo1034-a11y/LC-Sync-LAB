@@ -41,7 +41,8 @@ public class EstadisticasActivity extends AppCompatActivity {
         simplificarVista();
         BottomNav.attach(this, BottomNav.ESTADISTICAS);
         // Edge-to-edge (targetSdk 36): el contenido no queda bajo las barras del sistema ni el teclado
-        InsetsHelper.padSystemBarsAndIme(findViewById(android.R.id.content));
+        // El inset inferior lo maneja la barra de navegación (BottomNav); aquí solo la barra de estado, arriba
+        InsetsHelper.padTop(findViewById(R.id.header));
 
         ((ImageView) findViewById(R.id.btnAtras)).setOnClickListener(v -> finish());
 

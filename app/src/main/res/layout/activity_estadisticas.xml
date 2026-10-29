@@ -177,7 +177,7 @@
                         android:layout_marginTop="2dp"
                         android:text="Hoy"
                         android:textColor="@color/lc_text_tertiary"
-                        android:textSize="11sp"
+                        android:textSize="12sp"
                         android:gravity="center" />
                 </LinearLayout>
 
@@ -243,11 +243,11 @@
                     android:id="@+id/cardCompletados"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_weight="1.35"
                     android:layout_marginStart="6dp"
                     android:orientation="vertical"
                     android:gravity="center"
-                    android:padding="14dp"
+                    android:padding="8dp"
                     android:background="@drawable/bg_surface">
                     <TextView
                         android:id="@+id/statCompletados"
