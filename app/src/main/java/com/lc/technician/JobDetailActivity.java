@@ -802,6 +802,10 @@ public class JobDetailActivity extends AppCompatActivity {
         String prev = job.estado != null ? job.estado : "";
         job.estado = next;
         JobRepository.get().persistEstado(job.id, next, prev);
+        // La hoja de estados también deja la hora (antes solo la dejaban los botones de «Registro de tiempos»):
+        // «En camino» registra la salida y «Llegué» la llegada, una sola vez por orden.
+        if (Job.STATUS_EN_ROUTE.equals(next)) registrarTiempoAuto("ON_MY_WAY");
+        else if (Job.STATUS_ARRIVED.equals(next)) registrarTiempoAuto("ARRIVED");
         Toast.makeText(this, toast, Toast.LENGTH_SHORT).show();
         pintarEstado();
         mostrarUpdatedAt();
@@ -2430,6 +2434,18 @@ public class JobDetailActivity extends AppCompatActivity {
                         .show();
             } else {
                 registrarYRefrescar(tipo);
+            }
+        });
+    }
+
+    /** Registra la hora de un cambio de estado solo si esa orden aún no tiene ese evento (no pisa lo marcado a mano). */
+    private void registrarTiempoAuto(final String tipo) {
+        JobRepository.get().getLatestTimeEventAsync(job.id, tipo, existing -> {
+            if (existing == null) {
+                JobRepository.get().registrarTimeEvent(job.id, tipo, null, () -> {
+                    cargarTiempos();
+                    cargarHistorial();
+                });
             }
         });
     }
