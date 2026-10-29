@@ -588,9 +588,10 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout cab = new LinearLayout(this);
         cab.setOrientation(LinearLayout.HORIZONTAL);
         cab.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView av = new ImageView(this);
-        av.setImageResource(R.drawable.ic_avatar_placeholder_suave);   // sin foto de perfil en el servidor: placeholder
-        av.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        // Sin foto de perfil en el servidor (profiles no tiene avatar_url): inicial sobre rojo suave
+        TextView av = Ui.texto(this, nombre.substring(0, 1).toUpperCase(), 32, R.color.lc_rojo, true);
+        av.setGravity(Gravity.CENTER);
+        av.setBackgroundResource(R.drawable.bg_avatar_rojo_suave);
         av.setContentDescription("Foto de perfil");
         cab.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 96), Ui.dp(this, 96)));
         LinearLayout nombres = new LinearLayout(this);

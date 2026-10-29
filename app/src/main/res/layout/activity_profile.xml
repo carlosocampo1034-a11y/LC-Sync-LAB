@@ -66,12 +66,16 @@
                 android:paddingTop="32dp"
                 android:paddingBottom="28dp">
 
-                <ImageView
+                <TextView
                     android:id="@+id/avatar"
                     android:layout_width="96dp"
                     android:layout_height="96dp"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/ic_avatar_placeholder"
+                    android:background="@drawable/bg_avatar_rojo_suave"
+                    android:gravity="center"
+                    android:text="Q"
+                    android:textColor="#E91605"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
                     android:contentDescription="Foto de perfil" />
 
                 <TextView

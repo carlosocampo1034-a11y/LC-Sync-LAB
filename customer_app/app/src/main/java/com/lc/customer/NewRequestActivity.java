@@ -305,6 +305,10 @@ public class NewRequestActivity extends AppCompatActivity {
 
     private static int iconoCategoria(String id) { return Ui.iconoCategoria(id); }
 
+    /**
+     * Categorías dinámicas desde settings.categories.list: la lista (y cuáles están activas) se administra en Control.
+     * Para mostrar «Calentador» y «Otro» basta activarlas allí; la app las pinta sola, con su ícono, sin nueva versión.
+     */
     private void cargarCategorias() {
         String idSel = catSel >= 0 && catSel < cats.size() ? cats.get(catSel).id : null;
         cats = Ajustes.lista(this, "categories.list", Ajustes.CATEGORIAS, true);

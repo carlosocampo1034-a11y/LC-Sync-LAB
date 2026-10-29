@@ -49,6 +49,9 @@ public class ProfileActivity extends AppCompatActivity {
         String name = prefs.getString(LoginActivity.KEY_NAME, Technician.NOMBRE);
 
         ((TextView) findViewById(R.id.tvNombre)).setText(name);
+        // Avatar: inicial del usuario (profiles no tiene avatar_url todavía: cuando exista se mostrará la foto)
+        TextView avatar = findViewById(R.id.avatar);
+        if (avatar != null && name != null && !name.trim().isEmpty()) avatar.setText(name.trim().substring(0, 1).toUpperCase());
         final TextView tvSub = (TextView) findViewById(R.id.tvSubtitulo);
         if ("TECNICO".equals(rol)) {
             // «Técnico HVAC»: la especialidad viene del perfil (profiles.specialties); sin dato, «HVAC» como respaldo

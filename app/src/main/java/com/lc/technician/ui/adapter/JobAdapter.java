@@ -46,11 +46,19 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         h.idOrden.setText("#" + job.id);
         // Miniatura 56×56: primera foto de evidencia de la orden; sin foto queda el marcador gris
         h.miniatura.setVisibility(View.VISIBLE);
-        h.miniatura.setImageDrawable(null);
         String foto = primeraFoto(job.id);
-        if (foto != null) {
-            android.graphics.Bitmap bm = miniatura(foto);
-            if (bm != null) h.miniatura.setImageBitmap(bm);
+        android.graphics.Bitmap bm = foto != null ? miniatura(foto) : null;
+        if (bm != null) {
+            h.miniatura.clearColorFilter();
+            h.miniatura.setPadding(0, 0, 0, 0);
+            h.miniatura.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+            h.miniatura.setImageBitmap(bm);
+        } else {   // sin foto: llave inglesa gris, igual que C7 en el Cliente
+            int p = Math.round(14 * h.itemView.getResources().getDisplayMetrics().density);
+            h.miniatura.setPadding(p, p, p, p);
+            h.miniatura.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+            h.miniatura.setImageResource(R.drawable.m_wrench);
+            h.miniatura.setColorFilter(0xFF9A9DA0);
         }
         String horaTxt = job.horaConFecha();
         h.hora.setText(horaTxt == null || horaTxt.trim().isEmpty() ? "Sin hora" : horaTxt);   // estructura completa aunque no haya hora
