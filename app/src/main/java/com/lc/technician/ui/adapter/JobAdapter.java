@@ -44,20 +44,27 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         h.cliente.setTextColor(sinCliente ? 0xFF62666A : 0xFF171717);
         h.direccion.setText(job.direccion);
         h.idOrden.setText("#" + job.id);
-        // Miniatura: primera foto de evidencia de la orden (dato real); sin fotos, no se muestra
+        // Miniatura 56×56: primera foto de evidencia de la orden; sin foto queda el marcador gris
+        h.miniatura.setVisibility(View.VISIBLE);
+        h.miniatura.setImageDrawable(null);
         String foto = primeraFoto(job.id);
         if (foto != null) {
             android.graphics.Bitmap bm = miniatura(foto);
-            if (bm != null) { h.miniatura.setImageBitmap(bm); h.miniatura.setVisibility(View.VISIBLE); }
-            else h.miniatura.setVisibility(View.GONE);
-        } else h.miniatura.setVisibility(View.GONE);
-        h.hora.setText(job.horaConFecha());
+            if (bm != null) h.miniatura.setImageBitmap(bm);
+        }
+        String horaTxt = job.horaConFecha();
+        h.hora.setText(horaTxt);
+        if (h.iconoHora != null) h.iconoHora.setVisibility(horaTxt == null || horaTxt.isEmpty() ? View.GONE : View.VISIBLE);
         h.descripcion.setText(job.descripcion);
-        boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty();
+        // Etiqueta de categoría («HVAC») desde el servidor; si aún no hay, el equipo de la orden
+        String cat = com.lc.technician.sync.QaOrderSync.categoria(h.itemView.getContext(), job.id);
+        String textoCat = etiquetaCategoria(cat);
+        if (textoCat == null && job.equipo != null && !job.equipo.trim().isEmpty() && !"Por asignar".equals(job.equipo.trim())) textoCat = job.equipo.trim();
+        boolean hayEq = textoCat != null;
         boolean hayPr = job.prioridad != null && !job.prioridad.trim().isEmpty() && !"NORMAL".equalsIgnoreCase(job.prioridad.trim());
         h.filaTags.setVisibility(hayEq || hayPr ? View.VISIBLE : View.GONE);
         h.tagEquipo.setVisibility(hayEq ? View.VISIBLE : View.GONE);
-        if (hayEq) h.tagEquipo.setText(job.equipo.trim());
+        if (hayEq) h.tagEquipo.setText(textoCat);
         h.tagPrioridad.setVisibility(hayPr ? View.VISIBLE : View.GONE);
         if (hayPr) h.tagPrioridad.setText("Prioridad " + job.prioridad.trim().toLowerCase(java.util.Locale.ROOT));
         h.estado.setText(com.lc.technician.sync.Listas.etiquetaEstado(h.estado.getContext(), job.estado));
@@ -97,6 +104,18 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
 
     @Override public int getItemCount() { return jobs.size(); }
 
+    /** Texto corto de la etiqueta como la maqueta («HVAC»); null si la orden no trae categoría. */
+    private static String etiquetaCategoria(String id) {
+        if (id == null || id.trim().isEmpty() || "null".equals(id)) return null;
+        switch (id) {
+            case "HVAC": return "HVAC";
+            case "PLOMERIA": return "Plomería";
+            case "ELECTRICIDAD": return "Electricidad";
+            case "ELECTRODOMESTICOS": return "Electrodomésticos";
+            default: return id.substring(0, 1).toUpperCase() + id.substring(1).toLowerCase(java.util.Locale.ROOT);
+        }
+    }
+
     private final java.util.Map<Long, String> cacheFoto = new java.util.HashMap<>();
     private final java.util.Map<String, android.graphics.Bitmap> cacheBmp = new java.util.HashMap<>();
 
@@ -132,6 +151,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
 
     static class VH extends RecyclerView.ViewHolder {
         final TextView cliente, direccion, hora, descripcion, estado, otroTecnico, tagEquipo, tagPrioridad, idOrden;
+        final View iconoHora;
         final View filaTags;
         final android.widget.ImageView miniatura;
         VH(@NonNull View v) {
@@ -142,6 +162,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
             idOrden     = v.findViewById(R.id.idOrden);
             descripcion = v.findViewById(R.id.descripcion);
             estado      = v.findViewById(R.id.estado);
+            iconoHora   = v.findViewById(R.id.iconoHora);
             otroTecnico = v.findViewById(R.id.tvOtroTecnico);
             tagEquipo   = v.findViewById(R.id.tagEquipo);
             tagPrioridad = v.findViewById(R.id.tagPrioridad);

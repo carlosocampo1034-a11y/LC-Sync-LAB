@@ -43,7 +43,7 @@ public class MensajesActivity extends AppCompatActivity {
         final LinearLayout chips = new LinearLayout(this);
         chips.setOrientation(LinearLayout.HORIZONTAL);
         chips.setPadding(dp(16), 0, dp(16), dp(8));
-        final String[] pn = {"Todos", "Cliente", "Despacho"};
+        final String[] pn = {"Todos", "Clientes", "Despacho"};
         for (int i = 0; i < 3; i++) {
             final int idx = i;
             TextView c = t(pn[i], 13, 0xFF0A0A0A, false);
@@ -151,7 +151,27 @@ public class MensajesActivity extends AppCompatActivity {
             c.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             c.setColor(0xFF62666A);
             av.setBackground(c);
-            fila.addView(av, new LinearLayout.LayoutParams(dp(44), dp(44)));
+            android.widget.FrameLayout avatarBox = new android.widget.FrameLayout(this);
+            avatarBox.setClipChildren(false);
+            avatarBox.setClipToPadding(false);
+            avatarBox.addView(av, new android.widget.FrameLayout.LayoutParams(dp(44), dp(44)));
+            String[] sinLeer = ultimos.get(j.id);
+            if (sinLeer != null && !"0".equals(sinLeer[2])) {   // globo rojo: mensajes del cliente sin responder
+                TextView n = t(sinLeer[2], 11, 0xFFFFFFFF, true);
+                n.setGravity(Gravity.CENTER);
+                n.setMinWidth(dp(18));
+                n.setMinHeight(dp(18));
+                n.setPadding(dp(4), 0, dp(4), 0);
+                android.graphics.drawable.GradientDrawable gb = new android.graphics.drawable.GradientDrawable();
+                gb.setColor(0xFFE91605);
+                gb.setCornerRadius(dp(9));
+                gb.setStroke(dp(2), 0xFFFFFFFF);
+                n.setBackground(gb);
+                android.widget.FrameLayout.LayoutParams nlp = new android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+                nlp.setMargins(0, -dp(6), -dp(6), 0);
+                avatarBox.addView(n, nlp);
+            }
+            fila.addView(avatarBox, new LinearLayout.LayoutParams(dp(44), dp(44)));
             LinearLayout col = new LinearLayout(this);
             col.setOrientation(LinearLayout.VERTICAL);
             col.setPadding(dp(12), 0, 0, 0);
@@ -167,14 +187,6 @@ public class MensajesActivity extends AppCompatActivity {
                 TextView hh = t(u[3], 12, 0xFF62666A, false);
                 hh.setPadding(dp(8), 0, dp(8), 0);
                 fila.addView(hh);
-            }
-            if (u != null && !"0".equals(u[2])) {   // globo rojo: mensajes del cliente sin responder
-                TextView n = t(u[2], 12, 0xFFFFFFFF, true);
-                n.setGravity(Gravity.CENTER);
-                n.setPadding(dp(8), dp(2), dp(8), dp(2));
-                n.setBackgroundResource(R.drawable.bg_chip_active);
-                n.getBackground().mutate().setTint(0xFFE91605);
-                fila.addView(n);
             }
             fila.setOnClickListener(v -> startActivity(new Intent(this, ChatActivity.class)
                     .putExtra("job", j.id).putExtra("cliente", j.cliente)));

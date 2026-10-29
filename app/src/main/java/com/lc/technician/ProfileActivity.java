@@ -33,6 +33,9 @@ public class ProfileActivity extends AppCompatActivity {
             gear.setPadding(pad, pad, pad, pad);
             gear.setOnClickListener(v -> startActivity(new Intent(this, ConfiguracionActivity.class)));
             hdr.addView(gear, new android.widget.LinearLayout.LayoutParams(Math.round(48 * getResources().getDisplayMetrics().density), Math.round(48 * getResources().getDisplayMetrics().density)));
+            // El título empieza a 14 dp del borde (8 de la cabecera + 6 de su margen): el engranaje queda a esos mismos 14 dp
+            // (48 dp de botón con 10 dp de aire interno → la cabecera deja 4 dp a la derecha).
+            hdr.setPaddingRelative(hdr.getPaddingStart(), hdr.getPaddingTop(), Math.round(4 * getResources().getDisplayMetrics().density), hdr.getPaddingBottom());
         }
         View atrasPerfil = findViewById(R.id.btnAtras);
         if (atrasPerfil != null) atrasPerfil.setVisibility(View.GONE);   // la barra inferior reemplaza la flecha
@@ -46,8 +49,6 @@ public class ProfileActivity extends AppCompatActivity {
         String name = prefs.getString(LoginActivity.KEY_NAME, Technician.NOMBRE);
 
         ((TextView) findViewById(R.id.tvNombre)).setText(name);
-        TextView avatar = findViewById(R.id.avatar);
-        if (avatar != null && name != null && !name.trim().isEmpty()) avatar.setText(name.trim().substring(0, 1).toUpperCase());
         ((TextView) findViewById(R.id.tvSubtitulo)).setText("Técnico desde " + Technician.FECHA_INGRESO);
 
         TextView tvRol = findViewById(R.id.tvRol);

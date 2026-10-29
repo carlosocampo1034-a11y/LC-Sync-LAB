@@ -66,16 +66,15 @@
                 android:paddingTop="32dp"
                 android:paddingBottom="28dp">
 
-                <TextView
+                <ImageView
                     android:id="@+id/avatar"
                     android:layout_width="80dp"
                     android:layout_height="80dp"
-                    android:background="@drawable/bg_avatar"
-                    android:gravity="center"
-                    android:text="C"
-                    android:textColor="#FFFFFF"
-                    android:textSize="32sp"
-                    android:textStyle="bold" />
+                    android:background="@drawable/bg_avatar_gris"
+                    android:padding="20dp"
+                    android:src="@drawable/m_person"
+                    android:tint="#9A9DA0"
+                    android:contentDescription="Foto de perfil" />
 
                 <TextView
                     android:id="@+id/tvNombre"
