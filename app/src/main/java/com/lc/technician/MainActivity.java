@@ -517,10 +517,15 @@ public class MainActivity extends AppCompatActivity {
 
         // El alcance (mis trabajos / todos) ya no es un chip más: vive en la cabecera, para que solo haya UN chip activo.
         TextView alcance = findViewById(R.id.tvAlcance);
-        if (alcance != null) {
-            alcance.setText(filtroMisJobs ? "Solo mis trabajos · ver todos" : "Todos los técnicos · ver solo míos");
-            alcance.setOnClickListener(v -> {
-                filtroMisJobs = !filtroMisJobs;
+        final android.widget.Switch sw = findViewById(R.id.swAlcance);
+        if (alcance != null && sw != null) {
+            alcance.setText(filtroMisJobs ? "Solo mis trabajos" : "Todos los técnicos");
+            sw.setOnCheckedChangeListener(null);
+            sw.setChecked(filtroMisJobs);
+            sw.setThumbTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0xFFE91605 : 0xFF9A9DA0));
+            sw.setTrackTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0x66E91605 : 0x55999999));
+            sw.setOnCheckedChangeListener((v, on) -> {
+                filtroMisJobs = on;
                 buildChips();
                 aplicarFiltros();
             });
@@ -575,6 +580,25 @@ public class MainActivity extends AppCompatActivity {
         chip.setTypeface(null, activo ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
     }
 
+    /** Cada chip de estado muestra cuántas órdenes tiene (con el alcance «solo mis trabajos» ya aplicado). */
+    private void actualizarConteosChips() {
+        String myTechId = SessionManager.get(this).getTechnicianName();
+        int idx = 0;
+        for (int j = 0; j < layoutChips.getChildCount(); j++) {
+            View c = layoutChips.getChildAt(j);
+            if (!(c instanceof TextView) || !"estado_chip".equals(c.getTag()) || idx >= ESTADOS_CHIPS.length) continue;
+            int n = 0;
+            for (Job x : allJobs) {
+                if (filtroMisJobs && !pasaFiltroMisJobs(x, myTechId)) continue;
+                if ("TODOS".equals(ESTADOS_CHIPS[idx]) || ESTADOS_CHIPS[idx].equals(x.estado)) n++;
+            }
+            String base = idx == 0 ? LABELS_CHIPS[0]
+                    : com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", ESTADOS_CHIPS[idx], LABELS_CHIPS[idx]);
+            ((TextView) c).setText(idx == 0 || n == 0 ? base : base + "  " + n);
+            idx++;
+        }
+    }
+
     private void actualizarContador() {
         int pendientes = 0, completados = 0;
         for (Job j : allJobs) {
@@ -582,6 +606,7 @@ public class MainActivity extends AppCompatActivity {
             else pendientes++;
         }
         contador.setText(pendientes + " pendientes · " + completados + " completados");
+        actualizarConteosChips();
         android.widget.Button fab = findViewById(R.id.btnSolicitarServicio);
         if (fab != null) {
             boolean vacio = pendientes == 0;

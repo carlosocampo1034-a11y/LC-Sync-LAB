@@ -11,7 +11,7 @@ import android.widget.TextView;
 
 /** Barra de navegación inferior del Técnico: Trabajos · Estadísticas · Perfil. Se agrega sin tocar el layout de cada pantalla. */
 public final class BottomNav {
-    public static final int TRABAJOS = 0, ESTADISTICAS = 1, PERFIL = 2;
+    public static final int TRABAJOS = 0, ESTADISTICAS = 1, MENSAJES = 2, PERFIL = 3;
     private BottomNav() {}
 
     public static void attach(Activity a, int seleccionado) {
@@ -32,9 +32,9 @@ public final class BottomNav {
         barra.setBackgroundColor(0xFFFFFFFF);
         barra.setElevation(a.getResources().getDisplayMetrics().density * 8);
         String[] ico = {"🏠", "📊", "👤"};
-        String[] txt = {"Trabajos", "Estadísticas", "Perfil"};
-        final Class<?>[] destino = {MainActivity.class, EstadisticasActivity.class, ProfileActivity.class};
-        for (int i = 0; i < 3; i++) {
+        String[] txt = {"Trabajos", "Estadísticas", "Mensajes", "Perfil"};
+        final Class<?>[] destino = {MainActivity.class, EstadisticasActivity.class, MensajesActivity.class, ProfileActivity.class};
+        for (int i = 0; i < 4; i++) {
             final int idx = i;
             TextView t = new TextView(a);
             t.setText(ico[i] + "\n" + txt[i]);

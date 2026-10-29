@@ -43,8 +43,15 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         h.cliente.setText(sinCliente ? "Orden Nº " + job.id + " · cerrada" : job.cliente);
         h.cliente.setTextColor(sinCliente ? 0xFF62666A : 0xFF171717);
         h.direccion.setText(job.direccion);
-        h.hora.setText(job.horaConFecha());
+        h.hora.setText("#" + job.id + (job.horaConFecha() == null || job.horaConFecha().isEmpty() ? "" : " · " + job.horaConFecha()));
         h.descripcion.setText(job.descripcion);
+        boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty();
+        boolean hayPr = job.prioridad != null && !job.prioridad.trim().isEmpty() && !"NORMAL".equalsIgnoreCase(job.prioridad.trim());
+        h.filaTags.setVisibility(hayEq || hayPr ? View.VISIBLE : View.GONE);
+        h.tagEquipo.setVisibility(hayEq ? View.VISIBLE : View.GONE);
+        if (hayEq) h.tagEquipo.setText(job.equipo.trim());
+        h.tagPrioridad.setVisibility(hayPr ? View.VISIBLE : View.GONE);
+        if (hayPr) h.tagPrioridad.setText("Prioridad " + job.prioridad.trim().toLowerCase(java.util.Locale.ROOT));
         h.estado.setText(com.lc.technician.sync.Listas.etiqueta(h.estado.getContext(), "order_states.list", job.estado, job.estado));
 
         int color;
@@ -82,7 +89,8 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
     @Override public int getItemCount() { return jobs.size(); }
 
     static class VH extends RecyclerView.ViewHolder {
-        final TextView cliente, direccion, hora, descripcion, estado, otroTecnico;
+        final TextView cliente, direccion, hora, descripcion, estado, otroTecnico, tagEquipo, tagPrioridad;
+        final View filaTags;
         VH(@NonNull View v) {
             super(v);
             cliente     = v.findViewById(R.id.cliente);
@@ -91,6 +99,9 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
             descripcion = v.findViewById(R.id.descripcion);
             estado      = v.findViewById(R.id.estado);
             otroTecnico = v.findViewById(R.id.tvOtroTecnico);
+            tagEquipo   = v.findViewById(R.id.tagEquipo);
+            tagPrioridad = v.findViewById(R.id.tagPrioridad);
+            filaTags    = v.findViewById(R.id.filaTags);
         }
     }
 }

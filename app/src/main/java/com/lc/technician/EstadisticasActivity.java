@@ -689,7 +689,7 @@ public class EstadisticasActivity extends AppCompatActivity {
         if (sv == null || !(sv.getChildAt(0) instanceof android.widget.LinearLayout)) return;
         android.widget.LinearLayout col = (android.widget.LinearLayout) sv.getChildAt(0);
         java.util.Set<String> detalle = new java.util.HashSet<>(java.util.Arrays.asList(
-                "INGRESOS ESTIMADOS", "TRABAJOS POR ESTADO", "TIEMPOS PROMEDIO", "TOP CLIENTES",
+                "FACTORES DEL TÉCNICO", "INGRESOS ESTIMADOS", "TRABAJOS POR ESTADO", "TIEMPOS PROMEDIO", "TOP CLIENTES",
                 "TOP CLIENTES POR FACTURACIÓN", "INGRESOS ÚLTIMAS 4 SEMANAS", "EQUIPOS MÁS ATENDIDOS"));
         final java.util.List<android.view.View> ocultos = new java.util.ArrayList<>();
         boolean enDetalle = false;
@@ -707,7 +707,9 @@ public class EstadisticasActivity extends AppCompatActivity {
                 v.setVisibility(android.view.View.GONE);
             }
         }
+        agregarKpisPrincipales(col);
         if (primero < 0) return;
+        primero++;   // la tarjeta de KPIs se insertó arriba
         final android.widget.TextView btn = new android.widget.TextView(this);
         btn.setText("Ver detalle completo  ▾");
         btn.setGravity(android.view.Gravity.CENTER);
@@ -722,6 +724,55 @@ public class EstadisticasActivity extends AppCompatActivity {
             btn.setText(abrir ? "Ocultar detalle  ▴" : "Ver detalle completo  ▾");
         });
         col.addView(btn, primero);
+    }
+
+    /** 4 KPIs grandes 2×2 (Total · Completados · En curso · Pendientes) con los conteos reales de las órdenes del técnico. */
+    private void agregarKpisPrincipales(android.widget.LinearLayout col) {
+        int total = 0, comp = 0, curso = 0, pend = 0;
+        for (Job j : JobRepository.get().getTodayJobs()) {
+            total++;
+            if (Job.STATUS_DONE.equals(j.estado)) comp++;
+            else if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado)
+                    || Job.STATUS_EN_REPARACION.equals(j.estado)) curso++;
+            else if (Job.STATUS_PENDING.equals(j.estado)) pend++;
+        }
+        String[][] k = {{"" + total, "Total trabajos", "0xFF62666A"}, {"" + comp, "Completados", "0xFF16A34A"},
+                        {"" + curso, "En curso", "0xFFE91605"}, {"" + pend, "Pendientes", "0xFF0A0A0A"}};
+        android.widget.LinearLayout grid = new android.widget.LinearLayout(this);
+        grid.setOrientation(android.widget.LinearLayout.VERTICAL);
+        for (int f = 0; f < 2; f++) {
+            android.widget.LinearLayout fila = new android.widget.LinearLayout(this);
+            fila.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            for (int c = 0; c < 2; c++) {
+                String[] d = k[f * 2 + c];
+                android.widget.LinearLayout card = new android.widget.LinearLayout(this);
+                card.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                card.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                card.setBackgroundResource(R.drawable.bg_surface);
+                int p16 = Math.round(16 * getResources().getDisplayMetrics().density);
+                card.setPadding(p16, p16, p16, p16);
+                android.widget.TextView pto = new android.widget.TextView(this);
+                pto.setText("●");
+                pto.setTextSize(22);
+                pto.setTextColor((int) Long.decode(d[2]).longValue());
+                card.addView(pto);
+                android.widget.LinearLayout txt = new android.widget.LinearLayout(this);
+                txt.setOrientation(android.widget.LinearLayout.VERTICAL);
+                txt.setPadding(p16 / 2, 0, 0, 0);
+                android.widget.TextView n = new android.widget.TextView(this);
+                n.setText(d[0]); n.setTextSize(28); n.setTypeface(null, android.graphics.Typeface.BOLD);
+                n.setTextColor(0xFF0A0A0A);
+                android.widget.TextView l = new android.widget.TextView(this);
+                l.setText(d[1]); l.setTextSize(13); l.setTextColor(0xFF62666A);
+                txt.addView(n); txt.addView(l);
+                card.addView(txt);
+                android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(0, -2, 1f);
+                lp.setMargins(c == 0 ? 0 : p16 / 2, f == 0 ? 0 : p16 / 2, c == 0 ? p16 / 2 : 0, 0);
+                fila.addView(card, lp);
+            }
+            grid.addView(fila, new android.widget.LinearLayout.LayoutParams(-1, -2));
+        }
+        col.addView(grid, 0);
     }
 
     private android.widget.ScrollView encontrarScroll(android.view.View v) {

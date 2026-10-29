@@ -142,7 +142,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Hoy"
+                        android:text="Trabajos"
                         android:textColor="@color/lc_text_secondary"
                         android:textSize="12sp"
                         android:gravity="center" />
@@ -172,7 +172,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Esta semana"
+                        android:text="Completados"
                         android:textColor="@color/lc_text_secondary"
                         android:textSize="12sp"
                         android:gravity="center" />
@@ -200,7 +200,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Completados"
+                        android:text="En curso"
                         android:textColor="@color/lc_text_secondary"
                         android:textSize="12sp"
                         android:gravity="center" />

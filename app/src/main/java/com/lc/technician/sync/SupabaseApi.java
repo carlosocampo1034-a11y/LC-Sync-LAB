@@ -131,4 +131,14 @@ public interface SupabaseApi {
     @POST("functions/v1/lc-api/orders/{id}/closure")
     Call<ResponseBody> closurePost(@Header("Authorization") String authorization, @Path("id") long id,
                                    @Body Map<String, Object> body);
+
+    /** Mensajes de la orden (lc-api qa-8): lista desde el id {@code since} y envío idempotente por clientMsgId. */
+    @GET("functions/v1/lc-api/orders/{id}/messages")
+    Call<ResponseBody> getMessages(@Header("Authorization") String authorization, @Path("id") long id,
+                                   @Query("since") String since);
+
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/orders/{id}/messages")
+    Call<ResponseBody> postMessage(@Header("Authorization") String authorization, @Path("id") long id,
+                                   @Body Map<String, Object> body);
 }

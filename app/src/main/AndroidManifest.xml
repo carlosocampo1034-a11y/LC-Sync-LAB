@@ -57,6 +57,8 @@
         <activity android:name=".RequestServiceActivity" android:exported="false" />
         <activity android:name=".PhotoViewActivity" android:exported="false" />
         <activity android:name=".ProfileActivity" android:exported="false" />
+        <activity android:name=".MensajesActivity" android:exported="false" />
+        <activity android:name=".ChatActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".JobCompletedActivity" android:exported="false" />
         <activity android:name=".ConfiguracionActivity" android:exported="false" />
         <activity android:name=".InspectionActivity" android:exported="false" />

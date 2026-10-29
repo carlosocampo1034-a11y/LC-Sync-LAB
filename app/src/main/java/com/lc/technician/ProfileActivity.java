@@ -71,9 +71,13 @@ public class ProfileActivity extends AppCompatActivity {
             }
         }
 
-        ((TextView) findViewById(R.id.statHoy)).setText(String.valueOf(completadosHoy));
-        ((TextView) findViewById(R.id.statSemana)).setText(String.valueOf(completadosSemana));
-        ((TextView) findViewById(R.id.statCompletados)).setText(String.valueOf(totalCompletados));
+        int enCurso = 0;
+        for (Job j : jobs) {
+            if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado) || Job.STATUS_EN_REPARACION.equals(j.estado)) enCurso++;
+        }
+        ((TextView) findViewById(R.id.statHoy)).setText(String.valueOf(jobs.size()));
+        ((TextView) findViewById(R.id.statSemana)).setText(String.valueOf(totalCompletados));
+        ((TextView) findViewById(R.id.statCompletados)).setText(String.valueOf(enCurso));
     }
 
     private void configurarMenu(SharedPreferences prefs, String rol) {
