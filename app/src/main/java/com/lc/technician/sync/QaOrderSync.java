@@ -51,23 +51,10 @@ public final class QaOrderSync {
         try {
             JSONObject b = new JSONObject().put("v", row.version)
                     .put("estado", row.estado == null ? JSONObject.NULL : row.estado)
-                    .put("notas", row.notas == null ? JSONObject.NULL : row.notas)
-                    .put("cat", row.categoria == null ? JSONObject.NULL : row.categoria);
+                    .put("notas", row.notas == null ? JSONObject.NULL : row.notas);
             bases(c).edit().putString(String.valueOf(row.id), b.toString()).apply();
         } catch (Exception e) {
             Log.w(TAG, "base no guardada " + row.id);
-        }
-    }
-
-    /** Categoría de la orden (HVAC, PLOMERIA…) tal como la envió el servidor; null si todavía no se sincronizó. */
-    public static String categoria(Context c, long jobId) {
-        try {
-            String raw = bases(c).getString(String.valueOf(jobId), null);
-            if (raw == null) return null;
-            JSONObject b = new JSONObject(raw);
-            return b.isNull("cat") ? null : b.optString("cat", null);
-        } catch (Exception e) {
-            return null;
         }
     }
 

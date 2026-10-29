@@ -57,7 +57,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         if (h.iconoHora != null) h.iconoHora.setVisibility(horaTxt == null || horaTxt.isEmpty() ? View.GONE : View.VISIBLE);
         h.descripcion.setText(job.descripcion);
         // Etiqueta de categoría («HVAC») desde el servidor; si aún no hay, el equipo de la orden
-        String cat = com.lc.technician.sync.QaOrderSync.categoria(h.itemView.getContext(), job.id);
+        String cat = com.lc.technician.sync.Listas.categoriaDe(h.itemView.getContext(), job.id);
         String textoCat = etiquetaCategoria(cat);
         if (textoCat == null && job.equipo != null && !job.equipo.trim().isEmpty() && !"Por asignar".equals(job.equipo.trim())) textoCat = job.equipo.trim();
         boolean hayEq = textoCat != null;
