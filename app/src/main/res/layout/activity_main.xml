@@ -5,72 +5,85 @@
     android:orientation="vertical"
     android:background="@color/lc_bg">
 
-    <!-- Header -->
-    <RelativeLayout
+    <!-- Header: logo + «L&C Technician» a la izquierda, campana a la derecha (como la maqueta) -->
+    <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:paddingStart="20dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="12dp">
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_toStartOf="@+id/btnPerfil"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="L&amp;C Technician"
-                android:textColor="@color/lc_text"
-                android:textSize="30sp"
-                android:textStyle="bold"
-                android:letterSpacing="-0.02" />
-
-            <TextView
-                android:id="@+id/contador"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textColor="@color/lc_text_secondary"
-                android:textSize="15sp" />
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_launcher"
+                android:contentDescription="L&amp;C" />
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvAlcance"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="#0A0A0A"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <Switch
-                    android:id="@+id/swAlcance"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:text="L&amp;C"
+                    android:textColor="#0A0A0A"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Technician"
+                    android:textColor="#62666A"
+                    android:textSize="12sp"
+                    android:includeFontPadding="false" />
             </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/btnCampana"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="Notificaciones">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/m_bell"
+                    android:tint="#0A0A0A" />
+
+                <View
+                    android:id="@+id/puntoCampana"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="9dp"
+                    android:layout_marginEnd="9dp"
+                    android:background="@drawable/bg_punto_rojo"
+                    android:visibility="gone" />
+            </FrameLayout>
         </LinearLayout>
 
-        <ImageView
-            android:id="@+id/btnPerfil"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:padding="10dp"
-            android:src="@drawable/ic_person"
-            android:contentDescription="Mi perfil" />
-    </RelativeLayout>
+        <TextView
+            android:id="@+id/contador"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <!-- Search bar row -->
     <LinearLayout
@@ -103,7 +116,7 @@
                 android:layout_height="match_parent"
                 android:paddingStart="40dp"
                 android:paddingEnd="36dp"
-                android:hint="Buscar cliente, dirección, equipo…"
+                android:hint="Buscar trabajos, cliente, dirección…"
                 android:textSize="14sp"
                 android:textColor="@color/lc_text"
                 android:textColorHint="@color/lc_text_tertiary"
@@ -148,6 +161,37 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal" />
     </HorizontalScrollView>
+
+    <!-- Fila «Solo mis trabajos»: ícono de persona, texto azul subrayado e interruptor (como la maqueta) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/m_person"
+            android:tint="#2563EB" />
+
+        <TextView
+            android:id="@+id/tvAlcance"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#2563EB"
+            android:textSize="14sp" />
+
+        <Switch
+            android:id="@+id/swAlcance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
 
     <View
         android:layout_width="match_parent"

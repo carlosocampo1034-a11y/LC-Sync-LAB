@@ -31,21 +31,30 @@ public final class BottomNav {
         barra.setOrientation(LinearLayout.HORIZONTAL);
         barra.setBackgroundColor(0xFFFFFFFF);
         barra.setElevation(a.getResources().getDisplayMetrics().density * 8);
-        String[] ico = {"🏠", "📊", "💬", "👤"};
+        final int[] ico = {R.drawable.m_home, R.drawable.m_bars, R.drawable.m_chat, R.drawable.m_person};
         String[] txt = {"Trabajos", "Estadísticas", "Mensajes", "Perfil"};
         final Class<?>[] destino = {MainActivity.class, EstadisticasActivity.class, MensajesActivity.class, ProfileActivity.class};
         for (int i = 0; i < 4; i++) {
             final int idx = i;
+            boolean activo = i == seleccionado;
+            int color = activo ? 0xFFE91605 : 0xFF62666A;
+            LinearLayout item = new LinearLayout(a);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setGravity(Gravity.CENTER);
+            item.setMinimumHeight(dp(a, 64));
+            android.widget.ImageView iv = new android.widget.ImageView(a);
+            iv.setImageResource(ico[i]);
+            iv.setColorFilter(color);
+            item.addView(iv, new LinearLayout.LayoutParams(dp(a, 24), dp(a, 24)));
             TextView t = new TextView(a);
-            t.setText(ico[i] + "\n" + txt[i]);
+            t.setText(txt[i]);
             t.setGravity(Gravity.CENTER);
             t.setTextSize(11f);
-            t.setPadding(0, dp(a, 8), 0, dp(a, 8));
-            boolean activo = i == seleccionado;
-            t.setTextColor(activo ? 0xFFE91605 : 0xFF62666A);
+            t.setTextColor(color);
             t.setTypeface(null, activo ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
-            t.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
-            t.setOnClickListener(v -> {
+            item.addView(t);
+            item.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+            item.setOnClickListener(v -> {
                 if (idx == seleccionado) return;
                 Intent in = new Intent(a, destino[idx]);
                 if (idx == TRABAJOS) in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -54,7 +63,7 @@ public final class BottomNav {
                 a.overridePendingTransition(0, 0);
                 if (seleccionado != TRABAJOS && idx != TRABAJOS) a.finish();   // entre pestañas secundarias no se apila
             });
-            barra.addView(t);
+            barra.addView(item);
         }
         // La barra inferior se encarga del inset de navegación: el contenido de arriba lo recibe ya descontado (sin franja doble)
         final int base = barra.getPaddingBottom();

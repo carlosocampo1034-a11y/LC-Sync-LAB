@@ -43,7 +43,8 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         h.cliente.setText(sinCliente ? "Orden Nº " + job.id + " · cerrada" : job.cliente);
         h.cliente.setTextColor(sinCliente ? 0xFF62666A : 0xFF171717);
         h.direccion.setText(job.direccion);
-        h.hora.setText("#" + job.id + (job.horaConFecha() == null || job.horaConFecha().isEmpty() ? "" : " · " + job.horaConFecha()));
+        h.idOrden.setText("#" + job.id);
+        h.hora.setText(job.horaConFecha());
         h.descripcion.setText(job.descripcion);
         boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty();
         boolean hayPr = job.prioridad != null && !job.prioridad.trim().isEmpty() && !"NORMAL".equalsIgnoreCase(job.prioridad.trim());
@@ -56,9 +57,9 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
 
         int color;
         switch (job.estado != null ? job.estado : "") {
-            case Job.STATUS_DONE:               color = 0xFF137333; break;
+            case Job.STATUS_DONE:               color = 0xFF16A34A; break;
             case Job.STATUS_ARRIVED:            color = 0xFF171717; break;
-            case Job.STATUS_EN_ROUTE:           color = 0xFF171717; break;
+            case Job.STATUS_EN_ROUTE:           color = 0xFFF59E0B; break;
             case Job.STATUS_EN_REPARACION:      color = 0xFFE91605; break;
             case Job.STATUS_PART_HOLD:          color = 0xFF62666A; break;
             case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF171717; break;
@@ -68,7 +69,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
 
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
-        bg.setCornerRadius(6f);
+        bg.setCornerRadius(60f);
         h.estado.setBackground(bg);
 
         // Badge "OTRO TÉCNICO": visible cuando el job pertenece a otro técnico y hay sesión activa
@@ -89,13 +90,14 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
     @Override public int getItemCount() { return jobs.size(); }
 
     static class VH extends RecyclerView.ViewHolder {
-        final TextView cliente, direccion, hora, descripcion, estado, otroTecnico, tagEquipo, tagPrioridad;
+        final TextView cliente, direccion, hora, descripcion, estado, otroTecnico, tagEquipo, tagPrioridad, idOrden;
         final View filaTags;
         VH(@NonNull View v) {
             super(v);
             cliente     = v.findViewById(R.id.cliente);
             direccion   = v.findViewById(R.id.direccion);
             hora        = v.findViewById(R.id.hora);
+            idOrden     = v.findViewById(R.id.idOrden);
             descripcion = v.findViewById(R.id.descripcion);
             estado      = v.findViewById(R.id.estado);
             otroTecnico = v.findViewById(R.id.tvOtroTecnico);

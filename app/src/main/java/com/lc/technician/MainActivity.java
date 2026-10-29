@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvActivoHora, tvActivoCliente, tvActivoDireccion, tvActivoDescripcion;
     private androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefresh;
 
-    private String filtroEstado         = "TODOS";
+    private int    filtroGrupo          = 0;   // 0 En curso · 1 Pendientes · 2 Completados · -1 todos (se vuelve a tocar el chip activo)
     private String ordenActual          = SORT_HORA;
     private boolean filtroMisJobs       = false;  // true = show only my jobs + unassigned
     private boolean filtroMisJobsInitialized = false;
@@ -150,8 +150,9 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btnSolicitarServicio).setOnClickListener(v ->
                 startActivity(new Intent(this, RequestServiceActivity.class)));
 
-        findViewById(R.id.btnPerfil).setOnClickListener(v ->
-                startActivity(new Intent(this, ProfileActivity.class)));
+        // Campana de la maqueta: avisa si hay algo nuevo; el perfil ya está en la barra inferior
+        findViewById(R.id.btnCampana).setOnClickListener(v ->
+                android.widget.Toast.makeText(this, "Sin notificaciones nuevas", android.widget.Toast.LENGTH_SHORT).show());
 
         adapter = new JobAdapter(displayedJobs, job -> {
             Job anterior = ordenAnteriorPendiente(job);
@@ -308,6 +309,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void actualizarJobActivo() {
+        if (layoutJobActivo != null) { layoutJobActivo.setVisibility(View.GONE); return; }   // la maqueta no lleva esta tarjeta
         Job activo = elegirActivo();
         if (activo == null) {
             layoutJobActivo.setVisibility(View.GONE);
@@ -342,9 +344,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // La orden destacada en «EN CURSO» no se repite en la lista
-        final Job destacado = elegirActivo();
-        if (destacado != null) displayedJobs.removeIf(j -> j.id == destacado.id);
-
         ordenar(displayedJobs);
 
         adapter.notifyDataSetChanged();
@@ -361,9 +360,16 @@ public class MainActivity extends AppCompatActivity {
         return j.technicianId.equals(myTechId);
     }
 
+    /** Grupo de la maqueta al que pertenece una orden: 0 En curso · 1 Pendientes · 2 Completados (incluye canceladas). */
+    private static int grupoDe(Job j) {
+        String e = j.estado == null ? "" : j.estado;
+        if (Job.STATUS_PENDING.equals(e)) return 1;
+        if (Job.STATUS_DONE.equals(e) || "CANCELADO".equals(e)) return 2;
+        return 0;   // EN RUTA, LLEGUÉ, EN REPARACIÓN, ESPERANDO APROBACIÓN, PART HOLD, PAUSADO
+    }
+
     private boolean pasaFiltroEstado(Job j) {
-        if ("TODOS".equals(filtroEstado)) return true;
-        return filtroEstado.equals(j.estado);
+        return filtroGrupo < 0 || grupoDe(j) == filtroGrupo;
     }
 
     private boolean pasaBusqueda(Job j, String q) {
@@ -513,58 +519,55 @@ public class MainActivity extends AppCompatActivity {
 
     private void buildChips() {
         layoutChips.removeAllViews();
-        int dp6 = dp(4); int dp16 = dp(12); int dp32 = dp(32); int dp36 = dp(36);
-
-        // El alcance (mis trabajos / todos) ya no es un chip más: vive en la cabecera, para que solo haya UN chip activo.
+        // Alcance «Solo mis trabajos» (fila con interruptor bajo los chips)
         TextView alcance = findViewById(R.id.tvAlcance);
         final android.widget.Switch sw = findViewById(R.id.swAlcance);
         if (alcance != null && sw != null) {
             alcance.setText(filtroMisJobs ? "Solo mis trabajos" : "Todos los técnicos");
+            alcance.setPaintFlags(alcance.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             sw.setOnCheckedChangeListener(null);
             sw.setChecked(filtroMisJobs);
-            sw.setThumbTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0xFFE91605 : 0xFF9A9DA0));
-            sw.setTrackTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0x66E91605 : 0x55999999));
+            sw.setThumbTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0xFF2563EB : 0xFF9A9DA0));
+            sw.setTrackTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0x662563EB : 0x55999999));
             sw.setOnCheckedChangeListener((v, on) -> {
                 filtroMisJobs = on;
                 buildChips();
                 aplicarFiltros();
             });
         }
-
-        for (int i = 0; i < ESTADOS_CHIPS.length; i++) {
-            final String estado = ESTADOS_CHIPS[i];
-            TextView chip = new TextView(this);
-            chip.setText(i == 0 ? LABELS_CHIPS[0]
-                    : com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", ESTADOS_CHIPS[i], LABELS_CHIPS[i]));
-            chip.setTextSize(12f);
-            chip.setGravity(Gravity.CENTER);
-            chip.setPadding(dp16, dp6, dp16, dp6);
-            chip.setSingleLine(true);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
+        // Tres chips como la maqueta: En curso · Pendientes · Completados (uno activo; tocar el activo otra vez muestra todas)
+        final String[] nombres = {"En curso", "Pendientes", "Completados"};
+        for (int i = 0; i < 3; i++) {
+            final int idx = i;
+            LinearLayout chip = new LinearLayout(this);
+            chip.setOrientation(LinearLayout.HORIZONTAL);
+            chip.setGravity(Gravity.CENTER_VERTICAL);
+            chip.setTag("estado_chip");
+            chip.setPadding(dp(14), dp(8), dp(10), dp(8));
+            TextView et = new TextView(this);
+            et.setText(nombres[i]);
+            et.setTextSize(13f);
+            et.setSingleLine(true);
+            TextView n = new TextView(this);
+            n.setTextSize(11f);
+            n.setGravity(Gravity.CENTER);
+            n.setMinWidth(dp(20));
+            n.setPadding(dp(5), dp(1), dp(5), dp(1));
+            LinearLayout.LayoutParams ln = new LinearLayout.LayoutParams(-2, -2);
+            ln.setMarginStart(dp(6));
+            chip.addView(et);
+            chip.addView(n, ln);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
             lp.setMarginEnd(dp(8));
             chip.setLayoutParams(lp);
-            chip.setTag("estado_chip");
-            actualizarChip(chip, estado.equals(filtroEstado));
             chip.setOnClickListener(v -> {
-                filtroEstado = estado;
-                // Re-render only the estado chips (skip misJobs toggle + separator at start)
-                int estadoIdx = 0;
-                for (int j = 0; j < layoutChips.getChildCount(); j++) {
-                    View c = layoutChips.getChildAt(j);
-                    if (c instanceof TextView && estadoIdx < ESTADOS_CHIPS.length) {
-                        String chipTag = (String) c.getTag();
-                        if ("estado_chip".equals(chipTag)) {
-                            actualizarChip((TextView) c, ESTADOS_CHIPS[estadoIdx].equals(filtroEstado));
-                            estadoIdx++;
-                        }
-                    }
-                }
+                filtroGrupo = (filtroGrupo == idx) ? -1 : idx;
+                actualizarConteosChips();
                 aplicarFiltros();
             });
             layoutChips.addView(chip);
         }
+        actualizarConteosChips();
     }
 
     private void actualizarChip(TextView chip, boolean activo) {
@@ -580,21 +583,35 @@ public class MainActivity extends AppCompatActivity {
         chip.setTypeface(null, activo ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
     }
 
-    /** Cada chip de estado muestra cuántas órdenes tiene (con el alcance «solo mis trabajos» ya aplicado). */
+    /** Cada chip muestra su conteo (con el alcance «solo mis trabajos» ya aplicado) y el activo va en rojo con número en círculo blanco. */
     private void actualizarConteosChips() {
         String myTechId = SessionManager.get(this).getTechnicianName();
+        int[] cuenta = new int[3];
+        for (Job x : allJobs) {
+            if (filtroMisJobs && !pasaFiltroMisJobs(x, myTechId)) continue;
+            cuenta[grupoDe(x)]++;
+        }
         int idx = 0;
-        for (int j = 0; j < layoutChips.getChildCount(); j++) {
+        for (int j = 0; j < layoutChips.getChildCount() && idx < 3; j++) {
             View c = layoutChips.getChildAt(j);
-            if (!(c instanceof TextView) || !"estado_chip".equals(c.getTag()) || idx >= ESTADOS_CHIPS.length) continue;
-            int n = 0;
-            for (Job x : allJobs) {
-                if (filtroMisJobs && !pasaFiltroMisJobs(x, myTechId)) continue;
-                if ("TODOS".equals(ESTADOS_CHIPS[idx]) || ESTADOS_CHIPS[idx].equals(x.estado)) n++;
-            }
-            String base = idx == 0 ? LABELS_CHIPS[0]
-                    : com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", ESTADOS_CHIPS[idx], LABELS_CHIPS[idx]);
-            ((TextView) c).setText(idx == 0 || n == 0 ? base : base + "  " + n);
+            if (!(c instanceof LinearLayout) || !"estado_chip".equals(c.getTag())) continue;
+            LinearLayout chip = (LinearLayout) c;
+            TextView et = (TextView) chip.getChildAt(0);
+            TextView n = (TextView) chip.getChildAt(1);
+            boolean activo = idx == filtroGrupo;
+            n.setText(String.valueOf(cuenta[idx]));
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setCornerRadius(dp(22));
+            bg.setColor(activo ? 0xFFE91605 : 0xFFF5F5F7);
+            chip.setBackground(bg);
+            et.setTextColor(activo ? 0xFFFFFFFF : 0xFF0A0A0A);
+            et.setTypeface(null, activo ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+            android.graphics.drawable.GradientDrawable cb = new android.graphics.drawable.GradientDrawable();
+            cb.setCornerRadius(dp(10));
+            cb.setColor(activo ? 0xFFFFFFFF : 0xFFE5E5E8);
+            n.setBackground(cb);
+            n.setTextColor(activo ? 0xFFE91605 : 0xFF62666A);
+            n.setTypeface(null, android.graphics.Typeface.BOLD);
             idx++;
         }
     }
@@ -616,6 +633,10 @@ public class MainActivity extends AppCompatActivity {
             lp.width = vacio ? android.view.ViewGroup.LayoutParams.WRAP_CONTENT : dp(56);
             fab.setPadding(vacio ? dp(24) : 0, 0, vacio ? dp(24) : 0, 0);
             fab.setLayoutParams(lp);
+            android.graphics.drawable.GradientDrawable fb = new android.graphics.drawable.GradientDrawable();
+            fb.setColor(0xFFE91605);
+            if (vacio) fb.setCornerRadius(dp(28)); else fb.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            fab.setBackground(fb);
         }
     }
 
