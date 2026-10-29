@@ -27,6 +27,8 @@ public class MensajesActivity extends AppCompatActivity {
 
     private LinearLayout lista;
     private final List<Job> jobs = new ArrayList<>();
+    private String filtro = "";
+    private java.util.Map<Long, String[]> ultimosCache = new java.util.HashMap<>();
 
     @Override
     protected void onCreate(Bundle b) {
@@ -37,6 +39,19 @@ public class MensajesActivity extends AppCompatActivity {
         TextView titulo = t("Mensajes", 28, 0xFF0A0A0A, true);
         titulo.setPadding(dp(20), dp(24), dp(20), dp(12));
         raiz.addView(titulo);
+        android.widget.EditText buscar = new android.widget.EditText(this);
+        buscar.setHint("Buscar mensajes…");
+        buscar.setSingleLine(true);
+        buscar.setBackgroundResource(R.drawable.bg_input);
+        buscar.setPadding(dp(16), dp(12), dp(16), dp(12));
+        buscar.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence c, int a, int b, int d) { }
+            @Override public void onTextChanged(CharSequence c, int a, int b, int d) { }
+            @Override public void afterTextChanged(android.text.Editable e) { filtro = e.toString().trim().toLowerCase(java.util.Locale.ROOT); pintar(ultimosCache); }
+        });
+        LinearLayout.LayoutParams lpb = new LinearLayout.LayoutParams(-1, dp(48));
+        lpb.setMargins(dp(16), 0, dp(16), dp(4));
+        raiz.addView(buscar, lpb);
         ScrollView sv = new ScrollView(this);
         lista = new LinearLayout(this);
         lista.setOrientation(LinearLayout.VERTICAL);
@@ -75,6 +90,7 @@ public class MensajesActivity extends AppCompatActivity {
     }
 
     private void pintar(java.util.Map<Long, String[]> ultimos) {
+        ultimosCache = ultimos;
         lista.removeAllViews();
         if (jobs.isEmpty()) {
             TextView v = t("Cuando tengas órdenes con cliente verás aquí sus conversaciones.", 15, 0xFF62666A, false);
@@ -83,6 +99,7 @@ public class MensajesActivity extends AppCompatActivity {
             return;
         }
         for (final Job j : jobs) {
+            if (!filtro.isEmpty() && !(j.cliente + " " + j.descripcion).toLowerCase(java.util.Locale.ROOT).contains(filtro)) continue;
             LinearLayout fila = new LinearLayout(this);
             fila.setOrientation(LinearLayout.HORIZONTAL);
             fila.setGravity(Gravity.CENTER_VERTICAL);

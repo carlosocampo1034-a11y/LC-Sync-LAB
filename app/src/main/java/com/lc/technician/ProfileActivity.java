@@ -23,6 +23,8 @@ public class ProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
         BottomNav.attach(this, BottomNav.PERFIL);
+        View atrasPerfil = findViewById(R.id.btnAtras);
+        if (atrasPerfil != null) atrasPerfil.setVisibility(View.GONE);   // la barra inferior reemplaza la flecha
         // Edge-to-edge (Android 15+): cabecera bajo la barra de estado (el inferior ya lo cubre marginBottom=56dp)
         InsetsHelper.padTop(findViewById(R.id.header));
 

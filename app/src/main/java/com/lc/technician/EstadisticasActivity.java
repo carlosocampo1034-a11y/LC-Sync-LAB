@@ -40,6 +40,9 @@ public class EstadisticasActivity extends AppCompatActivity {
         setContentView(R.layout.activity_estadisticas);
         simplificarVista();
         BottomNav.attach(this, BottomNav.ESTADISTICAS);
+        android.widget.TextView tit = null;
+        View atras = findViewById(R.id.btnAtras);
+        if (atras != null) atras.setVisibility(View.GONE);   // la navegación inferior reemplaza la flecha, como en la maqueta
         // Edge-to-edge (targetSdk 36): el contenido no queda bajo las barras del sistema ni el teclado
         // El inset inferior lo maneja la barra de navegación (BottomNav); aquí solo la barra de estado, arriba
         InsetsHelper.padTop(findViewById(R.id.header));
@@ -711,7 +714,7 @@ public class EstadisticasActivity extends AppCompatActivity {
         if (primero < 0) return;
         primero++;   // la tarjeta de KPIs se insertó arriba
         final android.widget.TextView btn = new android.widget.TextView(this);
-        btn.setText("Ver detalle completo  ▾");
+        btn.setText("Ver detalle completo  →");
         btn.setGravity(android.view.Gravity.CENTER);
         btn.setTextColor(0xFFE91605);
         btn.setTextSize(14f);
@@ -721,9 +724,22 @@ public class EstadisticasActivity extends AppCompatActivity {
         btn.setOnClickListener(v -> {
             boolean abrir = ocultos.get(0).getVisibility() != android.view.View.VISIBLE;
             for (android.view.View o : ocultos) o.setVisibility(abrir ? android.view.View.VISIBLE : android.view.View.GONE);
-            btn.setText(abrir ? "Ocultar detalle  ▴" : "Ver detalle completo  ▾");
+            btn.setText(abrir ? "Ocultar detalle  ↑" : "Ver detalle completo  →");
         });
-        col.addView(btn, primero);
+        // Botón rojo ancho después de la gráfica de 7 días (la maqueta lo pone al final de la vista corta)
+        int destino = primero;
+        for (int i = 0; i < col.getChildCount(); i++) {
+            android.view.View v = col.getChildAt(i);
+            if (v instanceof android.widget.TextView && "TIEMPOS PROMEDIO".equals(((android.widget.TextView) v).getText().toString())) { destino = i; break; }
+        }
+        android.graphics.drawable.GradientDrawable rb = new android.graphics.drawable.GradientDrawable();
+        rb.setCornerRadius(Math.round(12 * getResources().getDisplayMetrics().density));
+        rb.setColor(0xFFE91605);
+        btn.setBackground(rb);
+        btn.setTextColor(0xFFFFFFFF);
+        android.widget.LinearLayout.LayoutParams bl = new android.widget.LinearLayout.LayoutParams(-1, Math.round(52 * getResources().getDisplayMetrics().density));
+        bl.topMargin = Math.round(16 * getResources().getDisplayMetrics().density);
+        col.addView(btn, destino, bl);
     }
 
     /** 4 KPIs grandes 2×2 (Total · Completados · En curso · Pendientes) con los conteos reales de las órdenes del técnico. */
@@ -751,11 +767,20 @@ public class EstadisticasActivity extends AppCompatActivity {
                 card.setBackgroundResource(R.drawable.bg_surface);
                 int p16 = Math.round(16 * getResources().getDisplayMetrics().density);
                 card.setPadding(p16, p16, p16, p16);
-                android.widget.TextView pto = new android.widget.TextView(this);
-                pto.setText("●");
-                pto.setTextSize(22);
-                pto.setTextColor((int) Long.decode(d[2]).longValue());
-                card.addView(pto);
+                android.widget.FrameLayout circ = new android.widget.FrameLayout(this);
+                android.graphics.drawable.GradientDrawable cg = new android.graphics.drawable.GradientDrawable();
+                cg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                boolean relleno = f * 2 + c == 1;   // «Completados»: círculo verde con check blanco
+                cg.setColor(relleno ? 0xFF16A34A : 0xFFEDEDF0);
+                circ.setBackground(cg);
+                android.widget.ImageView gi = new android.widget.ImageView(this);
+                gi.setImageResource(new int[]{R.drawable.m_doc, R.drawable.m_check, R.drawable.m_clock, R.drawable.m_cal}[f * 2 + c]);
+                gi.setColorFilter(relleno ? 0xFFFFFFFF : (f * 2 + c == 2 ? 0xFFF59E0B : 0xFF62666A));
+                android.widget.FrameLayout.LayoutParams gp = new android.widget.FrameLayout.LayoutParams(Math.round(22 * getResources().getDisplayMetrics().density), Math.round(22 * getResources().getDisplayMetrics().density));
+                gp.gravity = android.view.Gravity.CENTER;
+                circ.addView(gi, gp);
+                int d44 = Math.round(44 * getResources().getDisplayMetrics().density);
+                card.addView(circ, new android.widget.LinearLayout.LayoutParams(d44, d44));
                 android.widget.LinearLayout txt = new android.widget.LinearLayout(this);
                 txt.setOrientation(android.widget.LinearLayout.VERTICAL);
                 txt.setPadding(p16 / 2, 0, 0, 0);

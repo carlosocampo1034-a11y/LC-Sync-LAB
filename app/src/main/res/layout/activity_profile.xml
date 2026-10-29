@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
-            android:text="Mi perfil"
+            android:text="Perfil"
             android:textColor="@color/lc_text"
             android:textSize="20sp"
             android:textStyle="bold"

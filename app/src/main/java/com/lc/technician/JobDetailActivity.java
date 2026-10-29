@@ -864,7 +864,7 @@ public class JobDetailActivity extends AppCompatActivity {
         nombre.setTextColor(0xFF0A0A0A);
         nombre.setPadding(0, dp(4), 0, dp(8));
         col.addView(nombre, 0);
-        View eq = findViewById(R.id.detalleEquipo);
+        View eq = findViewById(R.id.detalleDescripcion);
         if (eq != null && eq.getParent() instanceof android.view.ViewGroup && job.direccion != null && !job.direccion.isEmpty()) {
             android.view.ViewGroup pg = (android.view.ViewGroup) eq.getParent();
             TextView maps = new TextView(this);
@@ -908,7 +908,7 @@ public class JobDetailActivity extends AppCompatActivity {
             });
             tabs.addView(t, new android.widget.LinearLayout.LayoutParams(0, -2, 1f));
         }
-        col.addView(tabs, 1);
+        col.addView(tabs, 2);
     }
 
     private void addAccion(android.widget.LinearLayout fila, int icono, String texto, View.OnClickListener ir) {
@@ -965,6 +965,39 @@ public class JobDetailActivity extends AppCompatActivity {
 
     private int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
 
+    /** Círculo de color con glifo blanco, como los íconos de la hoja «Cambiar estado» de la maqueta. */
+    private View iconoEstado(int color, String nombre) {
+        int glifo;
+        switch (nombre) {
+            case "En camino": glifo = R.drawable.m_nav; break;
+            case "Completar": case "Siguiente": glifo = R.drawable.m_check; break;
+            case "Requiere Gerente": case "Cliente No Está": glifo = R.drawable.m_person; break;
+            case "Necesita Repuesto": case "Repuesto Pre-cargado": glifo = R.drawable.m_doc; break;
+            case "Cancelar": glifo = R.drawable.m_x; break;
+            case "Nueva Orden": glifo = R.drawable.m_plus; break;
+            default: glifo = -1;
+        }
+        android.widget.FrameLayout f = new android.widget.FrameLayout(this);
+        GradientDrawable c = new GradientDrawable();
+        c.setShape(GradientDrawable.OVAL);
+        c.setColor(color);
+        f.setBackground(c);
+        if (glifo != -1) {
+            android.widget.ImageView iv = new android.widget.ImageView(this);
+            iv.setImageResource(glifo);
+            iv.setColorFilter(0xFFFFFFFF);
+            android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(dp(22), dp(22));
+            lp.gravity = android.view.Gravity.CENTER;
+            f.addView(iv, lp);
+        } else {
+            TextView t = new TextView(this);
+            t.setText("$"); t.setTextColor(0xFFFFFFFF); t.setTextSize(20f); t.setTypeface(null, android.graphics.Typeface.BOLD);
+            t.setGravity(android.view.Gravity.CENTER);
+            f.addView(t, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        }
+        return f;
+    }
+
     /** Hoja inferior «Cambiar estado del trabajo» con las 9 opciones. Las opciones sin función real quedan atenuadas. */
     private void mostrarCambiarEstado() {
         final String estado = job.estado != null ? job.estado : "";
@@ -978,11 +1011,20 @@ public class JobDetailActivity extends AppCompatActivity {
         fondo.setColor(0xFFFFFFFF);
         fondo.setCornerRadii(new float[]{dp(20), dp(20), dp(20), dp(20), 0, 0, 0, 0});
         hoja.setBackground(fondo);
+        android.widget.LinearLayout cab = new android.widget.LinearLayout(this);
+        cab.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        cab.setGravity(android.view.Gravity.CENTER_VERTICAL);
         TextView titulo = new TextView(this);
         titulo.setText("Cambiar estado del trabajo");
         titulo.setTextSize(18f); titulo.setTypeface(null, android.graphics.Typeface.BOLD); titulo.setTextColor(0xFF0A0A0A);
         titulo.setPadding(0, 0, 0, dp(8));
-        hoja.addView(titulo);
+        cab.addView(titulo, new android.widget.LinearLayout.LayoutParams(0, -2, 1f));
+        android.widget.ImageView cerrarX = new android.widget.ImageView(this);
+        cerrarX.setImageResource(R.drawable.m_x);
+        cerrarX.setColorFilter(0xFF0A0A0A);
+        cerrarX.setOnClickListener(v -> dlg.dismiss());
+        cab.addView(cerrarX, new android.widget.LinearLayout.LayoutParams(dp(24), dp(24)));
+        hoja.addView(cab);
         android.widget.ScrollView cuerpo = new android.widget.ScrollView(this);
         android.widget.LinearLayout filas = new android.widget.LinearLayout(this);
         filas.setOrientation(android.widget.LinearLayout.VERTICAL);
@@ -1007,9 +1049,8 @@ public class JobDetailActivity extends AppCompatActivity {
             f0.setOrientation(android.widget.LinearLayout.HORIZONTAL);
             f0.setGravity(android.view.Gravity.CENTER_VERTICAL);
             f0.setPadding(0, dp(10), 0, dp(10));
-            TextView p0 = new TextView(this);
-            p0.setText("●"); p0.setTextSize(26f); p0.setTextColor(0xFFE91605); p0.setPadding(0, 0, dp(14), 0);
-            f0.addView(p0);
+            f0.addView(iconoEstado(0xFFE91605, "Siguiente"), new android.widget.LinearLayout.LayoutParams(dp(40), dp(40)));
+            ((android.widget.LinearLayout.LayoutParams) f0.getChildAt(0).getLayoutParams()).setMarginEnd(dp(14));
             android.widget.LinearLayout t0 = new android.widget.LinearLayout(this);
             t0.setOrientation(android.widget.LinearLayout.VERTICAL);
             TextView a0 = new TextView(this);
@@ -1028,10 +1069,8 @@ public class JobDetailActivity extends AppCompatActivity {
             f.setGravity(android.view.Gravity.CENTER_VERTICAL);
             f.setPadding(0, dp(10), 0, dp(10));
             f.setAlpha(on ? 1f : 0.4f);
-            TextView pto = new TextView(this);
-            pto.setText("●"); pto.setTextSize(26f); pto.setTextColor((Integer) o[2]);
-            pto.setPadding(0, 0, dp(14), 0);
-            f.addView(pto);
+            f.addView(iconoEstado((Integer) o[2], (String) o[0]), new android.widget.LinearLayout.LayoutParams(dp(40), dp(40)));
+            ((android.widget.LinearLayout.LayoutParams) f.getChildAt(0).getLayoutParams()).setMarginEnd(dp(14));
             android.widget.LinearLayout t = new android.widget.LinearLayout(this);
             t.setOrientation(android.widget.LinearLayout.VERTICAL);
             TextView a = new TextView(this);
