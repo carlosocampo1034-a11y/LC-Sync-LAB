@@ -424,7 +424,7 @@ public class HomeActivity extends AppCompatActivity {
             izq.addView(Ui.texto(this, etiquetaCategoria(j.optString("categoria")), 17, R.color.lc_texto, true));
             String dir = j.optString("direccion");
             if (!dir.isEmpty() && !"null".equals(dir)) izq.addView(filaIcono(R.drawable.ic_pin, 0xFF62666A, dir, 13, R.color.lc_sec, 1));
-            izq.addView(filaIcono(R.drawable.ic_doc, 0xFF62666A, limpiarDescripcion(j.optString("descripcion")), 14, R.color.lc_texto, 2));
+            izq.addView(filaIcono(R.drawable.ic_doc, 0xFF62666A, limpiarDescripcion(j.optString("descripcion")), 14, R.color.lc_texto, 3));
             cuerpo.addView(izq, new LinearLayout.LayoutParams(0, -2, 1f));
             ImageView foto = new ImageView(this);
             LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(Ui.dp(this, 80), Ui.dp(this, 80));

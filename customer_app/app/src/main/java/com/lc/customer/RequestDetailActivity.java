@@ -453,12 +453,17 @@ public class RequestDetailActivity extends AppCompatActivity {
         android.widget.FrameLayout m = new android.widget.FrameLayout(this);
         GradientDrawable g = new GradientDrawable();
         g.setCornerRadius(Ui.dp(this, 8));
-        g.setColor(0xFFE8EAED);
+        g.setColor(0xFFEDEFF1);
         m.setBackground(g);
+        m.setClipToOutline(true);   // las calles respetan las esquinas redondeadas
+        ImageView calles = new ImageView(this);
+        calles.setImageResource(R.drawable.ic_mapa_calles);
+        calles.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        m.addView(calles, new android.widget.FrameLayout.LayoutParams(-1, -1));
         ImageView pin = new ImageView(this);
         pin.setImageResource(R.drawable.ic_pin);
         m.addView(pin, new android.widget.FrameLayout.LayoutParams(Ui.dp(this, 28), Ui.dp(this, 28), Gravity.CENTER));
-        m.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 120), Ui.dp(this, 80)));
+        m.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 100), Ui.dp(this, 80)));
         m.setOnClickListener(v -> abrirMapa(direccion));
         return m;
     }
@@ -481,13 +486,15 @@ public class RequestDetailActivity extends AppCompatActivity {
         final String dirResumen = j.optString("direccion");
         filaInfo(card, R.drawable.ic_pin, "Dirección", dirResumen, mapaMini(dirResumen));
         if (!j.optString("equipo").isEmpty() && !"null".equals(j.optString("equipo"))) {
-            ImageView eq = new ImageView(this);   // sin foto de equipo en el servidor: ícono de la categoría
-            eq.setImageResource(Ui.iconoCategoria(j.optString("categoria")));
+            ImageView eq = new ImageView(this);   // sin foto de equipo en el servidor: recuadro neutro con ícono gris
+            eq.setImageResource(R.drawable.ic_wrench);
+            eq.setColorFilter(0xFF9A9DA0);
             eq.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             eq.setPadding(Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 14));
             GradientDrawable eg = new GradientDrawable();
             eg.setCornerRadius(Ui.dp(this, 8));
-            eg.setColor(0xFFF1F2F3);
+            eg.setColor(0xFFF5F5F7);
+            eg.setStroke(Ui.dp(this, 1), 0xFFE5E5E8);
             eq.setBackground(eg);
             eq.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 56), Ui.dp(this, 56)));
             filaInfo(card, R.drawable.ic_wrench, "Equipo", j.optString("equipo"), eq);
@@ -496,9 +503,14 @@ public class RequestDetailActivity extends AppCompatActivity {
         filaInfo(card, R.drawable.ic_clock_gris, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora", null);
         String tec = j.optString("tecnicoNombre");
         if (!tec.isEmpty() && !"null".equals(tec)) {
-            ImageView av = new ImageView(this);   // sin foto del técnico en el servidor: placeholder
-            av.setImageResource(R.drawable.ic_avatar_placeholder_suave);
-            av.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+            TextView av = Ui.texto(this, tec.substring(0, 1).toUpperCase(), 16, R.color.lc_sec, true);   // sin foto: inicial sobre fondo neutro
+            av.setGravity(Gravity.CENTER);
+            GradientDrawable ag = new GradientDrawable();
+            ag.setShape(GradientDrawable.OVAL);
+            ag.setColor(0xFFF5F5F7);
+            ag.setStroke(Ui.dp(this, 1), 0xFFE5E5E8);
+            av.setBackground(ag);
+            av.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 40), Ui.dp(this, 40)));
             filaInfo(card, R.drawable.ic_person, "Técnico asignado", tec, av);
         }
         // Estado: línea de tiempo compacta

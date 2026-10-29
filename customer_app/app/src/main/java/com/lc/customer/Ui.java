@@ -207,11 +207,13 @@ final class Ui {
         // marcador: ícono de la categoría sobre fondo gris claro
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
         bg.setCornerRadius(dp(a, 8));
-        bg.setColor(0xFFF1F2F3);
+        bg.setColor(0xFFF5F5F7);
+        bg.setStroke(dp(a, 1), 0xFFE5E5E8);
         iv.setBackground(bg);
         iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
         iv.setPadding(dp(a, lado / 4), dp(a, lado / 4), dp(a, lado / 4), dp(a, lado / 4));
-        iv.setImageResource(iconoCategoria(categoria));
+        iv.setImageResource(R.drawable.ic_wrench);
+        iv.setColorFilter(0xFF9A9DA0);
         Long visto = SIN_FOTO.get(jobId);
         if (visto != null && System.currentTimeMillis() - visto < 60_000) return;
         CARGA_FOTOS.execute(() -> {
@@ -241,6 +243,7 @@ final class Ui {
     }
 
     private static void ponerFoto(Activity a, android.widget.ImageView iv, android.graphics.Bitmap bm) {
+        iv.clearColorFilter();   // el tinte gris del marcador no debe teñir la foto
         iv.setPadding(0, 0, 0, 0);
         iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
