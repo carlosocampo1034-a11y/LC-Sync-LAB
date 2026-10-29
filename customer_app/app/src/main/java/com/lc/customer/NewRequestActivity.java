@@ -132,7 +132,6 @@ public class NewRequestActivity extends AppCompatActivity {
         cargarCategorias();
 
         // Paso 2: problema (con contador), fotos (hasta 4), equipo y marca
-        Ui.seccion(this, paso[1], "Describe el problema");
         desc = Ui.campo(this, paso[1], "Ej. El aire acondicionado no enfría y hace mucho ruido.",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         desc.setMinLines(4);
@@ -503,6 +502,9 @@ public class NewRequestActivity extends AppCompatActivity {
 
     private void mostrarPaso(int n) {
         actual = n;
+        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        View foco = getCurrentFocus();
+        if (imm != null && foco != null) { imm.hideSoftInputFromWindow(foco.getWindowToken(), 0); foco.clearFocus(); }
         for (int i = 0; i < PASOS; i++) paso[i].setVisibility(i == n ? View.VISIBLE : View.GONE);
         String[] t = {"Selecciona una categoría", "Describe el problema", "¿Dónde es el servicio?", "Revisa y envía"};
         String[] s = {"¿Qué servicio necesitas?", "Cuéntanos más sobre lo que sucede.", "Selecciona una propiedad o agrega una nueva.",
@@ -709,9 +711,11 @@ public class NewRequestActivity extends AppCompatActivity {
         check.setBackground(verde);
         c.addView(check, new LinearLayout.LayoutParams(Ui.dp(this, 112), Ui.dp(this, 112)));
         TextView t1 = Ui.texto(this, "¡Solicitud enviada!", 26, R.color.lc_texto, true);
+        t1.setGravity(Gravity.CENTER);
         t1.setPadding(0, Ui.dp(this, 24), 0, 0);
         c.addView(t1);
         TextView t2 = Ui.texto(this, "Solicitud #" + id, 18, R.color.lc_rojo, true);
+        t2.setGravity(Gravity.CENTER);
         t2.setPadding(0, Ui.dp(this, 8), 0, 0);
         c.addView(t2);
         TextView t3 = Ui.texto(this, "Te notificaremos cuando sea asignada.", 15, R.color.lc_sec, false);

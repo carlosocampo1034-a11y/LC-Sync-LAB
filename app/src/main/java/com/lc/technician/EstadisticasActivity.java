@@ -311,7 +311,7 @@ public class EstadisticasActivity extends AppCompatActivity {
             tr++;
             if (Job.esCompletado(j.estado)) co++;
             else if ("CANCELADO".equals(j.estado)) ca++;
-            else if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado) || Job.STATUS_EN_REPARACION.equals(j.estado)) cu++;
+            else if (Job.esEnCurso(j.estado)) cu++;
         }
         ((TextView) findViewById(R.id.statHoy)).setText(String.valueOf(tr));
         ((TextView) findViewById(R.id.statSemana)).setText(String.valueOf(co));
@@ -335,6 +335,12 @@ public class EstadisticasActivity extends AppCompatActivity {
                     }
                 }
             }
+        }
+        View filaResumen = findViewById(R.id.cardHoy) == null ? null : (View) findViewById(R.id.cardHoy).getParent();
+        if (filaResumen instanceof LinearLayout) {
+            LinearLayout fr = (LinearLayout) filaResumen;
+            for (int q = 0; q < fr.getChildCount(); q++) fr.getChildAt(q).getLayoutParams().height = android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+            fr.requestLayout();
         }
         // colores como la maqueta: verde completados, naranja en curso, rojo cancelados
         ((TextView) findViewById(R.id.statSemana)).setTextColor(0xFF16A34A);
@@ -782,8 +788,7 @@ public class EstadisticasActivity extends AppCompatActivity {
         for (Job j : JobRepository.get().getTodayJobs()) {
             total++;
             if (Job.esCompletado(j.estado)) comp++;
-            else if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado)
-                    || Job.STATUS_EN_REPARACION.equals(j.estado)) curso++;
+            else if (Job.esEnCurso(j.estado)) curso++;
             else if (Job.STATUS_PENDING.equals(j.estado)) pend++;
         }
         String[][] k = {{"" + total, "Total trabajos", "0xFF62666A"}, {"" + comp, "Completados", "0xFF16A34A"},

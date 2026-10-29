@@ -23,7 +23,8 @@ import java.util.concurrent.Executors;
 public class HomeActivity extends AppCompatActivity {
 
     private static final String[] TABS = {"Inicio", "Solicitudes", "Seguimiento", "Perfil"};
-    private static final String[] ICONOS = {"⌂", "☰", "◷", "●"};
+    private static final int[] ICONOS = {R.drawable.ic_home, R.drawable.ic_list, R.drawable.ic_clock, R.drawable.ic_person};
+    private final ImageView[] iconosNav = new ImageView[4];
 
     private Ui.Pantalla p;
     private final TextView[] botones = new TextView[4];
@@ -51,12 +52,20 @@ public class HomeActivity extends AppCompatActivity {
         barra.setOrientation(LinearLayout.HORIZONTAL);
         for (int i = 0; i < 4; i++) {
             final int idx = i;
-            TextView t = Ui.texto(this, ICONOS[i] + "\n" + TABS[i], 12, R.color.lc_sec, true);
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setGravity(Gravity.CENTER);
+            item.setMinimumHeight(Ui.dp(this, 60));
+            ImageView iv = new ImageView(this);
+            iv.setImageResource(ICONOS[i]);
+            item.addView(iv, new LinearLayout.LayoutParams(Ui.dp(this, 24), Ui.dp(this, 24)));
+            TextView t = Ui.texto(this, TABS[i], 12, R.color.lc_sec, true);
             t.setGravity(Gravity.CENTER);
-            t.setMinHeight(Ui.dp(this, 60));
-            t.setOnClickListener(v -> { tab = idx; pintar(); });
+            item.addView(t);
+            item.setOnClickListener(v -> { tab = idx; pintar(); });
             botones[i] = t;
-            barra.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            iconosNav[i] = iv;
+            barra.addView(item, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         }
         p.inferior.addView(barra);
         pintar();
@@ -162,6 +171,7 @@ public class HomeActivity extends AppCompatActivity {
     private void pintar() {
         for (int i = 0; i < 4; i++) {
             botones[i].setTextColor(getResources().getColor(i == tab ? R.color.lc_rojo : R.color.lc_sec));
+            iconosNav[i].setColorFilter(i == tab ? 0xFFE91605 : 0xFF62666A);
         }
         armarCabecera();
         p.contenido.removeAllViews();
@@ -232,7 +242,7 @@ public class HomeActivity extends AppCompatActivity {
         iconos.setOrientation(LinearLayout.HORIZONTAL);
         iconos.setPadding(0, Ui.dp(this, 10), 0, 0);
         int[] ic = {R.drawable.ic_cat_hvac, R.drawable.ic_cat_plomeria, R.drawable.ic_cat_electricidad, R.drawable.ic_cat_electro};
-        String[] nm = {"A/C", "Plomería", "Electricidad", "Electrodomésticos"};
+        String[] nm = {"A/C", "Plomería", "Electricidad", "Electro-\ndomésticos"};
         for (int k = 0; k < 4; k++) {
             LinearLayout celda = new LinearLayout(this);
             celda.setOrientation(LinearLayout.VERTICAL);
@@ -282,6 +292,8 @@ public class HomeActivity extends AppCompatActivity {
         f.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.topMargin = Ui.dp(this, 10);
+        lp.leftMargin = -Ui.dp(this, 5);    // las tarjetas llevan 5 dp por lado: así quedan al ras del hero
+        lp.rightMargin = -Ui.dp(this, 5);
         dest.addView(f, lp);
         return f;
     }
@@ -467,7 +479,7 @@ public class HomeActivity extends AppCompatActivity {
         boolean enRevision = asignado || d.optLong("programadoPara", 0) > 0 || !"PENDIENTE".equals(est);
         boolean enRuta = "EN RUTA".equals(est) || "LLEGUÉ".equals(est) || "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est)
                 || "PART HOLD".equals(est) || "PAUSADO".equals(est) || "REQUIERE GERENTE".equals(est) || "REPUESTO PRECARGADO".equals(est)
-                || "COMPLETADO".equals(est) || "PAGADO".equals(est);
+                || "COMPLETADO".equals(est) || "PAGADO".equals(est) || "CLIENTE NO ESTÁ".equals(est);
         boolean enSitio = enRuta && !"EN RUTA".equals(est);
         boolean reparacion = "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est) || "PART HOLD".equals(est) || "PAUSADO".equals(est)
                 || "REQUIERE GERENTE".equals(est) || "REPUESTO PRECARGADO".equals(est) || "COMPLETADO".equals(est) || "PAGADO".equals(est);

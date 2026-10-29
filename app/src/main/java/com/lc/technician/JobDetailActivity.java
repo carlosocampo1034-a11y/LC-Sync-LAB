@@ -872,6 +872,7 @@ public class JobDetailActivity extends AppCompatActivity {
         int color;
         switch (e) {
             case Job.STATUS_DONE: case Job.STATUS_PAID: color = 0xFF16A34A; break;
+            case Job.STATUS_MANAGER: case Job.STATUS_NOT_HOME: color = 0xFFF59E0B; break;
             case Job.STATUS_EN_REPARACION:
             case Job.STATUS_EN_ROUTE: case Job.STATUS_ARRIVED: case Job.STATUS_AWAITING_APPROVAL: color = 0xFFE91605; break;
             default: color = 0xFF62666A;

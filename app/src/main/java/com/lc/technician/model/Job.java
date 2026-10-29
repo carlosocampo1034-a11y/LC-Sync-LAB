@@ -55,6 +55,11 @@ public class Job {
     public static final String STATUS_NOT_HOME           = "CLIENTE NO ESTÁ";
     public static final String STATUS_CANCELLED          = "CANCELADO";
 
+    /** Ya salió de «Pendiente» y todavía no terminó ni se canceló (mismo criterio que el chip «En curso»). */
+    public static boolean esEnCurso(String estado) {
+        return estado != null && !estado.isEmpty() && !STATUS_PENDING.equals(estado) && !esCompletado(estado) && !STATUS_CANCELLED.equals(estado);
+    }
+
     /** Trabajo terminado: completado o ya pagado. */
     public static boolean esCompletado(String estado) {
         return STATUS_DONE.equals(estado) || STATUS_PAID.equals(estado);

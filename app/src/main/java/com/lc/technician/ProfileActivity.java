@@ -46,6 +46,8 @@ public class ProfileActivity extends AppCompatActivity {
         String name = prefs.getString(LoginActivity.KEY_NAME, Technician.NOMBRE);
 
         ((TextView) findViewById(R.id.tvNombre)).setText(name);
+        TextView avatar = findViewById(R.id.avatar);
+        if (avatar != null && name != null && !name.trim().isEmpty()) avatar.setText(name.trim().substring(0, 1).toUpperCase());
         ((TextView) findViewById(R.id.tvSubtitulo)).setText("Técnico desde " + Technician.FECHA_INGRESO);
 
         TextView tvRol = findViewById(R.id.tvRol);
@@ -86,7 +88,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         int enCurso = 0;
         for (Job j : jobs) {
-            if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado) || Job.STATUS_EN_REPARACION.equals(j.estado)) enCurso++;
+            if (Job.esEnCurso(j.estado)) enCurso++;
         }
         ((TextView) findViewById(R.id.statHoy)).setText(String.valueOf(jobs.size()));
         ((TextView) findViewById(R.id.statSemana)).setText(String.valueOf(totalCompletados));

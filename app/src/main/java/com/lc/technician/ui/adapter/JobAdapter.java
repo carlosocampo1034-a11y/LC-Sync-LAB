@@ -65,6 +65,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         int color;
         switch (job.estado != null ? job.estado : "") {
             case Job.STATUS_DONE: case Job.STATUS_PAID: color = 0xFF16A34A; break;
+            case Job.STATUS_MANAGER: case Job.STATUS_NOT_HOME: color = 0xFFF59E0B; break;
             case Job.STATUS_ARRIVED:            color = 0xFF171717; break;
             case Job.STATUS_EN_ROUTE:           color = 0xFFF59E0B; break;
             case Job.STATUS_EN_REPARACION:      color = 0xFFE91605; break;
