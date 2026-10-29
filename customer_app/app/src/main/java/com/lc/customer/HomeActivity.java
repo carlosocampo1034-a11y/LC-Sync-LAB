@@ -36,7 +36,6 @@ public class HomeActivity extends AppCompatActivity {
     private final java.util.Map<Long, JSONObject> detalles = new java.util.HashMap<>();
     private String novedades = "";
     private JSONArray avisos = new JSONArray();
-    private TextView tituloAvisos;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -224,9 +223,7 @@ public class HomeActivity extends AppCompatActivity {
                 plp.setMargins(0, Ui.dp(this, 9), Ui.dp(this, 9), 0);
                 campana.addView(punto, plp);
             }
-            campana.setOnClickListener(v -> {
-                if (tituloAvisos != null) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, tituloAvisos.getTop());
-            });
+            campana.setOnClickListener(v -> startActivity(new Intent(this, AvisosActivity.class).putExtra("novedades", novedades)));
             fila.addView(campana, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
             p.cabecera.addView(fila);
         } else {
@@ -263,33 +260,11 @@ public class HomeActivity extends AppCompatActivity {
         TextView cats = Ui.texto(this, "HVAC · Plomería · Electricidad\nElectrodomésticos y más", 12, android.R.color.white, false);
         cats.setPadding(0, Ui.dp(this, 8), 0, 0);
         banner.addView(cats);
-        // Asistente IA · Ofertas · Avisos
+        // Asistente IA · Ofertas (los avisos viven en la campana)
         LinearLayout fila2 = filaAccesos(c);
         acceso(fila2, R.drawable.ic_assistant, 0xFFE91605, "Asistente IA", null, v -> startActivity(new Intent(this, AsistenteActivity.class)));
         acceso(fila2, R.drawable.ic_offer, 0xFFE91605, "Ofertas", null, v -> Ui.avisoProximamente(this, "Ofertas",
                 "Próximamente: descuentos y ofertas exclusivas para clientes L&C. Síguenos para más novedades.", "OFERTAS"));
-        final int nAvisos = avisos.length() + (novedades.isEmpty() ? 0 : 1);
-        acceso(fila2, R.drawable.ic_bell, 0xFFE91605, nAvisos == 0 ? "Avisos" : "Avisos (" + nAvisos + ")", null, v -> {
-            if (tituloAvisos != null) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, tituloAvisos.getTop());
-        });
-        tituloAvisos = Ui.seccion(this, c, "Avisos");
-        if (avisos.length() == 0 && novedades.isEmpty()) {
-            c.addView(Ui.texto(this, "Sin avisos por ahora.", 15, R.color.lc_sec, false));
-        }
-        for (int i = 0; i < avisos.length() && i < 4; i++) {
-            JSONObject a = avisos.optJSONObject(i);
-            LinearLayout t = Ui.tarjeta(this, c);
-            t.addView(Ui.texto(this, a.optString("titulo"), 15, R.color.lc_texto, true));
-            if (!a.optString("cuerpo").isEmpty() && !"null".equals(a.optString("cuerpo"))) {
-                t.addView(Ui.texto(this, a.optString("cuerpo"), 14, R.color.lc_sec, false));
-            }
-            long jid = a.optLong("job_id", 0);
-            if (jid > 0) t.setOnClickListener(v -> startActivity(new Intent(this, RequestDetailActivity.class).putExtra("id", jid)));
-        }
-        if (avisos.length() == 0 && !novedades.isEmpty()) c.addView(Ui.texto(this, novedades, 15, R.color.lc_texto, true));
-        Ui.seccion(this, c, "Solicitudes activas");
-        int n2 = tarjetas(c, 0);
-        if (n2 == 0) c.addView(Ui.texto(this, "No tienes solicitudes activas.", 15, R.color.lc_sec, false));
     }
 
     private LinearLayout filaAccesos(LinearLayout dest) {
