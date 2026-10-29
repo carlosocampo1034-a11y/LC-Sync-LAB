@@ -189,7 +189,7 @@ public class HomeActivity extends AppCompatActivity {
         else pintarSeguimiento();
     }
 
-    /** Inicio: logo L&C como la maqueta; las demás pestañas llevan su título. */
+    /** Inicio: logo L&C y campana como la maqueta; las demás pestañas llevan su título. */
     private void armarCabecera() {
         p.cabecera.removeAllViews();
         if (tab == 0) {
@@ -204,9 +204,30 @@ public class HomeActivity extends AppCompatActivity {
             tx.setOrientation(LinearLayout.VERTICAL);
             tx.addView(Ui.texto(this, "L&C", 26, R.color.lc_texto, true));
             tx.addView(Ui.texto(this, "HOME SERVICES", 11, R.color.lc_sec, true));
-            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-2, -2);
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, -2, 1f);
             tlp.leftMargin = Ui.dp(this, 10);
             fila.addView(tx, tlp);
+            // campana: lleva a los avisos; punto rojo si hay alguno
+            android.widget.FrameLayout campana = new android.widget.FrameLayout(this);
+            campana.setContentDescription("Avisos");
+            ImageView bell = new ImageView(this);
+            bell.setImageResource(R.drawable.ic_bell);
+            bell.setColorFilter(0xFF0A0A0A);
+            campana.addView(bell, new android.widget.FrameLayout.LayoutParams(Ui.dp(this, 26), Ui.dp(this, 26), Gravity.CENTER));
+            if (avisos.length() > 0 || !novedades.isEmpty()) {
+                View punto = new View(this);
+                android.graphics.drawable.GradientDrawable pg = new android.graphics.drawable.GradientDrawable();
+                pg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                pg.setColor(0xFFE91605);
+                punto.setBackground(pg);
+                android.widget.FrameLayout.LayoutParams plp = new android.widget.FrameLayout.LayoutParams(Ui.dp(this, 9), Ui.dp(this, 9), Gravity.TOP | Gravity.END);
+                plp.setMargins(0, Ui.dp(this, 9), Ui.dp(this, 9), 0);
+                campana.addView(punto, plp);
+            }
+            campana.setOnClickListener(v -> {
+                if (tituloAvisos != null) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, tituloAvisos.getTop());
+            });
+            fila.addView(campana, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
             p.cabecera.addView(fila);
         } else {
             String[] t = {"", "Mis solicitudes", "Seguimiento", "Perfil"};
@@ -221,50 +242,35 @@ public class HomeActivity extends AppCompatActivity {
         String n = primerNombre(Api.nombre(this));
         int activas = 0;
         for (int i = 0; i < reqs.length(); i++) if (activa(reqs.optJSONObject(i).optString("estado"))) activas++;
-        LinearLayout hero = Ui.tarjeta(this, c);
-        hero.getBackground().mutate().setTint(getResources().getColor(R.color.lc_texto));
-        hero.addView(Ui.texto(this, n.isEmpty() ? "Hola" : "Hola, " + n, 22, android.R.color.white, true));
-        hero.addView(Ui.texto(this, "¿En qué podemos ayudarte hoy?", 14, android.R.color.white, false));
-        hero.addView(Ui.texto(this, activas == 0 ? "Sin servicios activos" : activas + (activas == 1 ? " servicio activo" : " servicios activos"),
-                13, android.R.color.white, true));
-        android.widget.Button solicitar = Ui.boton(this, c, "+  Solicitar servicio", true);
+        // Saludo sin tarjeta, como la maqueta
+        c.addView(Ui.texto(this, n.isEmpty() ? "Hola" : "Hola, " + n, 26, R.color.lc_texto, true));
+        c.addView(Ui.texto(this, "¿En qué podemos ayudarte hoy?", 15, R.color.lc_sec, false));
+        android.widget.Button solicitar = Ui.boton(this, c, "Solicitar Servicio   →", true);
         solicitar.setAllCaps(false);
+        solicitar.setTextSize(17f);
         solicitar.setOnClickListener(v -> startActivity(new Intent(this, NewRequestActivity.class)));
         LinearLayout fila1 = filaAccesos(c);
-        acceso(fila1, R.drawable.ic_home, "Mis propiedades", nProps < 0 ? "Ver y administrar" : nProps + (nProps == 1 ? " propiedad" : " propiedades"),
+        acceso(fila1, R.drawable.ic_home, 0xFF62666A, "Mis Propiedades", nProps < 0 ? "Ver y administrar" : nProps + (nProps == 1 ? " propiedad" : " propiedades"),
                 v -> startActivity(new Intent(this, PropertiesActivity.class)));
-        acceso(fila1, R.drawable.ic_list, "Mis solicitudes", activas + (activas == 1 ? " activa" : " activas"),
+        acceso(fila1, R.drawable.ic_doc, 0xFF0A0A0A, "Mis Solicitudes", activas + (activas == 1 ? " activa" : " activas"),
                 v -> { tab = 1; filtro = 0; pintar(); });
-        // Banner de confianza con las categorías
+        // Banner de confianza: texto y categorías de la maqueta (la foto del técnico no tiene recurso todavía)
         LinearLayout banner = Ui.tarjeta(this, c);
-        banner.addView(Ui.texto(this, "Servicio confiable para tu hogar", 16, R.color.lc_texto, true));
-        LinearLayout iconos = new LinearLayout(this);
-        iconos.setOrientation(LinearLayout.HORIZONTAL);
-        iconos.setPadding(0, Ui.dp(this, 10), 0, 0);
-        int[] ic = {R.drawable.ic_cat_hvac, R.drawable.ic_cat_plomeria, R.drawable.ic_cat_electricidad, R.drawable.ic_cat_electro};
-        String[] nm = {"A/C", "Plomería", "Electricidad", "Electro-\ndomésticos"};
-        for (int k = 0; k < 4; k++) {
-            LinearLayout celda = new LinearLayout(this);
-            celda.setOrientation(LinearLayout.VERTICAL);
-            celda.setGravity(Gravity.CENTER_HORIZONTAL);
-            ImageView iv = new ImageView(this);
-            iv.setImageResource(ic[k]);
-            celda.addView(iv, new LinearLayout.LayoutParams(Ui.dp(this, 28), Ui.dp(this, 28)));
-            TextView t = Ui.texto(this, nm[k], 11, R.color.lc_sec, true);
-            t.setGravity(Gravity.CENTER);
-            celda.addView(t);
-            iconos.addView(celda, new LinearLayout.LayoutParams(0, -2, 1f));
-        }
-        banner.addView(iconos);
-        // Asistente · Ofertas · Avisos
+        banner.getBackground().mutate().setTint(0xFF0A0A0A);
+        banner.setPadding(Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18));
+        banner.addView(Ui.texto(this, "Servicio confiable\npara tu hogar", 20, android.R.color.white, true));
+        TextView cats = Ui.texto(this, "HVAC · Plomería · Electricidad\nElectrodomésticos y más", 12, android.R.color.white, false);
+        cats.setPadding(0, Ui.dp(this, 8), 0, 0);
+        banner.addView(cats);
+        // Asistente IA · Ofertas · Avisos
         LinearLayout fila2 = filaAccesos(c);
-        acceso(fila2, R.drawable.ic_assistant, "Asistente IA", null, v -> startActivity(new Intent(this, AsistenteActivity.class)));
-        acceso(fila2, R.drawable.ic_offer, "Ofertas", null, v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+        acceso(fila2, R.drawable.ic_assistant, 0xFFE91605, "Asistente IA", null, v -> startActivity(new Intent(this, AsistenteActivity.class)));
+        acceso(fila2, R.drawable.ic_offer, 0xFFE91605, "Ofertas", null, v -> new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Ofertas")
                 .setMessage("Aquí verás las ofertas y promociones de L&C cuando estén disponibles.")
                 .setPositiveButton("Entendido", null).show());
         final int nAvisos = avisos.length() + (novedades.isEmpty() ? 0 : 1);
-        acceso(fila2, R.drawable.ic_bell, nAvisos == 0 ? "Avisos" : "Avisos (" + nAvisos + ")", null, v -> {
+        acceso(fila2, R.drawable.ic_bell, 0xFFE91605, nAvisos == 0 ? "Avisos" : "Avisos (" + nAvisos + ")", null, v -> {
             if (tituloAvisos != null) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, tituloAvisos.getTop());
         });
         tituloAvisos = Ui.seccion(this, c, "Avisos");
@@ -299,7 +305,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     /** Tarjeta de acceso rápido: ícono vectorial, título y, si hay, subtítulo. */
-    private void acceso(LinearLayout fila, int icono, String texto, String sub, View.OnClickListener ir) {
+    private void acceso(LinearLayout fila, int icono, int colorIcono, String texto, String sub, View.OnClickListener ir) {
         LinearLayout t = new LinearLayout(this);
         t.setOrientation(LinearLayout.VERTICAL);
         t.setGravity(Gravity.CENTER);
@@ -308,7 +314,8 @@ public class HomeActivity extends AppCompatActivity {
         t.setBackground(getDrawable(R.drawable.bg_card));
         ImageView i = new ImageView(this);
         i.setImageResource(icono);
-        t.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 28), Ui.dp(this, 28)));
+        i.setColorFilter(colorIcono);
+        t.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 32), Ui.dp(this, 32)));
         TextView x = Ui.texto(this, texto, 14, R.color.lc_texto, true);
         x.setGravity(Gravity.CENTER);
         x.setPadding(0, Ui.dp(this, 6), 0, 0);
@@ -329,6 +336,9 @@ public class HomeActivity extends AppCompatActivity {
 
     private void pintarSolicitudes() {
         LinearLayout c = p.contenido;
+        int total = reqs.length(), enCurso = 0;
+        for (int i = 0; i < reqs.length(); i++) if (activa(reqs.optJSONObject(i).optString("estado"))) enCurso++;
+        int[] cuenta = {total, enCurso, total - enCurso};
         LinearLayout fila = new LinearLayout(this);
         fila.setOrientation(LinearLayout.HORIZONTAL);
         String[] nombres = {"Todas", "En curso", "Completadas"};
@@ -336,14 +346,31 @@ public class HomeActivity extends AppCompatActivity {
         for (int i = 0; i < 3; i++) {
             final int m = modo[i];
             boolean on = filtro == m;
-            TextView t = Ui.texto(this, nombres[i], 14, on ? android.R.color.white : R.color.lc_texto, true);
-            t.setGravity(Gravity.CENTER);
-            t.setMinHeight(Ui.dp(this, 44));
-            t.setBackgroundResource(on ? R.drawable.bg_boton : R.drawable.bg_boton_sec);
-            t.setOnClickListener(v -> { filtro = m; pintar(); });
+            LinearLayout chip = new LinearLayout(this);
+            chip.setOrientation(LinearLayout.HORIZONTAL);
+            chip.setGravity(Gravity.CENTER);
+            chip.setMinimumHeight(Ui.dp(this, 44));
+            chip.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), 0);
+            GradientDrawable bg = new GradientDrawable();
+            bg.setCornerRadius(Ui.dp(this, 22));
+            bg.setColor(on ? 0xFFE91605 : 0xFFF5F5F7);
+            chip.setBackground(bg);
+            chip.addView(Ui.texto(this, nombres[i], 14, on ? android.R.color.white : R.color.lc_texto, true));
+            TextView num = Ui.texto(this, String.valueOf(cuenta[i]), 12, on ? R.color.lc_rojo : R.color.lc_sec, true);
+            num.setGravity(Gravity.CENTER);
+            num.setMinWidth(Ui.dp(this, 22));
+            num.setMinHeight(Ui.dp(this, 22));
+            GradientDrawable cg = new GradientDrawable();
+            cg.setShape(GradientDrawable.OVAL);
+            cg.setColor(on ? 0xFFFFFFFF : 0xFFE5E5E8);
+            num.setBackground(cg);
+            LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(-2, -2);
+            nlp.leftMargin = Ui.dp(this, 6);
+            chip.addView(num, nlp);
+            chip.setOnClickListener(v -> { filtro = m; pintar(); });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             lp.rightMargin = Ui.dp(this, 6);
-            fila.addView(t, lp);
+            fila.addView(chip, lp);
         }
         c.addView(fila);
         if (tarjetas(c, filtro) == 0) {
@@ -366,40 +393,46 @@ public class HomeActivity extends AppCompatActivity {
             boolean act = activa(j.optString("estado"));
             if ((modo == 0 && !act) || (modo == 2 && act)) continue;
             n++;
+            final long jid = j.optLong("id");
+            String estado = j.optString("estado");
+            boolean asignado = !j.optString("tecnicoNombre").isEmpty() && !"null".equals(j.optString("tecnicoNombre"));
             LinearLayout card = Ui.tarjeta(this, dest);
-            // estado a la izquierda · #ID y fecha a la derecha
+            // Fila 1: insignia de estado · #ID a su derecha · fecha/hora arriba a la derecha
             LinearLayout cab = new LinearLayout(this);
             cab.setOrientation(LinearLayout.HORIZONTAL);
             cab.setGravity(Gravity.CENTER_VERTICAL);
-            cab.addView(Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado"))));
-            View espacio = new View(this);
-            cab.addView(espacio, new LinearLayout.LayoutParams(0, 1, 1f));
+            String textoEstado = "PENDIENTE".equals(estado) && asignado ? "Asignada" : Ui.estadoCliente(this, estado);
+            cab.addView(Ui.badgeCliente(this, estado, textoEstado, asignado));
+            TextView idv = Ui.texto(this, "#" + jid, 12, R.color.lc_sec, false);
+            idv.setPadding(Ui.dp(this, 8), 0, 0, 0);
+            cab.addView(idv);
+            cab.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
             long cita = j.optLong("programadoPara", 0);
-            cab.addView(Ui.texto(this, "#" + j.optLong("id") + (cita > 0 ? " · " + Ui.fecha(cita) : ""), 12, R.color.lc_sec, false));
+            cab.addView(Ui.texto(this, cita > 0 ? Ui.fechaCorta(cita) : "Por confirmar", 12, R.color.lc_texto, cita > 0));
             card.addView(cab);
-            TextView cat = Ui.texto(this, etiquetaCategoria(j.optString("categoria")), 16, R.color.lc_texto, true);
-            cat.setPadding(0, Ui.dp(this, 8), 0, 0);
-            card.addView(cat);
+            // Fila 2: título, dirección y descripción a la izquierda · foto 80×80 y flecha a la derecha
+            LinearLayout cuerpo = new LinearLayout(this);
+            cuerpo.setOrientation(LinearLayout.HORIZONTAL);
+            cuerpo.setGravity(Gravity.CENTER_VERTICAL);
+            cuerpo.setPadding(0, Ui.dp(this, 8), 0, 0);
+            LinearLayout izq = new LinearLayout(this);
+            izq.setOrientation(LinearLayout.VERTICAL);
+            izq.addView(Ui.texto(this, etiquetaCategoria(j.optString("categoria")), 17, R.color.lc_texto, true));
             String dir = j.optString("direccion");
-            if (!dir.isEmpty() && !"null".equals(dir)) {
-                LinearLayout fd = new LinearLayout(this);
-                fd.setOrientation(LinearLayout.HORIZONTAL);
-                fd.setGravity(Gravity.CENTER_VERTICAL);
-                ImageView pin = new ImageView(this);
-                pin.setImageResource(R.drawable.ic_pin);
-                pin.setColorFilter(0xFF62666A);
-                fd.addView(pin, new LinearLayout.LayoutParams(Ui.dp(this, 16), Ui.dp(this, 16)));
-                TextView td = Ui.texto(this, dir, 13, R.color.lc_sec, false);
-                td.setPadding(Ui.dp(this, 6), 0, 0, 0);
-                fd.addView(td);
-                card.addView(fd);
-            }
-            TextView d = Ui.texto(this, limpiarDescripcion(j.optString("descripcion")), 14, R.color.lc_texto, false);
-            d.setPadding(0, Ui.dp(this, 6), 0, 0);
-            d.setMaxLines(2);
-            d.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            card.addView(d);
-            final long jid = j.optLong("id");
+            if (!dir.isEmpty() && !"null".equals(dir)) izq.addView(filaIcono(R.drawable.ic_pin, 0xFF62666A, dir, 13, R.color.lc_sec, 1));
+            izq.addView(filaIcono(R.drawable.ic_doc, 0xFF62666A, limpiarDescripcion(j.optString("descripcion")), 14, R.color.lc_texto, 2));
+            cuerpo.addView(izq, new LinearLayout.LayoutParams(0, -2, 1f));
+            ImageView foto = new ImageView(this);
+            LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(Ui.dp(this, 80), Ui.dp(this, 80));
+            flp.leftMargin = Ui.dp(this, 10);
+            cuerpo.addView(foto, flp);
+            Ui.miniaturaServicio(this, foto, jid, j.optString("categoria"), 80);
+            foto.setLayoutParams(flp);
+            ImageView ch = new ImageView(this);
+            ch.setImageResource(R.drawable.ic_chevron);
+            ch.setColorFilter(0xFF0A0A0A);
+            cuerpo.addView(ch, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
+            card.addView(cuerpo);
             card.setOnClickListener(v -> {
                 Intent it = new Intent(this, RequestDetailActivity.class);
                 it.putExtra("id", jid);
@@ -407,6 +440,26 @@ public class HomeActivity extends AppCompatActivity {
             });
         }
         return n;
+    }
+
+    /** Línea con ícono pequeño a la izquierda y texto (máx. {@code lineas} líneas). */
+    private LinearLayout filaIcono(int icono, int colorIcono, String texto, int sp, int colorTexto, int lineas) {
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.HORIZONTAL);
+        f.setGravity(Gravity.TOP);
+        f.setPadding(0, Ui.dp(this, 3), 0, 0);
+        ImageView iv = new ImageView(this);
+        iv.setImageResource(icono);
+        iv.setColorFilter(colorIcono);
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(Ui.dp(this, 16), Ui.dp(this, 16));
+        ilp.topMargin = Ui.dp(this, 2);
+        f.addView(iv, ilp);
+        TextView t = Ui.texto(this, texto, sp, colorTexto, false);
+        t.setMaxLines(lineas);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        t.setPadding(Ui.dp(this, 6), 0, 0, 0);
+        f.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        return f;
     }
 
     /** La descripción guarda la preferencia de fecha en líneas extra; en la lista solo se ve el problema. */
@@ -529,19 +582,19 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout c = p.contenido;
         String nombre = Api.nombre(this).isEmpty() ? "—" : Api.nombre(this);
         LinearLayout cab = new LinearLayout(this);
-        cab.setOrientation(LinearLayout.VERTICAL);
-        cab.setGravity(Gravity.CENTER_HORIZONTAL);
-        TextView av = Ui.texto(this, nombre.substring(0, 1).toUpperCase(), 32, android.R.color.white, true);
-        av.setGravity(Gravity.CENTER);
-        GradientDrawable ag = new GradientDrawable();
-        ag.setShape(GradientDrawable.OVAL);
-        ag.setColor(getResources().getColor(R.color.lc_rojo));
-        av.setBackground(ag);
-        cab.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 80), Ui.dp(this, 80)));
-        TextView nm = Ui.texto(this, nombre, 22, R.color.lc_texto, true);
-        nm.setPadding(0, Ui.dp(this, 12), 0, 0);
-        cab.addView(nm);
-        cab.addView(Ui.texto(this, "Cliente", 14, R.color.lc_sec, false));
+        cab.setOrientation(LinearLayout.HORIZONTAL);
+        cab.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView av = new ImageView(this);
+        av.setImageResource(R.drawable.ic_avatar_placeholder_suave);   // sin foto de perfil en el servidor: placeholder
+        av.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        av.setContentDescription("Foto de perfil");
+        cab.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 96), Ui.dp(this, 96)));
+        LinearLayout nombres = new LinearLayout(this);
+        nombres.setOrientation(LinearLayout.VERTICAL);
+        nombres.setPadding(Ui.dp(this, 16), 0, 0, 0);
+        nombres.addView(Ui.texto(this, nombre, 22, R.color.lc_texto, true));
+        nombres.addView(Ui.texto(this, "Cliente", 15, R.color.lc_sec, false));
+        cab.addView(nombres, new LinearLayout.LayoutParams(0, -2, 1f));
         c.addView(cab, new LinearLayout.LayoutParams(-1, -2));
         LinearLayout menu = new LinearLayout(this);
         menu.setOrientation(LinearLayout.VERTICAL);
@@ -576,6 +629,8 @@ public class HomeActivity extends AppCompatActivity {
         }
         TextView salir = Ui.texto(this, "Cerrar sesión", 16, R.color.lc_rojo, true);
         salir.setGravity(Gravity.CENTER);
+        salir.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_logout, 0, 0, 0);
+        salir.setCompoundDrawablePadding(Ui.dp(this, 10));
         GradientDrawable sb = new GradientDrawable();
         sb.setCornerRadius(Ui.dp(this, 12));
         sb.setColor(0xFFFFFFFF);

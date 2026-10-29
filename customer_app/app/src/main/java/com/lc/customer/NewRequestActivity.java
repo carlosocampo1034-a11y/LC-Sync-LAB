@@ -12,6 +12,7 @@ import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -92,13 +93,17 @@ public class NewRequestActivity extends AppCompatActivity {
         if (b != null) { fechaPreferida = b.getLong("fecha", 0); actual = b.getInt("paso", 0); catSel = b.getInt("cat", -1); propSel = b.getInt("prop", 0); }
         pan = Ui.pantalla(this, "Solicitar servicio", null, true);
         final Ui.Pantalla p = pan;
-        // Cabecera: título del paso, subtítulo y barra de progreso «n de 4»
-        tvTitulo = (TextView) p.cabecera.getChildAt(1);
-        tvSubtitulo = Ui.texto(this, "", 14, R.color.lc_sec, false);
-        p.cabecera.addView(tvSubtitulo);
+        // Cabecera de la maqueta: flecha atrás, barra de progreso y «n de 4» en una fila; debajo título y subtítulo
+        p.cabecera.removeAllViews();
         LinearLayout prog = new LinearLayout(this);
         prog.setOrientation(LinearLayout.HORIZONTAL);
         prog.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView atrasIc = new ImageView(this);
+        atrasIc.setImageResource(R.drawable.ic_back);
+        atrasIc.setPadding(Ui.dp(this, 10), Ui.dp(this, 10), Ui.dp(this, 10), Ui.dp(this, 10));
+        atrasIc.setContentDescription("Volver");
+        atrasIc.setOnClickListener(v -> finish());
+        prog.addView(atrasIc, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         LinearLayout barra = new LinearLayout(this);
         barra.setOrientation(LinearLayout.HORIZONTAL);
         for (int i = 0; i < PASOS; i++) {
@@ -107,13 +112,23 @@ public class NewRequestActivity extends AppCompatActivity {
             lp.rightMargin = Ui.dp(this, 4);
             barra.addView(segmentos[i], lp);
         }
-        prog.addView(barra, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        blp.leftMargin = Ui.dp(this, 8);
+        prog.addView(barra, blp);
         tvProgreso = Ui.texto(this, "", 13, R.color.lc_sec, true);
         tvProgreso.setPadding(Ui.dp(this, 10), 0, 0, 0);
         prog.addView(tvProgreso);
-        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(-1, -2);
-        plp.topMargin = Ui.dp(this, 10);
-        p.cabecera.addView(prog, plp);
+        p.cabecera.addView(prog);
+        tvTitulo = Ui.texto(this, "", 24, R.color.lc_texto, true);
+        tvTitulo.setPadding(0, Ui.dp(this, 10), 0, 0);
+        p.cabecera.addView(tvTitulo);
+        tvSubtitulo = Ui.texto(this, "", 14, R.color.lc_sec, false);
+        p.cabecera.addView(tvSubtitulo);
+        // Barra inferior de 4 pestañas (Solicitudes resaltada, como la maqueta)
+        View lineaNav = new View(this);
+        lineaNav.setBackgroundColor(ContextCompat.getColor(this, R.color.lc_borde));
+        p.raiz.addView(lineaNav, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 1)));
+        p.raiz.addView(Ui.barraNav(this, 1));
 
         for (int i = 0; i < PASOS; i++) {
             paso[i] = new LinearLayout(this);
@@ -188,7 +203,7 @@ public class NewRequestActivity extends AppCompatActivity {
         GradientDrawable punteado = new GradientDrawable();
         punteado.setCornerRadius(Ui.dp(this, 12));
         punteado.setColor(0xFFFFFFFF);
-        punteado.setStroke(Ui.dp(this, 1), ContextCompat.getColor(this, R.color.lc_rojo), Ui.dp(this, 6), Ui.dp(this, 4));
+        punteado.setStroke(Ui.dp(this, 1), ContextCompat.getColor(this, R.color.lc_rojo));
         nueva.setBackground(punteado);
         nueva.setOnClickListener(v -> startActivity(new Intent(this, PropertiesActivity.class)));
         LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(-1, -2);
@@ -288,16 +303,7 @@ public class NewRequestActivity extends AppCompatActivity {
 
     // ── Categorías ───────────────────────────────────────────────────────────────────────────────
 
-    private static int iconoCategoria(String id) {
-        switch (id == null ? "" : id) {
-            case "HVAC": return R.drawable.ic_cat_hvac;
-            case "PLOMERIA": return R.drawable.ic_cat_plomeria;
-            case "ELECTRICIDAD": return R.drawable.ic_cat_electricidad;
-            case "ELECTRODOMESTICOS": return R.drawable.ic_cat_electro;
-            case "CALENTADOR": return R.drawable.ic_cat_calentador;
-            default: return R.drawable.ic_cat_otros;
-        }
-    }
+    private static int iconoCategoria(String id) { return Ui.iconoCategoria(id); }
 
     private void cargarCategorias() {
         String idSel = catSel >= 0 && catSel < cats.size() ? cats.get(catSel).id : null;
@@ -542,12 +548,21 @@ public class NewRequestActivity extends AppCompatActivity {
         mostrarPaso(actual + 1);
     }
 
-    private void filaResumen(String etiqueta, String valor) {
+    private void filaResumen(String etiqueta, String valor, int icono) {
         LinearLayout f = new LinearLayout(this);
         f.setOrientation(LinearLayout.HORIZONTAL);
-        f.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
+        f.setGravity(Gravity.CENTER_VERTICAL);
+        f.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 10));
         TextView e = Ui.texto(this, etiqueta, 13, R.color.lc_sec, true);
-        f.addView(e, new LinearLayout.LayoutParams(Ui.dp(this, 92), -2));
+        f.addView(e, new LinearLayout.LayoutParams(Ui.dp(this, 82), -2));
+        if (icono != 0) {
+            ImageView iv = new ImageView(this);
+            iv.setImageResource(icono);
+            iv.setColorFilter(icono == R.drawable.ic_pin ? 0xFFE91605 : 0xFF62666A);
+            LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20));
+            ilp.rightMargin = Ui.dp(this, 8);
+            f.addView(iv, ilp);
+        }
         f.addView(Ui.texto(this, valor, 14, R.color.lc_texto, false), new LinearLayout.LayoutParams(0, -2, 1f));
         resumenBox.addView(f);
         View l = new View(this);
@@ -558,17 +573,17 @@ public class NewRequestActivity extends AppCompatActivity {
     private void pintarResumen() {
         resumenBox.removeAllViews();
         Ajustes.Opcion cs = categoriaSel();
-        filaResumen("Categoría", cs == null ? "—" : cs.label);
-        filaResumen("Problema", desc.getText().toString().trim());
-        filaResumen("Dirección", propSel < props.size() ? props.get(propSel).optString("direccion") : "—");
+        filaResumen("Categoría", cs == null ? "—" : cs.label, cs == null ? 0 : iconoCategoria(cs.id));
+        filaResumen("Problema", desc.getText().toString().trim(), R.drawable.ic_chat);
+        filaResumen("Dirección", propSel < props.size() ? props.get(propSel).optString("direccion") : "—", R.drawable.ic_pin);
         int nf = fotos.size() + fotosPrueba.size();
-        filaResumen("Fotos", nf == 0 ? "Sin fotos" : nf + (nf == 1 ? " foto adjunta" : " fotos adjuntas"));
+        filaResumen("Fotos", nf == 0 ? "Sin fotos" : nf + (nf == 1 ? " foto adjunta" : " fotos adjuntas"), R.drawable.ic_image);
         Object eq = spEquipo.getSelectedItem();
         String m = marca.getText().toString().trim();
-        filaResumen("Equipo", (eq == null ? "Sin especificar" : eq.toString()) + (m.isEmpty() ? "" : " · " + m));
-        filaResumen("Fecha", fechaPreferida > 0 ? Ui.fecha(fechaPreferida) + " (por confirmar)" : "Sin fecha preferida");
+        filaResumen("Equipo", (eq == null ? "Sin especificar" : eq.toString()) + (m.isEmpty() ? "" : " · " + m), R.drawable.ic_wrench);
+        filaResumen("Fecha", fechaPreferida > 0 ? Ui.fecha(fechaPreferida) + " (por confirmar)" : "Sin fecha preferida", R.drawable.ic_clock_gris);
         String v = ventana.getText().toString().trim();
-        if (!v.isEmpty()) filaResumen("Disponibilidad", v);
+        if (!v.isEmpty()) filaResumen("Disponibilidad", v, 0);
         TextView precio = Ui.texto(this, textoPrecio(), 13, R.color.lc_sec, false);
         precio.setPadding(0, Ui.dp(this, 10), 0, 0);
         resumenBox.addView(precio);
@@ -692,11 +707,7 @@ public class NewRequestActivity extends AppCompatActivity {
 
     /** Confirmación: check verde, número de solicitud y los dos caminos siguientes. */
     private void mostrarConfirmacion(long id) {
-        tvTitulo.setText("");
-        tvTitulo.setVisibility(View.GONE);
-        tvSubtitulo.setVisibility(View.GONE);
-        ((View) tvProgreso.getParent()).setVisibility(View.GONE);
-        pan.cabecera.getChildAt(0).setVisibility(View.GONE);   // «← Volver»: ya no hay nada que volver a editar
+        pan.cabecera.setVisibility(View.GONE);   // ya no hay nada que volver a editar
         pan.contenido.removeAllViews();
         pan.inferior.removeAllViews();
         LinearLayout c = new LinearLayout(this);

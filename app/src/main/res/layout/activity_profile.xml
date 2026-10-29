@@ -68,12 +68,10 @@
 
                 <ImageView
                     android:id="@+id/avatar"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:background="@drawable/bg_avatar_gris"
-                    android:padding="20dp"
-                    android:src="@drawable/m_person"
-                    android:tint="#9A9DA0"
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_avatar_placeholder"
                     android:contentDescription="Foto de perfil" />
 
                 <TextView
@@ -134,7 +132,7 @@
                         android:layout_height="wrap_content"
                         android:text="0"
                         android:textColor="@color/lc_text"
-                        android:textSize="28sp"
+                        android:textSize="32sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -164,7 +162,7 @@
                         android:layout_height="wrap_content"
                         android:text="0"
                         android:textColor="@color/lc_text"
-                        android:textSize="28sp"
+                        android:textSize="32sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -192,7 +190,7 @@
                         android:layout_height="wrap_content"
                         android:text="0"
                         android:textColor="@color/lc_text"
-                        android:textSize="28sp"
+                        android:textSize="32sp"
                         android:textStyle="bold" />
 
                     <TextView

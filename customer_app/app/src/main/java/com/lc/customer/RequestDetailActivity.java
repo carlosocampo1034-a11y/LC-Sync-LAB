@@ -374,6 +374,95 @@ public class RequestDetailActivity extends AppCompatActivity {
         if (o.has("total")) filaMonto(dest, "Total", o.optDouble("total"), true);
     }
 
+    /** Encabezado de la maqueta: flecha + #ID + insignia; título y hora a la izquierda, foto del servicio 80×80 a la derecha. */
+    private void armarCabecera(JSONObject j) {
+        p.cabecera.removeAllViews();
+        String estado = j.optString("estado");
+        boolean asignado = !j.optString("tecnicoNombre").isEmpty() && !"null".equals(j.optString("tecnicoNombre"));
+        LinearLayout fila1 = new LinearLayout(this);
+        fila1.setOrientation(LinearLayout.HORIZONTAL);
+        fila1.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView atras = new ImageView(this);
+        atras.setImageResource(R.drawable.ic_back);
+        atras.setPadding(Ui.dp(this, 10), Ui.dp(this, 10), Ui.dp(this, 10), Ui.dp(this, 10));
+        atras.setContentDescription("Volver");
+        atras.setOnClickListener(v -> finish());
+        fila1.addView(atras, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
+        fila1.addView(Ui.texto(this, "#" + id, 24, R.color.lc_texto, true), new LinearLayout.LayoutParams(0, -2, 1f));
+        String textoEstado = "PENDIENTE".equals(estado) && asignado ? "Asignada" : Ui.estadoCliente(this, estado);
+        fila1.addView(Ui.badgeCliente(this, estado, textoEstado, asignado));
+        p.cabecera.addView(fila1);
+        LinearLayout fila2 = new LinearLayout(this);
+        fila2.setOrientation(LinearLayout.HORIZONTAL);
+        fila2.setGravity(Gravity.CENTER_VERTICAL);
+        fila2.setPadding(0, Ui.dp(this, 10), 0, 0);
+        LinearLayout izq = new LinearLayout(this);
+        izq.setOrientation(LinearLayout.VERTICAL);
+        izq.addView(Ui.texto(this, Ajustes.etiqueta(this, "categories.list", Ajustes.CATEGORIAS, j.optString("categoria")), 22, R.color.lc_texto, true));
+        long cita = j.optLong("programadoPara", 0);
+        TextView hora = Ui.texto(this, cita > 0 ? Ui.fechaCorta(cita) : "Cita por confirmar", 14, R.color.lc_sec, false);
+        hora.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_clock_gris, 0, 0, 0);
+        hora.setCompoundDrawablePadding(Ui.dp(this, 6));
+        hora.setPadding(0, Ui.dp(this, 4), 0, 0);
+        izq.addView(hora);
+        fila2.addView(izq, new LinearLayout.LayoutParams(0, -2, 1f));
+        ImageView foto = new ImageView(this);
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(Ui.dp(this, 80), Ui.dp(this, 80));
+        flp.leftMargin = Ui.dp(this, 10);
+        fila2.addView(foto, flp);
+        Ui.miniaturaServicio(this, foto, id, j.optString("categoria"), 80);
+        foto.setLayoutParams(flp);
+        p.cabecera.addView(fila2);
+    }
+
+    /** Fila de la tarjeta: ícono pequeño, etiqueta gris, valor y, si hay, un elemento a la derecha (mapa, foto). */
+    private void filaInfo(LinearLayout dest, int icono, String etiqueta, String valor, View derecha) {
+        if (valor == null || valor.isEmpty() || "null".equals(valor)) return;
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.HORIZONTAL);
+        f.setGravity(Gravity.CENTER_VERTICAL);
+        f.setPadding(0, Ui.dp(this, 10), 0, 0);
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout et = new LinearLayout(this);
+        et.setOrientation(LinearLayout.HORIZONTAL);
+        et.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView iv = new ImageView(this);
+        iv.setImageResource(icono);
+        iv.setColorFilter(0xFF62666A);
+        et.addView(iv, new LinearLayout.LayoutParams(Ui.dp(this, 14), Ui.dp(this, 14)));
+        TextView e = Ui.texto(this, etiqueta, 13, R.color.lc_sec, true);
+        e.setPadding(Ui.dp(this, 6), 0, 0, 0);
+        et.addView(e);
+        t.addView(et);
+        TextView v = Ui.texto(this, valor, 15, R.color.lc_texto, false);
+        v.setPadding(0, Ui.dp(this, 2), 0, 0);
+        t.addView(v);
+        f.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        if (derecha != null) {
+            LinearLayout.LayoutParams dl = derecha.getLayoutParams() instanceof LinearLayout.LayoutParams
+                    ? (LinearLayout.LayoutParams) derecha.getLayoutParams() : new LinearLayout.LayoutParams(Ui.dp(this, 56), Ui.dp(this, 56));
+            dl.leftMargin = Ui.dp(this, 10);
+            f.addView(derecha, dl);
+        }
+        dest.addView(f);
+    }
+
+    /** Mapa pequeño 120×80 dp con el pin (marcador de posición hasta tener la clave de Google Maps); al tocarlo abre Mapas. */
+    private View mapaMini(String direccion) {
+        android.widget.FrameLayout m = new android.widget.FrameLayout(this);
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(Ui.dp(this, 8));
+        g.setColor(0xFFE8EAED);
+        m.setBackground(g);
+        ImageView pin = new ImageView(this);
+        pin.setImageResource(R.drawable.ic_pin);
+        m.addView(pin, new android.widget.FrameLayout.LayoutParams(Ui.dp(this, 28), Ui.dp(this, 28), Gravity.CENTER));
+        m.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 120), Ui.dp(this, 80)));
+        m.setOnClickListener(v -> abrirMapa(direccion));
+        return m;
+    }
+
     private void mostrar(Api.Respuesta r) {
         secPropuesta = null;
         secEstado = null;
@@ -382,22 +471,45 @@ public class RequestDetailActivity extends AppCompatActivity {
         c.removeAllViews();
         if (!r.ok()) { c.addView(Ui.texto(this, r.error(), 15, R.color.lc_rojo, false)); return; }
         JSONObject j = r.cuerpo;
-        ((TextView) p.cabecera.getChildAt(1)).setText("#" + id);
-        ((TextView) p.cabecera.getChildAt(2)).setText(Ajustes.etiqueta(this, "categories.list", Ajustes.CATEGORIAS, j.optString("categoria")));
-        TextView est = Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado")));
-        c.addView(est, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        armarCabecera(j);
         agregarAccesos(c, j);
         agregarPestanas(c);
+        // Tarjeta «Información del servicio» (maqueta C8)
         LinearLayout card = Ui.tarjeta(this, c);
-        fila(card, "Problema", j.optString("descripcion"));
-        fila(card, "Equipo", j.optString("equipo"));
-        fila(card, "Servicio", Ajustes.etiqueta(this, "categories.list", Ajustes.CATEGORIAS, j.optString("categoria")));
-        long cita = j.optLong("programadoPara", 0);
-        fila(card, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora");
-        fila(card, "Técnico", j.optString("tecnicoNombre"));
-        fila(card, "Dirección", j.optString("direccion"));
+        card.addView(Ui.texto(this, "Información del servicio", 17, R.color.lc_texto, true));
+        filaInfo(card, R.drawable.ic_chat, "Problema", j.optString("descripcion"), null);
         final String dirResumen = j.optString("direccion");
-        filaBotones(card, "Ver ubicación", v -> abrirMapa(dirResumen), "Contactar técnico", v -> irA(chat));
+        filaInfo(card, R.drawable.ic_pin, "Dirección", dirResumen, mapaMini(dirResumen));
+        if (!j.optString("equipo").isEmpty() && !"null".equals(j.optString("equipo"))) {
+            ImageView eq = new ImageView(this);   // sin foto de equipo en el servidor: ícono de la categoría
+            eq.setImageResource(Ui.iconoCategoria(j.optString("categoria")));
+            eq.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            eq.setPadding(Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 14));
+            GradientDrawable eg = new GradientDrawable();
+            eg.setCornerRadius(Ui.dp(this, 8));
+            eg.setColor(0xFFF1F2F3);
+            eq.setBackground(eg);
+            eq.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 56), Ui.dp(this, 56)));
+            filaInfo(card, R.drawable.ic_wrench, "Equipo", j.optString("equipo"), eq);
+        }
+        long cita = j.optLong("programadoPara", 0);
+        filaInfo(card, R.drawable.ic_clock_gris, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora", null);
+        String tec = j.optString("tecnicoNombre");
+        if (!tec.isEmpty() && !"null".equals(tec)) {
+            ImageView av = new ImageView(this);   // sin foto del técnico en el servidor: placeholder
+            av.setImageResource(R.drawable.ic_avatar_placeholder_suave);
+            av.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+            filaInfo(card, R.drawable.ic_person, "Técnico asignado", tec + "\nTécnico L&C", av);
+        }
+        // Estado: línea de tiempo compacta
+        LinearLayout tl = new LinearLayout(this);
+        tl.setOrientation(LinearLayout.VERTICAL);
+        tl.setPadding(0, Ui.dp(this, 8), 0, 0);
+        secEstado = Ui.texto(this, "Estado: " + Ui.estadoCliente(this, j.optString("estado")), 14, R.color.lc_texto, true);
+        card.addView(secEstado);
+        Ui.lineaTiempoCompacta(this, tl, HomeActivity.lineaTiempo(j));
+        card.addView(tl);
+        filaBotones(card, "Ver ubicación", v -> abrirMapa(dirResumen), "Contactar Técnico", v -> irA(chat));
         String diag = j.optString("diagnostico");
         if (!diag.isEmpty() && !"null".equals(diag)) {   // lo que anotó el técnico
             Ui.seccion(this, c, "Diagnóstico del técnico");
@@ -587,9 +699,6 @@ public class RequestDetailActivity extends AppCompatActivity {
                 });
             }
         }
-        secEstado = Ui.seccion(this, c, "Estado del servicio");
-        LinearLayout tl = Ui.tarjeta(this, c);
-        Ui.lineaTiempo(this, tl, HomeActivity.lineaTiempo(j));
         Ui.seccion(this, c, "Historial");
         JSONArray h = j.optJSONArray("historial");
         for (int i = 0; h != null && i < h.length(); i++) {

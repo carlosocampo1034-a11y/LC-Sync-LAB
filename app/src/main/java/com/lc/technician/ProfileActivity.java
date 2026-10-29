@@ -56,6 +56,17 @@ public class ProfileActivity extends AppCompatActivity {
         tvRol.setVisibility(View.VISIBLE);
 
         configurarMenu(prefs, rol);
+        View menuTitulo = encontrarTexto(findViewById(R.id.scrollPerfil), "MENÚ");
+        if (menuTitulo != null) menuTitulo.setVisibility(View.GONE);
+    }
+
+    private static View encontrarTexto(View raiz, String texto) {
+        if (raiz instanceof TextView && texto.contentEquals(((TextView) raiz).getText())) return raiz;
+        if (raiz instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) raiz;
+            for (int i = 0; i < g.getChildCount(); i++) { View r = encontrarTexto(g.getChildAt(i), texto); if (r != null) return r; }
+        }
+        return null;
     }
 
     @Override
@@ -94,6 +105,18 @@ public class ProfileActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.statHoy)).setText(String.valueOf(jobs.size()));
         ((TextView) findViewById(R.id.statSemana)).setText(String.valueOf(totalCompletados));
         ((TextView) findViewById(R.id.statCompletados)).setText(String.valueOf(enCurso));
+        colorearKpi(R.id.statSemana, 0xFF16A34A);     // Completados: verde
+        colorearKpi(R.id.statCompletados, 0xFFF59E0B); // En curso: naranja
+    }
+
+    private void colorearKpi(int idNumero, int color) {
+        TextView num = findViewById(idNumero);
+        if (num == null) return;
+        num.setTextColor(color);
+        if (num.getParent() instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) num.getParent();
+            for (int i = 0; i < g.getChildCount(); i++) if (g.getChildAt(i) != num && g.getChildAt(i) instanceof TextView) ((TextView) g.getChildAt(i)).setTextColor(color);
+        }
     }
 
     private static int posicionConTag(android.view.ViewGroup box, String tag) {
@@ -102,30 +125,32 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * El menú de la maqueta tiene cinco entradas. Las demás funciones (completados, repuestos, equipos, favoritos, reportes,
-     * dispatch…) se conservan, agrupadas bajo «Más opciones» entre «Documentos» y «Notificaciones».
+     * El menú visible tiene exactamente las cinco entradas de la maqueta. Las demás funciones (completados, repuestos, equipos,
+     * favoritos, solicitudes de repuestos, reportes, dispatch…) siguen existiendo y se abren desde «Documentos».
      */
     private void agruparOpcionesExtra(android.view.ViewGroup box) {
         int a = posicionConTag(box, "docs"), b = posicionConTag(box, "notif");
         if (a < 0 || b <= a + 1) return;
-        final LinearLayout extras = new LinearLayout(this);
-        extras.setOrientation(LinearLayout.VERTICAL);
-        extras.setVisibility(View.GONE);
-        java.util.List<View> mover = new java.util.ArrayList<>();
-        for (int i = a + 1; i < b; i++) mover.add(box.getChildAt(i));
-        for (View v : mover) { box.removeView(v); extras.addView(v); }
-        final View mas = getLayoutInflater().inflate(R.layout.item_menu, box, false);
-        ((ImageView) mas.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_gear);
-        final TextView etiqueta = mas.findViewById(R.id.menuLabel);
-        etiqueta.setText("Más opciones  ⌄");
-        mas.setOnClickListener(v -> {
-            boolean abrir = extras.getVisibility() != View.VISIBLE;
-            extras.setVisibility(abrir ? View.VISIBLE : View.GONE);
-            etiqueta.setText(abrir ? "Más opciones  ⌃" : "Más opciones  ⌄");
+        final java.util.List<View> extras = new java.util.ArrayList<>();
+        for (int i = a + 1; i < b; i++) extras.add(box.getChildAt(i));
+        final java.util.List<View> acciones = new java.util.ArrayList<>();
+        final java.util.List<String> nombres = new java.util.ArrayList<>();
+        for (View v : extras) {
+            TextView et = v.findViewById(R.id.menuLabel);
+            if (et != null && v.getVisibility() == View.VISIBLE) { acciones.add(v); nombres.add(et.getText().toString()); }
+            v.setVisibility(View.GONE);   // fuera del menú visible
+        }
+        box.findViewWithTag("docs").setOnClickListener(v -> {
+            if (acciones.isEmpty()) {
+                new android.app.AlertDialog.Builder(this).setTitle("Documentos")
+                        .setMessage("Aquí verás tus documentos (licencia, seguro, certificaciones).")
+                        .setPositiveButton("Entendido", null).show();
+                return;
+            }
+            new android.app.AlertDialog.Builder(this).setTitle("Documentos")
+                    .setItems(nombres.toArray(new String[0]), (d, which) -> acciones.get(which).performClick())
+                    .setNegativeButton("Cerrar", null).show();
         });
-        int ac = posicionConTag(box, "acerca");
-        box.addView(mas, ac + 1);
-        box.addView(extras, ac + 2);
     }
 
     private void configurarMenu(SharedPreferences prefs, String rol) {

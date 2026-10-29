@@ -151,8 +151,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(this, RequestServiceActivity.class)));
 
         // Campana de la maqueta: avisa si hay algo nuevo; el perfil ya está en la barra inferior
-        findViewById(R.id.btnCampana).setOnClickListener(v ->
-                android.widget.Toast.makeText(this, "Sin notificaciones nuevas", android.widget.Toast.LENGTH_SHORT).show());
+        findViewById(R.id.btnCampana).setOnClickListener(v -> mostrarNotificaciones());
 
         adapter = new JobAdapter(displayedJobs, job -> {
             Job anterior = ordenAnteriorPendiente(job);
@@ -245,6 +244,7 @@ public class MainActivity extends AppCompatActivity {
         // lo que traiga la sincronización (órdenes nuevas o cambiadas) aparece sin salir y volver a entrar
         JobRepository.get().setOyenteCache(this::recargarJobs);
         recargarJobs();
+        revisarCampana();
         java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> PrivacidadLocal.purgarCerradas(this));
         // Sync v2: al volver a la app se pide lo nuevo (p. ej. órdenes asignadas por despacho), con límite de 30 s
         if (com.lc.technician.sync.LabSession.activa(this)) {
@@ -516,6 +516,83 @@ public class MainActivity extends AppCompatActivity {
                     dialog.dismiss();
                 })
                 .show();
+    }
+
+    // ── Campana: últimas 5 notificaciones reales del servidor (lc-api /notifications) ─────────────────────────────
+
+    private static final String PREFS_NOTIF = "lc_notif_campana";
+    private long ultimaNotif = 0;   // created_at de la más reciente conocida
+
+    /** Consulta en segundo plano y enciende el punto rojo si hay algo posterior a lo último que el técnico vio. */
+    private void revisarCampana() {
+        if (!com.lc.technician.BuildConfig.CLOUD_LOGIN) return;
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
+                if (!sb.hasUserSession()) return;
+                retrofit2.Response<okhttp3.ResponseBody> r = sb.api().notifications(sb.authHeader(), 0).execute();
+                if (!r.isSuccessful() || r.body() == null) return;
+                org.json.JSONArray a = new org.json.JSONArray(r.body().string());
+                long max = 0;
+                for (int i = 0; i < a.length(); i++) max = Math.max(max, a.getJSONObject(i).optLong("created_at"));
+                final long visto = getSharedPreferences(PREFS_NOTIF, MODE_PRIVATE).getLong("visto", 0);
+                final long m = max;
+                runOnUiThread(() -> {
+                    ultimaNotif = m;
+                    View punto = findViewById(R.id.puntoCampana);
+                    if (punto != null) punto.setVisibility(m > visto ? View.VISIBLE : View.GONE);
+                });
+            } catch (Exception ignored) { }
+        });
+    }
+
+    private void mostrarNotificaciones() {
+        if (!com.lc.technician.BuildConfig.CLOUD_LOGIN) {
+            android.widget.Toast.makeText(this, "Las notificaciones requieren sesión con el servidor", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+            final java.util.List<String> lineas = new java.util.ArrayList<>();
+            final java.util.List<Long> jobs = new java.util.ArrayList<>();
+            String error = null;
+            long max = 0;
+            try {
+                com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
+                retrofit2.Response<okhttp3.ResponseBody> r = sb.api().notifications(sb.authHeader(), 0).execute();
+                if (!r.isSuccessful() || r.body() == null) error = "No se pudieron cargar las notificaciones (" + r.code() + ")";
+                else {
+                    org.json.JSONArray a = new org.json.JSONArray(r.body().string());
+                    for (int i = 0; i < a.length() && lineas.size() < 5; i++) {   // el servidor ya las entrega de la más nueva a la más vieja
+                        org.json.JSONObject n = a.getJSONObject(i);
+                        max = Math.max(max, n.optLong("created_at"));
+                        String hora = new java.text.SimpleDateFormat("d MMM · h:mm a", java.util.Locale.forLanguageTag("es")).format(new java.util.Date(n.optLong("created_at")));
+                        String cuerpo = n.isNull("cuerpo") ? "" : n.optString("cuerpo");
+                        lineas.add(n.optString("titulo") + (cuerpo.isEmpty() ? "" : "\n" + cuerpo) + "\n" + hora);
+                        jobs.add(n.isNull("job_id") ? 0L : n.optLong("job_id"));
+                    }
+                }
+            } catch (Exception e) { error = "Sin conexión: no se pudieron cargar las notificaciones"; }
+            final String err = error;
+            final long mx = max;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (err != null) { android.widget.Toast.makeText(this, err, android.widget.Toast.LENGTH_SHORT).show(); return; }
+                getSharedPreferences(PREFS_NOTIF, MODE_PRIVATE).edit().putLong("visto", Math.max(mx, ultimaNotif)).apply();
+                View punto = findViewById(R.id.puntoCampana);
+                if (punto != null) punto.setVisibility(View.GONE);
+                if (lineas.isEmpty()) {
+                    new android.app.AlertDialog.Builder(this).setTitle("Notificaciones").setMessage("Sin notificaciones nuevas")
+                            .setPositiveButton("Cerrar", null).show();
+                    return;
+                }
+                new android.app.AlertDialog.Builder(this).setTitle("Notificaciones")
+                        .setItems(lineas.toArray(new String[0]), (d, which) -> {
+                            long jid = jobs.get(which);
+                            for (Job j : allJobs) if (j.id == jid) { abrirOrden(j); return; }
+                        })
+                        .setNegativeButton("Cerrar", null).show();
+            });
+        });
     }
 
     private void buildChips() {
