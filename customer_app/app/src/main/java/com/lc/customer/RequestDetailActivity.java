@@ -36,7 +36,7 @@ public class RequestDetailActivity extends AppCompatActivity {
     };
     private androidx.activity.result.ActivityResultLauncher<String> elegirFoto;
     private View secFotos, secEstado, secPropuesta;
-    private int metodoPago = 0;                       // 0 Tarjeta · 1 Zelle · 2 Efectivo · 3 Otro (prueba: no cambia el cobro)
+    private int metodoPago = 0;                       // 0 Tarjeta (prueba) · 1 Efectivo (solo informativo: lo confirma el técnico)
     private TextView[] chipsMetodo;
 
     @Override
@@ -670,9 +670,10 @@ public class RequestDetailActivity extends AppCompatActivity {
                 fc.addView(Ui.texto(this, "Método de pago", 13, R.color.lc_sec, true));
                 LinearLayout metodos = new LinearLayout(this);
                 metodos.setOrientation(LinearLayout.HORIZONTAL);
-                String[] mn = {"Tarjeta", "Zelle", "Efectivo", "Otro"};
-                chipsMetodo = new TextView[4];
-                for (int q = 0; q < 4; q++) {
+                // Solo métodos con respaldo real (orden 54): tarjeta de prueba y efectivo. Zelle y «Otro» no existen en el backend.
+                String[] mn = {"Tarjeta", "Efectivo"};
+                chipsMetodo = new TextView[2];
+                for (int q = 0; q < 2; q++) {
                     final int mi = q;
                     TextView chip = Ui.texto(this, mn[q], 13, R.color.lc_texto, true);
                     chip.setGravity(Gravity.CENTER);
@@ -687,7 +688,7 @@ public class RequestDetailActivity extends AppCompatActivity {
                 pintarMetodos();
                 fc.addView(Ui.texto(this, "Modo de prueba: no se cobra ningún método real; el pago queda registrado como prueba.", 12, R.color.lc_sec, false));
                 Ui.boton(this, fc, "Procesar pago", true).setOnClickListener(v -> {
-                    if (metodoPago == 2) {   // Efectivo: lo confirma el técnico al recibir el dinero; aquí no se registra nada
+                    if (metodoPago == 1) {   // Efectivo: lo confirma el técnico al recibir el dinero; aquí no se registra nada
                         new AlertDialog.Builder(this)
                                 .setTitle("Pago en efectivo")
                                 .setMessage(String.format(java.util.Locale.US, "Entrega $%.2f en efectivo a tu técnico. Él confirma el cobro en su app y la factura quedará pagada; no se registra nada hasta entonces.", aPagar))
