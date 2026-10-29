@@ -233,6 +233,26 @@ public class RequestServiceActivity extends AppCompatActivity {
             selectedEquipmentId = 0;
         }));
 
+        // Orden 54 «Nueva Orden»: llega con cliente, dirección y propiedad de la orden abierta
+        android.content.Intent pf = getIntent();
+        String pfCliente = pf.getStringExtra("prefill_cliente");
+        if (pfCliente != null && !pfCliente.isEmpty() && savedInstanceState == null) {
+            long pfCust = pf.getLongExtra("prefill_customer_id", 0);
+            long pfProp = pf.getLongExtra("prefill_property_id", 0);
+            pendingClienteSelection = true;
+            acCliente.setText(pfCliente, false);
+            selectedCustomerId = pfCust;
+            String pfTel = pf.getStringExtra("prefill_telefono");
+            if (pfTel != null && !pfTel.isEmpty()) etTelefono.setText(pfTel);
+            String pfDir = pf.getStringExtra("prefill_direccion");
+            if (pfDir != null && !pfDir.isEmpty()) {
+                pendingDireccionSelection = true;
+                acDireccion.setText(pfDir, false);
+            }
+            selectedPropertyId = pfProp;
+            if (pfCust > 0) cargarPropiedadesDelCliente(pfCust);
+        }
+
         // El indicador de pasos refleja lo que ya está completo
         SimpleWatcher pasos = new SimpleWatcher(this::actualizarPasos);
         for (EditText et : new EditText[]{acDireccion, acCliente, etTelefono, etHora,

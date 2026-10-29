@@ -72,7 +72,7 @@ public class ProfileActivity extends AppCompatActivity {
         int completadosHoy = 0, completadosSemana = 0, totalCompletados = 0;
 
         for (Job j : jobs) {
-            if (!Job.STATUS_DONE.equals(j.estado)) continue;
+            if (!Job.esCompletado(j.estado)) continue;
             totalCompletados++;
             if (j.updatedAt != null) {
                 Calendar c = Calendar.getInstance();

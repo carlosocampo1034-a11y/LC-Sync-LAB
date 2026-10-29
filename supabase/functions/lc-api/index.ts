@@ -90,7 +90,7 @@ async function listarTecnicos() {
     .eq("role", "TECHNICIAN").order("active", { ascending: false }).order("technician_code");
   if (error) return null;
   const { data: abiertas } = await db.from("jobs").select("technician_id")
-    .not("technician_id", "is", null).not("estado", "in", "(COMPLETADO,CANCELADO)");
+    .not("technician_id", "is", null).not("estado", "in", "(COMPLETADO,CANCELADO,PAGADO)");
   const n: Record<string, number> = {};
   for (const j of abiertas || []) n[j.technician_id] = (n[j.technician_id] || 0) + 1;
   return (data || []).map((t) => ({ ...t, abiertas: n[t.id] || 0 }));
@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
         if (error) return out(500, { error: "update_failed" });
         await db.from("profiles").update({ active: activo }).eq("id", t.id);
         const { count } = await db.from("jobs").select("id", { count: "exact", head: true })
-          .eq("technician_id", t.id).not("estado", "in", "(COMPLETADO,CANCELADO)");
+          .eq("technician_id", t.id).not("estado", "in", "(COMPLETADO,CANCELADO,PAGADO)");
         return out(200, { id: t.id, active: activo, abiertas: count || 0 });
       }
       const clave = claveSegura();

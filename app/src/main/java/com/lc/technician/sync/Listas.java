@@ -149,6 +149,13 @@ public final class Listas {
     }
 
     /** Texto de un id (incluye opciones desactivadas, para mostrar datos históricos). */
+    /** Texto de un estado en pantalla: «EN RUTA» se muestra «En camino» como la maqueta (el dato del servidor no cambia). */
+    public static String etiquetaEstado(Context c, String id) {
+        if ("EN RUTA".equals(id)) return "En camino";
+        String e = id == null ? "" : id;
+        return etiqueta(c, "order_states.list", e, e);
+    }
+
     public static String etiqueta(Context c, String key, String id, String respaldo) {
         JSONArray a = datos(c).optJSONArray(key);
         for (int i = 0; a != null && i < a.length(); i++) {

@@ -80,7 +80,7 @@ public class EstadisticasActivity extends AppCompatActivity {
                     if (c.get(Calendar.MONTH) == hoyMes)           d.jobsMes++;
                 }
             }
-            if (Job.STATUS_DONE.equals(j.estado)) d.jobsCompletados++;
+            if (Job.esCompletado(j.estado)) d.jobsCompletados++;
         }
 
         // SECCIÓN 2 — ingresos
@@ -172,7 +172,7 @@ public class EstadisticasActivity extends AppCompatActivity {
         Map<String, Double> mapaMontos = new HashMap<>();
         Map<String, Long>   mapaUltimo = new HashMap<>();
         for (Job j : jobs) {
-            if (!Job.STATUS_DONE.equals(j.estado)) continue;
+            if (!Job.esCompletado(j.estado)) continue;
             String nombre = (j.cliente != null && !j.cliente.isEmpty()) ? j.cliente : "Sin nombre";
             List<WorkItemEntity> wi = JobRepository.get().getWorkItemsForJob(j.id);
             double total = 0;
@@ -207,7 +207,7 @@ public class EstadisticasActivity extends AppCompatActivity {
             d.semanasLabels[i] = semFmt.format(ini.getTime());
         }
         for (Job j : jobs) {
-            if (!Job.STATUS_DONE.equals(j.estado) || j.updatedAt == null) continue;
+            if (!Job.esCompletado(j.estado) || j.updatedAt == null) continue;
             Calendar jc = Calendar.getInstance();
             jc.setTimeInMillis(j.updatedAt);
             int semOffset = -1;
@@ -258,7 +258,7 @@ public class EstadisticasActivity extends AppCompatActivity {
         }
         d.kpiFacturacionMes = 0;
         for (Job j : jobs) {
-            if (!Job.STATUS_DONE.equals(j.estado) || j.updatedAt == null) continue;
+            if (!Job.esCompletado(j.estado) || j.updatedAt == null) continue;
             Calendar jc = Calendar.getInstance();
             jc.setTimeInMillis(j.updatedAt);
             if (jc.get(Calendar.YEAR) == hoyAnio && jc.get(Calendar.MONTH) == hoyMes) {
@@ -309,7 +309,7 @@ public class EstadisticasActivity extends AppCompatActivity {
         for (Job j : JobRepository.get().getTodayJobs()) {
             if (j.updatedAt == null || j.updatedAt < desde) continue;
             tr++;
-            if (Job.STATUS_DONE.equals(j.estado)) co++;
+            if (Job.esCompletado(j.estado)) co++;
             else if ("CANCELADO".equals(j.estado)) ca++;
             else if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado) || Job.STATUS_EN_REPARACION.equals(j.estado)) cu++;
         }
@@ -624,7 +624,7 @@ public class EstadisticasActivity extends AppCompatActivity {
                 Map<String, Integer> countMap = new HashMap<>();
                 Map<String, Long> ultimoMap   = new HashMap<>();
                 for (Job j : jobs) {
-                    if (!Job.STATUS_DONE.equals(j.estado)) continue;
+                    if (!Job.esCompletado(j.estado)) continue;
                     String nombre = (j.cliente != null && !j.cliente.isEmpty()) ? j.cliente : "Sin nombre";
                     List<WorkItemEntity> wi = JobRepository.get().getWorkItemsForJob(j.id);
                     double total = 0;
@@ -781,7 +781,7 @@ public class EstadisticasActivity extends AppCompatActivity {
         int total = 0, comp = 0, curso = 0, pend = 0;
         for (Job j : JobRepository.get().getTodayJobs()) {
             total++;
-            if (Job.STATUS_DONE.equals(j.estado)) comp++;
+            if (Job.esCompletado(j.estado)) comp++;
             else if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado)
                     || Job.STATUS_EN_REPARACION.equals(j.estado)) curso++;
             else if (Job.STATUS_PENDING.equals(j.estado)) pend++;

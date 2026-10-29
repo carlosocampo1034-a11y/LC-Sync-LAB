@@ -60,11 +60,11 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         if (hayEq) h.tagEquipo.setText(job.equipo.trim());
         h.tagPrioridad.setVisibility(hayPr ? View.VISIBLE : View.GONE);
         if (hayPr) h.tagPrioridad.setText("Prioridad " + job.prioridad.trim().toLowerCase(java.util.Locale.ROOT));
-        h.estado.setText(com.lc.technician.sync.Listas.etiqueta(h.estado.getContext(), "order_states.list", job.estado, job.estado));
+        h.estado.setText(com.lc.technician.sync.Listas.etiquetaEstado(h.estado.getContext(), job.estado));
 
         int color;
         switch (job.estado != null ? job.estado : "") {
-            case Job.STATUS_DONE:               color = 0xFF16A34A; break;
+            case Job.STATUS_DONE: case Job.STATUS_PAID: color = 0xFF16A34A; break;
             case Job.STATUS_ARRIVED:            color = 0xFF171717; break;
             case Job.STATUS_EN_ROUTE:           color = 0xFFF59E0B; break;
             case Job.STATUS_EN_REPARACION:      color = 0xFFE91605; break;

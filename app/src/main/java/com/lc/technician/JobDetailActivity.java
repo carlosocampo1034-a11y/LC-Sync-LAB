@@ -600,6 +600,10 @@ public class JobDetailActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        guardarNotasAhora();
+    }
+
+    private void guardarNotasAhora() {
         if (job != null) {
             EditText etNotas = findViewById(R.id.detalleNotas);
             if (etNotas != null) {
@@ -682,12 +686,58 @@ public class JobDetailActivity extends AppCompatActivity {
             case "RESUME":
                 aplicarEstado(Job.STATUS_EN_REPARACION, "Reparación reanudada"); break;
             case "CLIENT_CANCELLED":
-                registrarNota("Cliente canceló el servicio"); break;
+                confirmarCancelacion(); break;
             case "NO_ACCESS":
-                registrarNota("Cliente no estaba en casa al llegar"); break;
+                aplicarEstado(Job.STATUS_NOT_HOME, "Cliente no está · se avisó a Control"); break;
             case "NEED_ORDER":
-                registrarNota("Técnico solicitó una orden de trabajo"); break;
+                abrirNuevaOrden(); break;
         }
+    }
+
+    /** «Cancelar»: confirma y pide el motivo (opcional). El servidor libera la oferta abierta y avisa a Control. */
+    private void confirmarCancelacion() {
+        final EditText motivo = new EditText(this);
+        motivo.setHint("Motivo de la cancelación (opcional)");
+        motivo.setMinLines(2);
+        motivo.setPadding(dp(20), dp(12), dp(20), dp(12));
+        new AlertDialog.Builder(this)
+                .setTitle("¿Estás seguro?")
+                .setMessage("Vas a cancelar el trabajo #" + job.id + " de " + job.cliente + ".")
+                .setView(motivo)
+                .setPositiveButton("Sí, cancelar", (d, w) -> {
+                    String m = motivo.getText().toString().trim().replace('\n', ' ');
+                    EditText etNotas = findViewById(R.id.detalleNotas);
+                    if (etNotas != null) {
+                        String actual = etNotas.getText().toString();
+                        etNotas.setText(actual + (actual.isEmpty() ? "" : "\n") + "[CANCELACIÓN] " + (m.isEmpty() ? "Sin motivo indicado" : m));
+                    }
+                    guardarNotasAhora();
+                    aplicarEstado(Job.STATUS_CANCELLED, "Trabajo cancelado");
+                })
+                .setNegativeButton("No", null)
+                .show();
+    }
+
+    /** «Nueva Orden»: abre el alta con cliente, dirección y propiedad de esta orden. No toca la orden actual. */
+    private void abrirNuevaOrden() {
+        Intent i = new Intent(this, RequestServiceActivity.class);
+        i.putExtra("prefill_cliente", job.cliente);
+        i.putExtra("prefill_direccion", job.direccion);
+        i.putExtra("prefill_telefono", job.telefono);
+        if (job.customerId != null) i.putExtra("prefill_customer_id", job.customerId.longValue());
+        if (job.propertyId != null) i.putExtra("prefill_property_id", job.propertyId.longValue());
+        startActivity(i);
+    }
+
+    /** «Pagado / Completado»: pago de PRUEBA (sin cobro real). El servidor exige factura emitida; si no la hay lo rechaza. */
+    private void confirmarPagado() {
+        new AlertDialog.Builder(this)
+                .setTitle("Registrar pago de prueba")
+                .setMessage("Se registra un pago de prueba (sin cobro real), la factura pasa a pagada y la orden a PAGADO. "
+                        + "Requiere que la orden tenga factura emitida.")
+                .setPositiveButton("Registrar pago", (d, w) -> aplicarEstado(Job.STATUS_PAID, "Pago de prueba enviado · el servidor lo confirma al sincronizar"))
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void registrarNota(String descripcion) {
@@ -721,7 +771,7 @@ public class JobDetailActivity extends AppCompatActivity {
     private void pintarEstado() {
         int color;
         switch (job.estado != null ? job.estado : "") {
-            case Job.STATUS_DONE:               color = 0xFF137333; break;
+            case Job.STATUS_DONE: case Job.STATUS_PAID: color = 0xFF137333; break;
             case Job.STATUS_ARRIVED:            color = 0xFF171717; break;
             case Job.STATUS_EN_ROUTE:           color = 0xFF171717; break;
             case Job.STATUS_AWAITING_APPROVAL:  color = 0xFF171717; break;
@@ -733,7 +783,7 @@ public class JobDetailActivity extends AppCompatActivity {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
         bg.setCornerRadius(6f);
-        estadoView.setText(com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", job.estado, job.estado));
+        estadoView.setText(com.lc.technician.sync.Listas.etiquetaEstado(this, job.estado));
         estadoView.setBackground(bg);
     }
 
@@ -746,7 +796,10 @@ public class JobDetailActivity extends AppCompatActivity {
             case Job.STATUS_AWAITING_APPROVAL:  return "CLIENT_APPROVED";
             case Job.STATUS_EN_REPARACION:      return "COMPLETE";   // abre el cierre
             case Job.STATUS_PART_HOLD:
-            case Job.STATUS_ON_HOLD:            return "RESUME";
+            case Job.STATUS_ON_HOLD:
+            case Job.STATUS_MANAGER:
+            case Job.STATUS_PARTS_PRELOADED:    return "RESUME";
+            case Job.STATUS_NOT_HOME:           return "GO_ENROUTE";
             default:                            return null;
         }
     }
@@ -760,7 +813,10 @@ public class JobDetailActivity extends AppCompatActivity {
             case Job.STATUS_AWAITING_APPROVAL:  return new String[]{"CLIENT_CANCELLED"};
             case Job.STATUS_EN_REPARACION:      return new String[]{"PAUSE", "NEED_ORDER"};
             case Job.STATUS_PART_HOLD:
-            case Job.STATUS_ON_HOLD:            return new String[]{"CLIENT_CANCELLED"};
+            case Job.STATUS_ON_HOLD:
+            case Job.STATUS_MANAGER:
+            case Job.STATUS_PARTS_PRELOADED:    return new String[]{"CLIENT_CANCELLED"};
+            case Job.STATUS_NOT_HOME:           return new String[]{"CLIENT_CANCELLED", "NEED_ORDER"};
             default:                            return new String[]{};
         }
     }
@@ -812,10 +868,10 @@ public class JobDetailActivity extends AppCompatActivity {
         armarCabeceraPremium();
         if (tvBadgeEstado == null) return;
         String e = job.estado != null ? job.estado : "";
-        tvBadgeEstado.setText(com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", e, e));
+        tvBadgeEstado.setText(com.lc.technician.sync.Listas.etiquetaEstado(this, e));
         int color;
         switch (e) {
-            case Job.STATUS_DONE: color = 0xFF16A34A; break;
+            case Job.STATUS_DONE: case Job.STATUS_PAID: color = 0xFF16A34A; break;
             case Job.STATUS_EN_REPARACION:
             case Job.STATUS_EN_ROUTE: case Job.STATUS_ARRIVED: case Job.STATUS_AWAITING_APPROVAL: color = 0xFFE91605; break;
             default: color = 0xFF62666A;
@@ -1166,7 +1222,7 @@ public class JobDetailActivity extends AppCompatActivity {
     /** Hoja inferior «Cambiar estado del trabajo» con las 9 opciones. Las opciones sin función real quedan atenuadas. */
     private void mostrarCambiarEstado() {
         final String estado = job.estado != null ? job.estado : "";
-        final boolean abierta = !Job.STATUS_DONE.equals(estado);
+        final boolean abierta = !Job.esCompletado(estado) && !Job.STATUS_CANCELLED.equals(estado);
         final android.app.Dialog dlg = new android.app.Dialog(this);
         dlg.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
         android.widget.LinearLayout hoja = new android.widget.LinearLayout(this);
@@ -1199,13 +1255,13 @@ public class JobDetailActivity extends AppCompatActivity {
         Object[][] op = {
             {"En camino", "Voy al trabajo", 0xFF2563EB, pend, "GO_ENROUTE"},
             {"Completar", "Trabajo terminado (sin pago)", 0xFF16A34A, rep, "COMPLETE"},
-            {"Pagado / Completado", "Trabajo terminado y pagado", 0xFF16A34A, false, "—"},
-            {"Requiere Gerente", "Necesita revisión de gerente", 0xFFF59E0B, abierta, "#GERENTE"},
+            {"Pagado / Completado", "Trabajo terminado y pagado", 0xFF16A34A, Job.STATUS_DONE.equals(estado), "#PAGADO"},
+            {"Requiere Gerente", "Necesita revisión de gerente", 0xFFF59E0B, abierta && !Job.STATUS_MANAGER.equals(estado), "#GERENTE"},
             {"Necesita Repuesto", "Esperando parte", 0xFF7C3AED, rep, "PART_HOLD"},
-            {"Repuesto Pre-cargado", "Parte ya asignada", 0xFF7C3AED, abierta, "#PRECARGADO"},
-            {"Cliente No Está", "Cliente no disponible en la dirección", 0xFFF59E0B, abierta, "NO_ACCESS"},
+            {"Repuesto Pre-cargado", "Parte ya asignada", 0xFF7C3AED, abierta && !Job.STATUS_PARTS_PRELOADED.equals(estado), "#PRECARGADO"},
+            {"Cliente No Está", "Cliente no disponible en la dirección", 0xFFF59E0B, abierta && !Job.STATUS_NOT_HOME.equals(estado), "NO_ACCESS"},
             {"Cancelar", "Trabajo cancelado", 0xFFE91605, abierta, "CLIENT_CANCELLED"},
-            {"Nueva Orden", "Crear nueva orden desde este cliente", 0xFF62666A, abierta, "NEED_ORDER"}};
+            {"Nueva Orden", "Crear nueva orden desde este cliente", 0xFF62666A, true, "NEED_ORDER"}};
         // Siguiente paso del flujo (llegué, iniciar reparación, cerrar trabajo, factura…): sigue disponible, ahora dentro de la hoja
         final String idPrincipal = idAccionPrincipal();
         final String textoPrincipal = idPrincipal == null ? "Factura" : ("COMPLETE".equals(idPrincipal) ? "Cerrar trabajo" : acc(idPrincipal).substring(0, 1) + acc(idPrincipal).substring(1).toLowerCase(java.util.Locale.ROOT));
@@ -1242,15 +1298,16 @@ public class JobDetailActivity extends AppCompatActivity {
             TextView a = new TextView(this);
             a.setText((String) o[0]); a.setTextSize(16f); a.setTypeface(null, android.graphics.Typeface.BOLD); a.setTextColor(0xFF0A0A0A);
             TextView b = new TextView(this);
-            b.setText(on || !"—".equals(o[4]) ? (String) o[1] : "Disponible cuando haya cobro en sitio");
+            b.setText(on || !"#PAGADO".equals(o[4]) ? (String) o[1] : "Disponible cuando el trabajo esté completado");
             b.setTextSize(13f); b.setTextColor(0xFF62666A);
             t.addView(a); t.addView(b);
             f.addView(t);
             if (on) f.setOnClickListener(v -> {
                 dlg.dismiss();
                 String id = (String) o[4];
-                if ("#GERENTE".equals(id)) registrarNota("Técnico solicitó revisión de gerente");
-                else if ("#PRECARGADO".equals(id)) registrarNota("Repuesto pre-cargado: parte ya asignada");
+                if ("#GERENTE".equals(id)) aplicarEstado(Job.STATUS_MANAGER, "Se avisó a Control: requiere gerente");
+                else if ("#PAGADO".equals(id)) confirmarPagado();
+                else if ("#PRECARGADO".equals(id)) aplicarEstado(Job.STATUS_PARTS_PRELOADED, "Repuesto pre-cargado registrado");
                 else manejarOpcionMenu(estado, id);
             });
             filas.addView(f);
@@ -2195,7 +2252,7 @@ public class JobDetailActivity extends AppCompatActivity {
     private int estadoColor(String estado) {
         if (estado == null) return 0xFFE91605;
         switch (estado) {
-            case Job.STATUS_DONE:               return 0xFF137333;
+            case Job.STATUS_DONE: case Job.STATUS_PAID: return 0xFF137333;
             case Job.STATUS_EN_ROUTE:           return 0xFF171717;
             case Job.STATUS_ARRIVED:            return 0xFF171717;
             case Job.STATUS_AWAITING_APPROVAL:  return 0xFF171717;

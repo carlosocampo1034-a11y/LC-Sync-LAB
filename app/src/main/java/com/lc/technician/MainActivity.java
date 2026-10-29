@@ -364,7 +364,7 @@ public class MainActivity extends AppCompatActivity {
     private static int grupoDe(Job j) {
         String e = j.estado == null ? "" : j.estado;
         if (Job.STATUS_PENDING.equals(e)) return 1;
-        if (Job.STATUS_DONE.equals(e) || "CANCELADO".equals(e)) return 2;
+        if (Job.esCompletado(e) || Job.STATUS_CANCELLED.equals(e)) return 2;
         return 0;   // EN RUTA, LLEGUÉ, EN REPARACIÓN, ESPERANDO APROBACIÓN, PART HOLD, PAUSADO
     }
 
@@ -412,7 +412,7 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    private static boolean cerrada(Job j) { return Job.STATUS_DONE.equals(j.estado) || "CANCELADO".equals(j.estado); }
+    private static boolean cerrada(Job j) { return Job.esCompletado(j.estado) || "CANCELADO".equals(j.estado); }
 
     /** Instante programado: fecha y hora si existen; si solo hay hora (texto), esa hora de hoy; sin hora, al final. */
     private long claveHora(Job j) {
@@ -500,6 +500,7 @@ public class MainActivity extends AppCompatActivity {
             case Job.STATUS_ON_HOLD:           return 5;
             case Job.STATUS_PART_HOLD:         return 6;
             case Job.STATUS_DONE:              return 7;
+            case Job.STATUS_PAID:              return 8;
             default:                           return 99;
         }
     }
@@ -618,9 +619,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void actualizarContador() {
         int pendientes = 0, completados = 0;
+        String myTechId = SessionManager.get(this).getTechnicianName();
         for (Job j : allJobs) {
-            if (Job.STATUS_DONE.equals(j.estado)) completados++;
-            else pendientes++;
+            if (filtroMisJobs && !pasaFiltroMisJobs(j, myTechId)) continue;
+            if (grupoDe(j) == 2) completados++;
+            else pendientes++;   // En curso + Pendientes: lo que sigue abierto
         }
         contador.setText(pendientes + " pendientes · " + completados + " completados");
         actualizarConteosChips();

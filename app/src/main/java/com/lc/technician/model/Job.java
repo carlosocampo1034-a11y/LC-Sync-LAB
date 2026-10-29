@@ -48,6 +48,17 @@ public class Job {
     public static final String STATUS_PART_HOLD          = "PART HOLD";
     public static final String STATUS_ON_HOLD            = "PAUSADO";
     public static final String STATUS_DONE               = "COMPLETADO";
+    // Orden 54: estados nuevos (el servidor los acepta tras la migración 20261029100000)
+    public static final String STATUS_PAID               = "PAGADO";
+    public static final String STATUS_MANAGER            = "REQUIERE GERENTE";
+    public static final String STATUS_PARTS_PRELOADED    = "REPUESTO PRECARGADO";
+    public static final String STATUS_NOT_HOME           = "CLIENTE NO ESTÁ";
+    public static final String STATUS_CANCELLED          = "CANCELADO";
+
+    /** Trabajo terminado: completado o ya pagado. */
+    public static boolean esCompletado(String estado) {
+        return STATUS_DONE.equals(estado) || STATUS_PAID.equals(estado);
+    }
 
     public final long   id;
     public final String cliente;

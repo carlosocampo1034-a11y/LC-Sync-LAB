@@ -50,7 +50,7 @@ public class JobCompletedActivity extends AppCompatActivity {
         super.onResume();
         completados.clear();
         for (Job j : JobRepository.get().getTodayJobs()) {
-            if (Job.STATUS_DONE.equals(j.estado)) completados.add(j);
+            if (Job.esCompletado(j.estado)) completados.add(j);
         }
         adapter.notifyDataSetChanged();
 
