@@ -31,7 +31,7 @@ public final class BottomNav {
         barra.setOrientation(LinearLayout.HORIZONTAL);
         barra.setBackgroundColor(0xFFFFFFFF);
         barra.setElevation(a.getResources().getDisplayMetrics().density * 8);
-        String[] ico = {"🏠", "📊", "👤"};
+        String[] ico = {"🏠", "📊", "💬", "👤"};
         String[] txt = {"Trabajos", "Estadísticas", "Mensajes", "Perfil"};
         final Class<?>[] destino = {MainActivity.class, EstadisticasActivity.class, MensajesActivity.class, ProfileActivity.class};
         for (int i = 0; i < 4; i++) {
