@@ -141,7 +141,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="RESUMEN GENERAL"
+                android:text="RESUMEN SEMANAL · ÚLTIMOS 7 DÍAS"
                 android:textColor="@color/lc_text_tertiary"
                 android:textSize="12sp"
                 android:textStyle="bold"

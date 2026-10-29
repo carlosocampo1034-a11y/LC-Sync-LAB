@@ -303,10 +303,36 @@ public class EstadisticasActivity extends AppCompatActivity {
         }
 
         // SECCIÓN 1
-        ((TextView) findViewById(R.id.statHoy)).setText(String.valueOf(d.jobsHoy));
-        ((TextView) findViewById(R.id.statSemana)).setText(String.valueOf(d.jobsSemana));
-        ((TextView) findViewById(R.id.statMes)).setText(String.valueOf(d.jobsMes));
-        ((TextView) findViewById(R.id.statCompletados)).setText(String.valueOf(d.jobsCompletados));
+        // «Resumen semanal» como la maqueta: Trabajos · Completados · En curso · Cancelados de los últimos 7 días
+        long desde = System.currentTimeMillis() - 7L * 24 * 3600 * 1000;
+        int tr = 0, co = 0, cu = 0, ca = 0;
+        for (Job j : JobRepository.get().getTodayJobs()) {
+            if (j.updatedAt == null || j.updatedAt < desde) continue;
+            tr++;
+            if (Job.STATUS_DONE.equals(j.estado)) co++;
+            else if ("CANCELADO".equals(j.estado)) ca++;
+            else if (Job.STATUS_EN_ROUTE.equals(j.estado) || Job.STATUS_ARRIVED.equals(j.estado) || Job.STATUS_EN_REPARACION.equals(j.estado)) cu++;
+        }
+        ((TextView) findViewById(R.id.statHoy)).setText(String.valueOf(tr));
+        ((TextView) findViewById(R.id.statSemana)).setText(String.valueOf(co));
+        ((TextView) findViewById(R.id.statMes)).setText(String.valueOf(cu));
+        ((TextView) findViewById(R.id.statCompletados)).setText(String.valueOf(ca));
+        String[] nom = {"Trabajos", "Completados", "En curso", "Cancelados"};
+        int[] ids = {R.id.statHoy, R.id.statSemana, R.id.statMes, R.id.statCompletados};
+        for (int k = 0; k < 4; k++) {
+            View num = findViewById(ids[k]);
+            if (num != null && num.getParent() instanceof android.view.ViewGroup) {
+                android.view.ViewGroup g = (android.view.ViewGroup) num.getParent();
+                for (int q = 0; q < g.getChildCount(); q++) {
+                    View c = g.getChildAt(q);
+                    if (c != num && c instanceof TextView) ((TextView) c).setText(nom[k]);
+                }
+            }
+        }
+        // colores como la maqueta: verde completados, naranja en curso, rojo cancelados
+        ((TextView) findViewById(R.id.statSemana)).setTextColor(0xFF16A34A);
+        ((TextView) findViewById(R.id.statMes)).setTextColor(0xFFF59E0B);
+        ((TextView) findViewById(R.id.statCompletados)).setTextColor(0xFFE91605);
 
         // SECCIÓN 2
         ((TextView) findViewById(R.id.tvIngresosTotal))

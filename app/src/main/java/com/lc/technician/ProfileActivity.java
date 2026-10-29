@@ -23,6 +23,17 @@ public class ProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
         BottomNav.attach(this, BottomNav.PERFIL);
+        // Engranaje de la maqueta: abre Ajustes
+        android.widget.LinearLayout hdr = findViewById(R.id.header);
+        if (hdr != null) {
+            android.widget.ImageView gear = new android.widget.ImageView(this);
+            gear.setImageResource(R.drawable.m_gear);
+            gear.setColorFilter(0xFF62666A);
+            int pad = Math.round(10 * getResources().getDisplayMetrics().density);
+            gear.setPadding(pad, pad, pad, pad);
+            gear.setOnClickListener(v -> startActivity(new Intent(this, ConfiguracionActivity.class)));
+            hdr.addView(gear, new android.widget.LinearLayout.LayoutParams(Math.round(48 * getResources().getDisplayMetrics().density), Math.round(48 * getResources().getDisplayMetrics().density)));
+        }
         View atrasPerfil = findViewById(R.id.btnAtras);
         if (atrasPerfil != null) atrasPerfil.setVisibility(View.GONE);   // la barra inferior reemplaza la flecha
         // Edge-to-edge (Android 15+): cabecera bajo la barra de estado (el inferior ya lo cubre marginBottom=56dp)
@@ -120,6 +131,20 @@ public class ProfileActivity extends AppCompatActivity {
         tvCerrar.setText("Cerrar sesión");
         tvCerrar.setTextColor(0xFFE91605);
         cerrar.setOnClickListener(v -> cerrarSesion());
+        // Botón de contorno rojo, como la maqueta
+        android.graphics.drawable.GradientDrawable cb = new android.graphics.drawable.GradientDrawable();
+        cb.setCornerRadius(Math.round(12 * getResources().getDisplayMetrics().density));
+        cb.setStroke(Math.round(1.5f * getResources().getDisplayMetrics().density), 0xFFE91605);
+        cb.setColor(0xFFFFFFFF);
+        cerrar.setBackground(cb);
+        ((ImageView) cerrar.findViewById(R.id.menuIcon)).setColorFilter(0xFFE91605);
+        tvCerrar.setTypeface(null, android.graphics.Typeface.BOLD);
+        if (cerrar.getLayoutParams() instanceof android.view.ViewGroup.MarginLayoutParams) {
+            android.view.ViewGroup.MarginLayoutParams mp = (android.view.ViewGroup.MarginLayoutParams) cerrar.getLayoutParams();
+            int m = Math.round(16 * getResources().getDisplayMetrics().density);
+            mp.setMargins(m, m, m, m);
+            cerrar.setLayoutParams(mp);
+        }
     }
 
     private void setVisible(int itemId, int dividerId, boolean visible) {

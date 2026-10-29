@@ -82,7 +82,9 @@ public class MensajesActivity extends AppCompatActivity {
                     JSONArray a = new JSONArray(r.body().string());
                     if (a.length() == 0) continue;
                     JSONObject m = a.getJSONObject(a.length() - 1);
-                    ultimos.put(j.id, new String[]{m.optString("texto"), m.optBoolean("propio") ? "1" : "0", String.valueOf(a.length())});
+                    int sinResponder = 0;
+                    for (int q = a.length() - 1; q >= 0 && !a.getJSONObject(q).optBoolean("propio"); q--) sinResponder++;
+                    ultimos.put(j.id, new String[]{m.optString("texto"), m.optBoolean("propio") ? "1" : "0", String.valueOf(sinResponder), horaMensaje(m.optString("ts"))});
                 } catch (Exception ignored) { }
             }
             runOnUiThread(() -> { if (!isFinishing()) pintar(ultimos); });
@@ -123,7 +125,12 @@ public class MensajesActivity extends AppCompatActivity {
             sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
             col.addView(sub);
             fila.addView(col, new LinearLayout.LayoutParams(0, -2, 1f));
-            if (u != null) {
+            if (u != null && !u[3].isEmpty()) {
+                TextView hh = t(u[3], 12, 0xFF62666A, false);
+                hh.setPadding(dp(8), 0, dp(8), 0);
+                fila.addView(hh);
+            }
+            if (u != null && !"0".equals(u[2])) {   // globo rojo: mensajes del cliente sin responder
                 TextView n = t(u[2], 12, 0xFFFFFFFF, true);
                 n.setGravity(Gravity.CENTER);
                 n.setPadding(dp(8), dp(2), dp(8), dp(2));
@@ -137,6 +144,15 @@ public class MensajesActivity extends AppCompatActivity {
             lp.topMargin = dp(10);
             lista.addView(fila, lp);
         }
+    }
+
+    /** Hora corta («10:30 AM») de la marca de tiempo del mensaje; vacío si no se puede leer. */
+    private static String horaMensaje(String ts) {
+        try {
+            java.util.Date d = ts.matches("\\d+") ? new java.util.Date(Long.parseLong(ts))
+                    : new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).parse(ts.replace(' ', 'T'));
+            return new java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(d);
+        } catch (Exception e) { return ""; }
     }
 
     private TextView t(String s, int sp, int color, boolean bold) {
