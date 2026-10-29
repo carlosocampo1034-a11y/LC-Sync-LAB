@@ -261,7 +261,7 @@ final class CloudApi {
             for (int i = 0; pg != null && i < pg.length(); i++) {
                 JSONObject p = pg.optJSONObject(i);
                 if ("CONFIRMADO".equals(p.optString("status"))) pagado += p.optDouble("amount");
-                pagos.put(new JSONObject().put("metodo", "TEST".equals(p.optString("method")) ? "PRUEBA" : p.optString("method"))
+                pagos.put(new JSONObject().put("metodo", "TEST".equals(p.optString("method")) ? "PRUEBA" : "CASH".equals(p.optString("method")) ? "EFECTIVO" : p.optString("method"))
                         .put("monto", p.optDouble("amount")).put("estado", p.optString("status")));
             }
             o.put("factura", new JSONObject().put("numero", f.optString("number")).put("items", its).put("descuento", descuento)

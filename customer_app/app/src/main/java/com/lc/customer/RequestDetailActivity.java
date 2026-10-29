@@ -655,7 +655,9 @@ public class RequestDetailActivity extends AppCompatActivity {
             for (int k = 0; pagos != null && k < pagos.length(); k++) {
                 JSONObject pg = pagos.optJSONObject(k);
                 String estPago = pg.optString("estado");
-                fila(fc, "Pago " + pg.optString("metodo").toLowerCase(), String.format(java.util.Locale.US, "$%.2f · ",
+                String met = pg.optString("metodo");
+                String metTxt = "EFECTIVO".equals(met) ? "Efectivo" : "PRUEBA".equals(met) ? "Tarjeta (prueba)" : "STRIPE".equals(met) ? "Tarjeta" : met;
+                fila(fc, "Método de pago", metTxt + " · " + String.format(java.util.Locale.US, "$%.2f · ",
                         pg.optDouble("monto")) + ("CONFIRMADO".equals(estPago) ? "confirmado"
                         : "RECHAZADO".equals(estPago) ? "no aceptado" : "en revisión por L&C"));
             }
@@ -684,7 +686,15 @@ public class RequestDetailActivity extends AppCompatActivity {
                 fc.addView(metodos);
                 pintarMetodos();
                 fc.addView(Ui.texto(this, "Modo de prueba: no se cobra ningún método real; el pago queda registrado como prueba.", 12, R.color.lc_sec, false));
-                Ui.boton(this, fc, "Procesar pago", true).setOnClickListener(v -> new AlertDialog.Builder(this)
+                Ui.boton(this, fc, "Procesar pago", true).setOnClickListener(v -> {
+                    if (metodoPago == 2) {   // Efectivo: lo confirma el técnico al recibir el dinero; aquí no se registra nada
+                        new AlertDialog.Builder(this)
+                                .setTitle("Pago en efectivo")
+                                .setMessage(String.format(java.util.Locale.US, "Entrega $%.2f en efectivo a tu técnico. Él confirma el cobro en su app y la factura quedará pagada; no se registra nada hasta entonces.", aPagar))
+                                .setPositiveButton("Entendido", null).show();
+                        return;
+                    }
+                    new AlertDialog.Builder(this)
                         .setTitle("Pagar (prueba)")
                         .setMessage(String.format(java.util.Locale.US, "Se registrará un pago de prueba de $%.2f.\nNo se cobra nada a tu tarjeta.", aPagar))
                         .setNegativeButton("Cancelar", null)
@@ -698,7 +708,8 @@ public class RequestDetailActivity extends AppCompatActivity {
                                         : pr.ok() ? "Pago de prueba confirmado" : pr.error(), Toast.LENGTH_LONG).show();
                                 cargar();
                             });
-                        })).show());
+                        })).show();
+                });
             } else if ("PAGADA".equals(f.optString("estado"))) {
                 fc.addView(Ui.texto(this, "✓ Pagada", 16, R.color.lc_texto, true));   // verde solo para «Completado»
             }

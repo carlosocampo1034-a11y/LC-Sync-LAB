@@ -733,6 +733,15 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "pay_failed" }) : fromRpc(data, out);
     }
 
+    // ── Pago en EFECTIVO (Orden 65): lo confirma el técnico de la orden (o despacho) cuando recibe el dinero ──────────
+    const mcash = route.match(/^\/(?:orders|jobs)\/(\d+)\/pay-cash$/);
+    if (mcash && req.method === "POST") {
+      if (!["TECHNICIAN", "ADMIN", "DISPATCHER"].includes(user.role)) return out(403, { error: "role_denied" });
+      const clave = txt((body as Record<string, unknown> | null)?.idempotencyKey, 100) || txt(req.headers.get("idempotency-key"), 100) || null;
+      const { data, error } = await db.rpc("lc_pay_cash", { p_actor: user.id, p_job: Number(mcash[1]), p_key: clave });
+      return error ? out(500, { error: "pay_failed" }) : fromRpc(data, out);
+    }
+
     // ── Cierre del trabajo: firma del cliente o negativa registrada (Orden 21). El candado de cierre vive en lc_patch_order ──
     const mcl = route.match(/^\/(?:orders|jobs)\/(\d+)\/closure$/);
     if (mcl) {
@@ -845,8 +854,8 @@ Deno.serve(async (req) => {
       const extra: Record<string, unknown> = {};
       if (user.role === "CUSTOMER") {   // lo que el cliente puede ver: estado/cita/técnico (sin notas internas ni despacho)
         const { data: h } = await db.from("job_history").select("field,new_value,created_at").eq("job_id", data.id)
-          .in("field", ["estado", "programado_para", "technician_id"]).order("id", { ascending: false }).limit(60);
-        extra.historial = (h || []).map((e) => ({ campo: e.field === "estado" ? "Estado" : e.field === "programado_para" ? "Cita" : "Técnico asignado",
+          .in("field", ["estado", "programado_para", "technician_id", "pago"]).order("id", { ascending: false }).limit(60);
+        extra.historial = (h || []).map((e) => ({ campo: e.field === "estado" ? "Estado" : e.field === "programado_para" ? "Cita" : e.field === "pago" ? "Pago" : "Técnico asignado",
           valor: e.new_value, ts: typeof e.created_at === "string" ? Date.parse(e.created_at) : e.created_at }));
         if (data.technician_id) extra.tecnico_nombre = (await nombres([data.technician_id]))[data.technician_id] ?? null;
         const { count } = await db.from("job_photos").select("id", { count: "exact", head: true }).eq("job_id", data.id);

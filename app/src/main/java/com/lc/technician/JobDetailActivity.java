@@ -729,13 +729,65 @@ public class JobDetailActivity extends AppCompatActivity {
         startActivity(i);
     }
 
-    /** «Pagado / Completado»: pago de PRUEBA (sin cobro real). El servidor exige factura emitida; si no la hay lo rechaza. */
+    /** «Pagado / Completado»: cómo se cobró. Tarjeta = pago de PRUEBA (sin cobro real); efectivo = el técnico confirma que recibió el dinero. */
     private void confirmarPagado() {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Cómo se cobró el trabajo?")
+                .setItems(new String[]{"Cobrado con tarjeta (prueba)", "Cobrado en efectivo"}, (d, which) -> {
+                    if (which == 0) confirmarPagoTarjeta(); else confirmarPagoEfectivo();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void confirmarPagoTarjeta() {
         new AlertDialog.Builder(this)
                 .setTitle("Registrar pago de prueba")
                 .setMessage("Se registra un pago de prueba (sin cobro real), la factura pasa a pagada y la orden a PAGADO. "
                         + "Requiere que la orden tenga factura emitida.")
                 .setPositiveButton("Registrar pago", (d, w) -> aplicarEstado(Job.STATUS_PAID, "Pago de prueba enviado · el servidor lo confirma al sincronizar"))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    /** Efectivo: el servidor crea el pago CASH, marca la factura PAGADA y deja el aviso al cliente. La orden sigue COMPLETADA. */
+    private void confirmarPagoEfectivo() {
+        if (!com.lc.technician.BuildConfig.CLOUD_LOGIN) {
+            Toast.makeText(this, "El pago en efectivo requiere sesión con el servidor", Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Cobrado en efectivo")
+                .setMessage("Confirma que recibiste el pago en efectivo. La factura se marca como pagada (efectivo) y el cliente lo verá en su historial.")
+                .setPositiveButton("Sí, lo recibí", (d, w) -> java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+                    String msg;
+                    boolean ok = false;
+                    try {
+                        com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
+                        java.util.Map<String, Object> cuerpo = new java.util.HashMap<>();
+                        cuerpo.put("idempotencyKey", "cash-" + job.id + "-" + java.util.UUID.randomUUID());
+                        retrofit2.Response<okhttp3.ResponseBody> r = sb.api().payCash(sb.authHeader(), job.id, cuerpo).execute();
+                        String txt = r.isSuccessful() ? (r.body() != null ? r.body().string() : "{}") : (r.errorBody() != null ? r.errorBody().string() : "{}");
+                        org.json.JSONObject o = txt.trim().startsWith("{") ? new org.json.JSONObject(txt) : new org.json.JSONObject();
+                        if (r.isSuccessful()) {
+                            ok = true;
+                            msg = (o.optBoolean("replay") ? "Esta orden ya estaba pagada" : "Pago en efectivo confirmado")
+                                    + (o.has("numero") ? " · " + o.optString("numero") : "")
+                                    + (o.has("monto") ? String.format(java.util.Locale.US, " · $%.2f", o.optDouble("monto")) : "");
+                        } else {
+                            msg = o.optString("mensaje", o.optString("error", "No se pudo registrar el pago (" + r.code() + ")"));
+                        }
+                    } catch (Exception e) {
+                        msg = "Sin conexión: el pago en efectivo no se registró; vuelve a intentarlo con red";
+                    }
+                    final String fm = msg;
+                    final boolean fok = ok;
+                    runOnUiThread(() -> {
+                        if (isFinishing()) return;
+                        Toast.makeText(this, fm, Toast.LENGTH_LONG).show();
+                        if (fok) { JobRepository.get().agregarEvento(job.id, "PAGO", "Pago en efectivo confirmado"); cargarHistorial(); }
+                    });
+                }))
                 .setNegativeButton("Cancelar", null)
                 .show();
     }

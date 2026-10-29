@@ -57,6 +57,14 @@ public interface SupabaseApi {
             @Query("select")     String selectCols,
             @Query("limit")      int    limit);
 
+    /** Pago en efectivo confirmado por el técnico (Orden 65): crea el pago CASH y marca la factura pagada. */
+    @Headers("Content-Type: application/json")
+    @POST("functions/v1/lc-api/orders/{id}/pay-cash")
+    Call<ResponseBody> payCash(
+            @Header("Authorization") String authorization,
+            @Path("id") long id,
+            @Body java.util.Map<String, Object> body);
+
     /** Perfil propio (la política profiles_read_own solo deja ver la fila del usuario con sesión; solo para el técnico). */
     @GET("rest/v1/profiles")
     Call<ResponseBody> miPerfil(
