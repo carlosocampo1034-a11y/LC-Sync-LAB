@@ -816,8 +816,8 @@ public class JobDetailActivity extends AppCompatActivity {
         int color;
         switch (e) {
             case Job.STATUS_DONE: color = 0xFF16A34A; break;
-            case Job.STATUS_EN_REPARACION: color = 0xFFE91605; break;
-            case Job.STATUS_EN_ROUTE: case Job.STATUS_ARRIVED: case Job.STATUS_AWAITING_APPROVAL: color = 0xFF0A0A0A; break;
+            case Job.STATUS_EN_REPARACION:
+            case Job.STATUS_EN_ROUTE: case Job.STATUS_ARRIVED: case Job.STATUS_AWAITING_APPROVAL: color = 0xFFE91605; break;
             default: color = 0xFF62666A;
         }
         GradientDrawable g = new GradientDrawable();
@@ -831,7 +831,12 @@ public class JobDetailActivity extends AppCompatActivity {
         cabeceraArmada = true;
         android.widget.LinearLayout header = findViewById(R.id.header);
         TextView cli = findViewById(R.id.detalleCliente);
-        if (cli != null) cli.setText("#" + job.id);
+        if (cli != null) {
+            cli.setText("#" + job.id);
+            cli.setTextSize(14f);
+            cli.setTypeface(null, android.graphics.Typeface.NORMAL);
+            cli.setTextColor(0xFF62666A);
+        }
         if (estadoView != null) estadoView.setVisibility(View.GONE);   // el estado ya va en la píldora de la cabecera
         tvBadgeEstado = new TextView(this);
         tvBadgeEstado.setTextColor(0xFFFFFFFF);
@@ -944,7 +949,32 @@ public class JobDetailActivity extends AppCompatActivity {
             maps.setOnClickListener(v -> abrirMapa(job.direccion));
             android.view.ViewGroup.MarginLayoutParams mlp = pg instanceof android.widget.LinearLayout
                     ? new android.widget.LinearLayout.LayoutParams(-1, dp(52)) : null;
-            if (mlp != null) { mlp.topMargin = dp(16); pg.addView(maps, pg.indexOfChild(eq) + 1, mlp); }
+            if (mlp != null) {
+                mlp.topMargin = dp(12);
+                pg.addView(maps, pg.indexOfChild(eq) + 1, mlp);
+                // Tarjeta de mapa: placeholder con pin hasta tener la API key de Google Maps (pendiente documentado)
+                android.widget.FrameLayout mapa = new android.widget.FrameLayout(this);
+                GradientDrawable mg = new GradientDrawable();
+                mg.setCornerRadius(dp(12));
+                mg.setColor(0xFFE8EAED);
+                mapa.setBackground(mg);
+                android.widget.ImageView pin = new android.widget.ImageView(this);
+                pin.setImageResource(R.drawable.m_pin);
+                pin.setColorFilter(0xFFE91605);
+                mapa.addView(pin, new android.widget.FrameLayout.LayoutParams(dp(40), dp(40), android.view.Gravity.CENTER));
+                TextView dir = new TextView(this);
+                dir.setText(job.direccion);
+                dir.setTextSize(12f);
+                dir.setTextColor(0xFF62666A);
+                dir.setMaxLines(1);
+                dir.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                dir.setPadding(dp(12), 0, dp(12), dp(8));
+                mapa.addView(dir, new android.widget.FrameLayout.LayoutParams(-1, -2, android.view.Gravity.BOTTOM));
+                mapa.setOnClickListener(v -> abrirMapa(job.direccion));
+                android.widget.LinearLayout.LayoutParams mpl = new android.widget.LinearLayout.LayoutParams(-1, dp(140));
+                mpl.topMargin = dp(16);
+                pg.addView(mapa, pg.indexOfChild(eq) + 1, mpl);
+            }
         }
 
         // Pestañas: Info · Fotos · Mediciones · Partes (llevan a la sección correspondiente de esta misma pantalla)

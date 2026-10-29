@@ -527,8 +527,8 @@ public class MainActivity extends AppCompatActivity {
             alcance.setPaintFlags(alcance.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             sw.setOnCheckedChangeListener(null);
             sw.setChecked(filtroMisJobs);
-            sw.setThumbTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0xFF2563EB : 0xFF9A9DA0));
-            sw.setTrackTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0x662563EB : 0x55999999));
+            sw.setThumbTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0xFFE91605 : 0xFF9A9DA0));
+            sw.setTrackTintList(android.content.res.ColorStateList.valueOf(sw.isChecked() ? 0x66E91605 : 0x55999999));
             sw.setOnCheckedChangeListener((v, on) -> {
                 filtroMisJobs = on;
                 buildChips();

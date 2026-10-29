@@ -79,10 +79,23 @@
         </LinearLayout>
 
         <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Mis trabajos de hoy"
+            android:textColor="#0A0A0A"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false" />
+
+        <TextView
             android:id="@+id/contador"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:visibility="gone" />
+            android:layout_marginTop="2dp"
+            android:textColor="#62666A"
+            android:textSize="13sp"
+            android:includeFontPadding="false" />
     </LinearLayout>
 
     <!-- Search bar row -->
@@ -162,7 +175,7 @@
             android:orientation="horizontal" />
     </HorizontalScrollView>
 
-    <!-- Fila «Solo mis trabajos»: ícono de persona, texto azul subrayado e interruptor (como la maqueta) -->
+    <!-- Fila «Solo mis trabajos»: ícono de persona, enlace rojo subrayado e interruptor rojo (orden 53) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -177,14 +190,14 @@
             android:layout_height="18dp"
             android:layout_marginEnd="8dp"
             android:src="@drawable/m_person"
-            android:tint="#2563EB" />
+            android:tint="#E91605" />
 
         <TextView
             android:id="@+id/tvAlcance"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#2563EB"
+            android:textColor="#E91605"
             android:textSize="14sp" />
 
         <Switch

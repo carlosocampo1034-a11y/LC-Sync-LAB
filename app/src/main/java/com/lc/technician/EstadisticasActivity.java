@@ -121,7 +121,7 @@ public class EstadisticasActivity extends AppCompatActivity {
             Calendar c = Calendar.getInstance();
             c.add(Calendar.DAY_OF_YEAR, -(6 - i));
             int dow = c.get(Calendar.DAY_OF_WEEK); // 1=Dom…7=Sab
-            String[] nombres = {"D", "L", "M", "M", "J", "V", "S"};
+            String[] nombres = {"Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"};
             diasLabels[i] = nombres[dow - 1];
         }
         d.labelsDias = diasLabels;
