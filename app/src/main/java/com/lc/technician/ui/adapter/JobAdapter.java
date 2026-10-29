@@ -53,8 +53,8 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
             if (bm != null) h.miniatura.setImageBitmap(bm);
         }
         String horaTxt = job.horaConFecha();
-        h.hora.setText(horaTxt);
-        if (h.iconoHora != null) h.iconoHora.setVisibility(horaTxt == null || horaTxt.isEmpty() ? View.GONE : View.VISIBLE);
+        h.hora.setText(horaTxt == null || horaTxt.trim().isEmpty() ? "Sin hora" : horaTxt);   // estructura completa aunque no haya hora
+        if (h.iconoHora != null) h.iconoHora.setVisibility(View.VISIBLE);
         h.descripcion.setText(job.descripcion);
         // Etiqueta de categoría («HVAC») desde el servidor; si aún no hay, el equipo de la orden
         String cat = com.lc.technician.sync.Listas.categoriaDe(h.itemView.getContext(), job.id);

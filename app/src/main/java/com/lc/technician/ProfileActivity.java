@@ -49,7 +49,16 @@ public class ProfileActivity extends AppCompatActivity {
         String name = prefs.getString(LoginActivity.KEY_NAME, Technician.NOMBRE);
 
         ((TextView) findViewById(R.id.tvNombre)).setText(name);
-        ((TextView) findViewById(R.id.tvSubtitulo)).setText("Técnico desde " + Technician.FECHA_INGRESO);
+        final TextView tvSub = (TextView) findViewById(R.id.tvSubtitulo);
+        if ("TECNICO".equals(rol)) {
+            // «Técnico HVAC»: la especialidad viene del perfil (profiles.specialties); sin dato, «HVAC» como respaldo
+            final String claveEsp = "esp_" + name;
+            String esp = getSharedPreferences("lc_perfil_especialidad", MODE_PRIVATE).getString(claveEsp, null);
+            tvSub.setText("Técnico " + (esp != null ? esp : "HVAC"));
+            cargarEspecialidad(tvSub, claveEsp);
+        } else {
+            tvSub.setText("Técnico desde " + Technician.FECHA_INGRESO);
+        }
 
         TextView tvRol = findViewById(R.id.tvRol);
         tvRol.setText(labelForRole(rol));
@@ -107,6 +116,48 @@ public class ProfileActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.statCompletados)).setText(String.valueOf(enCurso));
         colorearKpi(R.id.statSemana, 0xFF16A34A);     // Completados: verde
         colorearKpi(R.id.statCompletados, 0xFFF59E0B); // En curso: naranja
+    }
+
+    /** Texto de una especialidad del perfil («HVAC», «PLOMERIA»…); varias separadas por coma se unen con « · ». */
+    private static String textoEspecialidad(Object valor) {
+        java.util.List<String> partes = new java.util.ArrayList<>();
+        if (valor instanceof org.json.JSONArray) {
+            org.json.JSONArray a = (org.json.JSONArray) valor;
+            for (int i = 0; i < a.length(); i++) partes.add(a.optString(i));
+        } else if (valor instanceof String) {
+            for (String s : ((String) valor).split("[,;|]")) partes.add(s);
+        }
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String s : partes) {
+            String t = s.trim();
+            if (t.isEmpty() || out.size() >= 2) continue;
+            switch (t.toUpperCase(java.util.Locale.ROOT)) {
+                case "HVAC": out.add("HVAC"); break;
+                case "PLOMERIA": out.add("Plomería"); break;
+                case "ELECTRICIDAD": out.add("Electricidad"); break;
+                case "ELECTRODOMESTICOS": out.add("Electrodomésticos"); break;
+                default: out.add(t.substring(0, 1).toUpperCase() + t.substring(1).toLowerCase(java.util.Locale.ROOT));
+            }
+        }
+        return out.isEmpty() ? null : android.text.TextUtils.join(" · ", out);
+    }
+
+    private void cargarEspecialidad(final TextView destino, final String clave) {
+        if (!com.lc.technician.BuildConfig.CLOUD_LOGIN) return;
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                com.lc.technician.sync.SupabaseClient sb = com.lc.technician.sync.SupabaseClient.get(this);
+                if (!sb.hasUserSession()) return;
+                retrofit2.Response<okhttp3.ResponseBody> r = sb.api().miPerfil(sb.authHeader(), "specialties", 1).execute();
+                if (!r.isSuccessful() || r.body() == null) return;
+                org.json.JSONArray a = new org.json.JSONArray(r.body().string());
+                if (a.length() == 0) return;
+                final String esp = textoEspecialidad(a.getJSONObject(0).opt("specialties"));
+                if (esp == null) return;
+                getSharedPreferences("lc_perfil_especialidad", MODE_PRIVATE).edit().putString(clave, esp).apply();
+                runOnUiThread(() -> { if (!isFinishing()) destino.setText("Técnico " + esp); });
+            } catch (Exception ignored) { }
+        });
     }
 
     private void colorearKpi(int idNumero, int color) {

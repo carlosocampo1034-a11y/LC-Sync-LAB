@@ -57,6 +57,13 @@ public interface SupabaseApi {
             @Query("select")     String selectCols,
             @Query("limit")      int    limit);
 
+    /** Perfil propio (la política profiles_read_own solo deja ver la fila del usuario con sesión; solo para el técnico). */
+    @GET("rest/v1/profiles")
+    Call<ResponseBody> miPerfil(
+            @Header("Authorization") String authorization,
+            @Query("select") String selectCols,
+            @Query("limit")  int    limit);
+
     // ── lc-api (Edge Function) · variante QA ────────────────────────────────
 
     /** Cambio de una orden con versión base, dispositivo y marca del cliente (idempotente). */
