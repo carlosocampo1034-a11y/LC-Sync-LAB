@@ -251,7 +251,7 @@ public class HomeActivity extends AppCompatActivity {
         acceso(fila1, R.drawable.ic_home, 0xFF62666A, "Mis Propiedades", nProps < 0 ? "Ver y administrar" : nProps + (nProps == 1 ? " propiedad" : " propiedades"),
                 v -> startActivity(new Intent(this, PropertiesActivity.class)));
         acceso(fila1, R.drawable.ic_doc, 0xFF0A0A0A, "Mis Solicitudes", activas + (activas == 1 ? " activa" : " activas"),
-                v -> { tab = 1; filtro = 0; pintar(); });
+                v -> { tab = 1; filtro = 1; pintar(); });   // listado completo (Todas)
         // Banner de confianza: texto y categorías de la maqueta (la foto del técnico no tiene recurso todavía)
         LinearLayout banner = Ui.tarjeta(this, c);
         banner.getBackground().mutate().setTint(0xFF0A0A0A);
