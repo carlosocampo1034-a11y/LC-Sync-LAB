@@ -206,9 +206,11 @@ public class ConfiguracionActivity extends AppCompatActivity {
                 .getBoolean(KEY_SYNC_AUTO, true);  // default ON
         if (switchSyncAuto != null) {
             switchSyncAuto.setChecked(autoEnabled);
-            switchSyncAuto.setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
-            switchSyncAuto.setTrackTintList(new android.content.res.ColorStateList(
-                    new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}}, new int[]{0xFFE91605, 0xFFC4C6C8}));
+            android.graphics.drawable.StateListDrawable pistaSync = new android.graphics.drawable.StateListDrawable();
+            pistaSync.addState(new int[]{android.R.attr.state_checked}, pistaInterruptor(0xFFE91605));
+            pistaSync.addState(new int[]{}, pistaInterruptor(0xFFC4C6C8));
+            switchSyncAuto.setTrackDrawable(pistaSync);
+            switchSyncAuto.setThumbDrawable(pulgarInterruptor());
             switchSyncAuto.setOnCheckedChangeListener((btn, checked) -> {
                 getSharedPreferences(PREFS_SYNC, MODE_PRIVATE)
                     .edit().putBoolean(KEY_SYNC_AUTO, checked).apply();
@@ -1244,8 +1246,8 @@ public class ConfiguracionActivity extends AppCompatActivity {
         android.widget.Switch sw = new android.widget.Switch(this);
         sw.setChecked(activo);
         // Maqueta T4: pista roja llena con pulgar blanco cuando está activo; apagado de verdad = gris
-        sw.setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
-        sw.setTrackTintList(android.content.res.ColorStateList.valueOf(activo ? 0xFFE91605 : 0xFFC4C6C8));
+        sw.setTrackDrawable(pistaInterruptor(activo ? 0xFFE91605 : 0xFFC4C6C8));
+        sw.setThumbDrawable(pulgarInterruptor());
         if (editable) {
             sw.setClickable(false);   // el cambio real se hace en los ajustes del sistema
             f.setOnClickListener(ir);
@@ -1266,6 +1268,24 @@ public class ConfiguracionActivity extends AppCompatActivity {
             }
         }
         return null;
+    }
+
+    /** Pista redondeada de 52×30 dp con color sólido (maqueta T4: roja cuando está activo). */
+    private android.graphics.drawable.Drawable pistaInterruptor(int color) {
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(dpPx(15));
+        g.setSize(dpPx(52), dpPx(30));
+        return g;
+    }
+
+    /** Pulgar blanco circular (24 dp dentro de un cuadro de 30 dp). */
+    private android.graphics.drawable.Drawable pulgarInterruptor() {
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        g.setColor(0xFFFFFFFF);
+        g.setSize(dpPx(30), dpPx(30));
+        return new android.graphics.drawable.InsetDrawable(g, dpPx(3));
     }
 
     private int dpPx(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
