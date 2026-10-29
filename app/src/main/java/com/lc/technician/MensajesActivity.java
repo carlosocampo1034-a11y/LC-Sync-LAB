@@ -143,6 +143,8 @@ public class MensajesActivity extends AppCompatActivity {
             LinearLayout fila = new LinearLayout(this);
             fila.setOrientation(LinearLayout.HORIZONTAL);
             fila.setGravity(Gravity.CENTER_VERTICAL);
+            fila.setClipChildren(false);     // la insignia sobresale de la esquina del avatar
+            fila.setClipToPadding(false);
             fila.setBackgroundResource(R.drawable.bg_card);
             fila.setPadding(dp(14), dp(12), dp(14), dp(12));
             TextView av = t(j.cliente.substring(0, 1).toUpperCase(), 18, 0xFFFFFFFF, true);
