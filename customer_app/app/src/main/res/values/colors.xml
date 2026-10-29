@@ -1,6 +1,6 @@
 <resources>
     <color name="lc_rojo">#E91605</color>
-    <color name="lc_texto">#171717</color>
+    <color name="lc_texto">#0A0A0A</color>
     <color name="lc_sec">#62666A</color>
     <color name="lc_borde">#E5E5E5</color>
     <color name="lc_suave">#F1F2F3</color>

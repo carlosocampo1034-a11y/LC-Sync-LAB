@@ -32,6 +32,7 @@ public class HomeActivity extends AppCompatActivity {
     private final java.util.Map<Long, JSONObject> detalles = new java.util.HashMap<>();
     private String novedades = "";
     private JSONArray avisos = new JSONArray();
+    private TextView tituloAvisos;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -165,13 +166,21 @@ public class HomeActivity extends AppCompatActivity {
         hero.getBackground().mutate().setTint(getResources().getColor(R.color.lc_texto));
         hero.addView(Ui.texto(this, n.isEmpty() ? "Hola" : "Hola, " + n, 22, android.R.color.white, true));
         hero.addView(Ui.texto(this, "Revisa tus solicitudes y el estado de cada visita.", 14, android.R.color.white, false));
-        android.widget.Button sol = Ui.boton(this, c, "Solicitar servicio", true);
-        sol.setOnClickListener(v -> startActivity(new Intent(this, NewRequestActivity.class)));
-        android.widget.Button props = Ui.boton(this, c, "Mis propiedades y equipos", false);
-        props.setOnClickListener(v -> startActivity(new Intent(this, PropertiesActivity.class)));
-        android.widget.Button asist = Ui.boton(this, c, "Asistente · Assistant", false);
-        asist.setOnClickListener(v -> startActivity(new Intent(this, AsistenteActivity.class)));
-        Ui.seccion(this, c, "Avisos");
+        int activas = 0;
+        for (int i = 0; i < reqs.length(); i++) if (activa(reqs.optJSONObject(i).optString("estado"))) activas++;
+        hero.addView(Ui.texto(this, activas == 0 ? "Sin servicios activos" : activas + (activas == 1 ? " servicio activo" : " servicios activos"),
+                13, android.R.color.white, true));
+        // Accesos rápidos 2×2: las mismas acciones de antes, en tarjetas grandes
+        LinearLayout fila1 = filaAccesos(c);
+        acceso(fila1, "＋", "Solicitar servicio", true, v -> startActivity(new Intent(this, NewRequestActivity.class)));
+        acceso(fila1, "⌂", "Mis propiedades", false, v -> startActivity(new Intent(this, PropertiesActivity.class)));
+        LinearLayout fila2 = filaAccesos(c);
+        acceso(fila2, "✦", "Asistente · Assistant", false, v -> startActivity(new Intent(this, AsistenteActivity.class)));
+        final int nAvisos = avisos.length() + (novedades.isEmpty() ? 0 : 1);
+        acceso(fila2, "◔", nAvisos == 0 ? "Avisos" : "Avisos (" + nAvisos + ")", false, v -> {
+            if (tituloAvisos != null) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, tituloAvisos.getTop());
+        });
+        tituloAvisos = Ui.seccion(this, c, "Avisos");
         if (avisos.length() == 0 && novedades.isEmpty()) {
             c.addView(Ui.texto(this, "Sin avisos por ahora.", 15, R.color.lc_sec, false));
         }
@@ -189,6 +198,37 @@ public class HomeActivity extends AppCompatActivity {
         Ui.seccion(this, c, "Solicitudes activas");
         int n2 = tarjetas(c, 0);
         if (n2 == 0) c.addView(Ui.texto(this, "No tienes solicitudes activas.", 15, R.color.lc_sec, false));
+    }
+
+    private LinearLayout filaAccesos(LinearLayout dest) {
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = Ui.dp(this, 10);
+        dest.addView(f, lp);
+        return f;
+    }
+
+    /** Tarjeta de acceso rápido: ícono grande y texto; la principal va en rojo. */
+    private void acceso(LinearLayout fila, String icono, String texto, boolean principal, View.OnClickListener ir) {
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL);
+        t.setGravity(Gravity.CENTER);
+        t.setMinimumHeight(Ui.dp(this, 96));
+        t.setPadding(Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12));
+        t.setBackground(getDrawable(principal ? R.drawable.bg_boton : R.drawable.bg_card));
+        int col = principal ? android.R.color.white : R.color.lc_texto;
+        TextView i = Ui.texto(this, icono, 28, principal ? android.R.color.white : R.color.lc_rojo, true);
+        i.setGravity(Gravity.CENTER);
+        TextView x = Ui.texto(this, texto, 14, col, true);
+        x.setGravity(Gravity.CENTER);
+        t.addView(i);
+        t.addView(x);
+        t.setOnClickListener(ir);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        lp.rightMargin = Ui.dp(this, 5);
+        lp.leftMargin = Ui.dp(this, 5);
+        fila.addView(t, lp);
     }
 
     // ── Solicitudes ──────────────────────────────────────────────────────────────────────────────
@@ -318,10 +358,17 @@ public class HomeActivity extends AppCompatActivity {
         card.addView(Ui.texto(this, Api.nombre(this).isEmpty() ? "—" : Api.nombre(this), 18, R.color.lc_texto, true));
         android.widget.Button props = Ui.boton(this, c, "Mis propiedades y equipos", false);
         props.setOnClickListener(v -> startActivity(new Intent(this, PropertiesActivity.class)));
+        android.widget.Button mias = Ui.boton(this, c, "Mis solicitudes", false);
+        mias.setOnClickListener(v -> { filtro = 1; tab = 1; pintar(); });
         if (!CloudApi.activo()) {   // herramienta técnica solo en el laboratorio con servidor propio
             android.widget.Button diag = Ui.boton(this, c, "Diagnóstico de conexión", false);
             diag.setOnClickListener(v -> startActivity(new Intent(this, DiagnosticoActivity.class)));
         }
+        String ver = "";
+        try { ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) { }
+        TextView acerca = Ui.texto(this, "Acerca de · L&C Cliente " + ver, 13, R.color.lc_sec, false);
+        acerca.setPadding(0, Ui.dp(this, 14), 0, 0);
+        c.addView(acerca);
         android.widget.Button salir = Ui.boton(this, c, "Cerrar sesión", false);
         salir.setOnClickListener(v -> {
             Api.cerrarSesion(this);

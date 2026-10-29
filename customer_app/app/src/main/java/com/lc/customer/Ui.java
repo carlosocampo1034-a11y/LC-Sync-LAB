@@ -126,7 +126,7 @@ final class Ui {
         b.setTextColor(principal ? 0xFFFFFFFF : ContextCompat.getColor(a, R.color.lc_texto));
         b.setBackground(ContextCompat.getDrawable(a, principal ? R.drawable.bg_boton : R.drawable.bg_boton_sec));
         b.setStateListAnimator(null);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 54));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 52));
         lp.topMargin = dp(a, 10);
         dest.addView(b, lp);
         return b;
