@@ -44,6 +44,13 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
         h.cliente.setTextColor(sinCliente ? 0xFF62666A : 0xFF171717);
         h.direccion.setText(job.direccion);
         h.idOrden.setText("#" + job.id);
+        // Miniatura: primera foto de evidencia de la orden (dato real); sin fotos, no se muestra
+        String foto = primeraFoto(job.id);
+        if (foto != null) {
+            android.graphics.Bitmap bm = miniatura(foto);
+            if (bm != null) { h.miniatura.setImageBitmap(bm); h.miniatura.setVisibility(View.VISIBLE); }
+            else h.miniatura.setVisibility(View.GONE);
+        } else h.miniatura.setVisibility(View.GONE);
         h.hora.setText(job.horaConFecha());
         h.descripcion.setText(job.descripcion);
         boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty();
@@ -89,9 +96,43 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
 
     @Override public int getItemCount() { return jobs.size(); }
 
+    private final java.util.Map<Long, String> cacheFoto = new java.util.HashMap<>();
+    private final java.util.Map<String, android.graphics.Bitmap> cacheBmp = new java.util.HashMap<>();
+
+    private String primeraFoto(long jobId) {
+        if (cacheFoto.containsKey(jobId)) return cacheFoto.get(jobId);
+        String path = null;
+        try {
+            java.util.List<com.lc.technician.model.PhotoEntity> l = com.lc.technician.data.JobRepository.get().getPhotosForJob(jobId);
+            for (com.lc.technician.model.PhotoEntity p : l) {
+                if (p.path != null && new java.io.File(p.path).exists()) { path = p.path; break; }
+            }
+        } catch (Exception ignored) { }
+        cacheFoto.put(jobId, path);
+        return path;
+    }
+
+    private android.graphics.Bitmap miniatura(String path) {
+        android.graphics.Bitmap b = cacheBmp.get(path);
+        if (b != null) return b;
+        try {
+            android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeFile(path, o);
+            int ss = 1;
+            while (o.outWidth / (ss * 2) >= 160) ss *= 2;
+            o = new android.graphics.BitmapFactory.Options();
+            o.inSampleSize = ss;
+            b = android.graphics.BitmapFactory.decodeFile(path, o);
+            if (b != null) cacheBmp.put(path, b);
+        } catch (Exception ignored) { }
+        return b;
+    }
+
     static class VH extends RecyclerView.ViewHolder {
         final TextView cliente, direccion, hora, descripcion, estado, otroTecnico, tagEquipo, tagPrioridad, idOrden;
         final View filaTags;
+        final android.widget.ImageView miniatura;
         VH(@NonNull View v) {
             super(v);
             cliente     = v.findViewById(R.id.cliente);
@@ -104,6 +145,7 @@ public class JobAdapter extends RecyclerView.Adapter<JobAdapter.VH> {
             tagEquipo   = v.findViewById(R.id.tagEquipo);
             tagPrioridad = v.findViewById(R.id.tagPrioridad);
             filaTags    = v.findViewById(R.id.filaTags);
+            miniatura   = v.findViewById(R.id.miniatura);
         }
     }
 }

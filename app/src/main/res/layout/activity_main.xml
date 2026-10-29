@@ -196,7 +196,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/lc_border" />
+        android:background="#FFFFFF" />
 
     <!-- Job Activo card — DoorDash-style hero, visible solo cuando hay job EN CURSO -->
     <LinearLayout
