@@ -130,11 +130,11 @@ public class EquipoActivity extends AppCompatActivity {
         escaneando = Ui.texto(this, "Leyendo la etiqueta…", 14, R.color.lc_rojo, true);
         escaneando.setVisibility(View.GONE);
         cuerpo.addView(escaneando);
-        fTipo = Ui.campo(this, cuerpo, "Tipo de equipo (ej. Aire acondicionado, Nevera)", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        fMarca = Ui.campo(this, cuerpo, "Marca (opcional)", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        fModelo = Ui.campo(this, cuerpo, "Modelo (opcional)", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
-        fSerie = Ui.campo(this, cuerpo, "Número de serie (opcional)", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
-        fCapacidad = Ui.campo(this, cuerpo, "Capacidad o especificaciones (opcional)", InputType.TYPE_CLASS_TEXT);
+        fTipo = campoEtiquetado("Tipo de equipo", "Ej. Aire acondicionado, Nevera", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        fMarca = campoEtiquetado("Marca (opcional)", "Marca del fabricante", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        fModelo = campoEtiquetado("Modelo (opcional)", "Número de modelo", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        fSerie = campoEtiquetado("Número de serie (opcional)", "Número de serie", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        fCapacidad = campoEtiquetado("Capacidad o especificaciones (opcional)", "Ej. 3 TON · 36,000 BTU/H", InputType.TYPE_CLASS_TEXT);
         fTipo.setText(tipo); fMarca.setText(marca); fModelo.setText(modelo); fSerie.setText(serie); fCapacidad.setText(capacidad);
         TextView otra = Ui.texto(this, "Escanear etiqueta de nuevo", 15, R.color.lc_rojo, true);
         otra.setMinHeight(Ui.dp(this, 48));
@@ -144,6 +144,14 @@ public class EquipoActivity extends AppCompatActivity {
         guardar = Ui.boton(this, p.inferior, equipoId > 0 || equipoId < 0 ? "Guardar cambios" : "Guardar equipo", true);
         guardar.setAllCaps(false);
         guardar.setOnClickListener(v -> guardarEquipo());
+    }
+
+    /** Etiqueta fija sobre el campo: el texto no desaparece cuando el campo se llena (a mano o con el OCR). */
+    private EditText campoEtiquetado(String etiqueta, String hint, int tipo) {
+        TextView t = Ui.texto(this, etiqueta, 13, R.color.lc_sec, true);
+        t.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), 0, 0);
+        cuerpo.addView(t);
+        return Ui.campo(this, cuerpo, hint, tipo);
     }
 
     private EditText[] campos() { return new EditText[]{fTipo, fMarca, fModelo, fSerie, fCapacidad}; }
