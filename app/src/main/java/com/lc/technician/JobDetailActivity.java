@@ -857,13 +857,68 @@ public class JobDetailActivity extends AppCompatActivity {
         addAccion(acciones, R.drawable.m_nav, "GPS", v -> { if (job.direccion != null && !job.direccion.isEmpty()) abrirMapa(job.direccion); });
         addAccion(acciones, R.drawable.m_person, "Cliente", v -> irASeccion(sv, col, "CONTACTOS"));
         col.addView(acciones, 0);
+        // Bloque de datos del cliente como la maqueta: nombre, dirección con pin, teléfono con ícono y foto a la derecha
+        android.widget.LinearLayout datos = new android.widget.LinearLayout(this);
+        datos.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        datos.setPadding(0, dp(4), 0, dp(8));
+        android.widget.LinearLayout izq = new android.widget.LinearLayout(this);
+        izq.setOrientation(android.widget.LinearLayout.VERTICAL);
         TextView nombre = new TextView(this);
         nombre.setText(job.cliente);
         nombre.setTextSize(24f);
         nombre.setTypeface(null, android.graphics.Typeface.BOLD);
         nombre.setTextColor(0xFF0A0A0A);
-        nombre.setPadding(0, dp(4), 0, dp(8));
-        col.addView(nombre, 0);
+        izq.addView(nombre);
+        if (job.direccion != null && !job.direccion.isEmpty()) {
+            izq.addView(filaIcono(R.drawable.m_pin, 0xFF62666A, job.direccion, 0xFF62666A, v -> abrirMapa(job.direccion)));
+        }
+        if (job.telefono != null && !job.telefono.isEmpty()) {
+            izq.addView(filaIcono(R.drawable.m_phone, 0xFF2563EB, job.telefono, 0xFF2563EB,
+                    v -> startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + job.telefono)))));
+        }
+        datos.addView(izq, new android.widget.LinearLayout.LayoutParams(0, -2, 1f));
+        android.graphics.Bitmap fb = primeraFotoBitmap();
+        if (fb != null) {
+            android.widget.ImageView iv = new android.widget.ImageView(this);
+            iv.setImageBitmap(fb);
+            iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+            GradientDrawable ib = new GradientDrawable();
+            ib.setCornerRadius(dp(12));
+            ib.setColor(0xFFE5E5E8);
+            iv.setBackground(ib);
+            iv.setClipToOutline(true);
+            android.widget.LinearLayout.LayoutParams ip = new android.widget.LinearLayout.LayoutParams(dp(96), dp(96));
+            ip.setMarginStart(dp(12));
+            datos.addView(iv, ip);
+        }
+        col.addView(datos, 0);
+        // Lo que ya muestra el bloque de arriba (dirección, teléfono, hora, descripción) se oculta de la lista antigua;
+        // los TextView siguen existiendo para que el resto del código no cambie.
+        ocultarPar(R.id.detalleDireccion); ocultarPar(R.id.detalleTelefono); ocultarPar(R.id.detalleHora); ocultarPar(R.id.detalleDescripcion);
+        // Tarjeta «Descripción del trabajo» con etiquetas (equipo y prioridad si existen)
+        android.widget.LinearLayout desc = new android.widget.LinearLayout(this);
+        desc.setOrientation(android.widget.LinearLayout.VERTICAL);
+        desc.setBackgroundResource(R.drawable.bg_card_f5);
+        desc.setPadding(dp(16), dp(14), dp(16), dp(14));
+        TextView dt = new TextView(this);
+        dt.setText("Descripción del trabajo"); dt.setTextSize(15f); dt.setTypeface(null, android.graphics.Typeface.BOLD); dt.setTextColor(0xFF0A0A0A);
+        TextView dv = new TextView(this);
+        dv.setText(job.descripcion == null ? "" : job.descripcion); dv.setTextSize(14f); dv.setTextColor(0xFF62666A);
+        dv.setPadding(0, dp(6), 0, 0);
+        desc.addView(dt); desc.addView(dv);
+        boolean hayEq = job.equipo != null && !job.equipo.trim().isEmpty();
+        boolean hayPr = job.prioridad != null && !job.prioridad.trim().isEmpty() && !"NORMAL".equalsIgnoreCase(job.prioridad.trim());
+        if (hayEq || hayPr) {
+            android.widget.LinearLayout tg = new android.widget.LinearLayout(this);
+            tg.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            tg.setPadding(0, dp(10), 0, 0);
+            if (hayEq) tg.addView(etiqueta(job.equipo.trim(), 0xFF0A0A0A));
+            if (hayPr) tg.addView(etiqueta("Prioridad " + job.prioridad.trim().toLowerCase(java.util.Locale.ROOT), 0xFFE91605));
+            desc.addView(tg);
+        }
+        android.widget.LinearLayout.LayoutParams dlp = new android.widget.LinearLayout.LayoutParams(-1, -2);
+        dlp.topMargin = dp(8);
+        col.addView(desc, Math.min(col.getChildCount(), 3), dlp);
         View eq = findViewById(R.id.detalleDescripcion);
         if (eq != null && eq.getParent() instanceof android.view.ViewGroup && job.direccion != null && !job.direccion.isEmpty()) {
             android.view.ViewGroup pg = (android.view.ViewGroup) eq.getParent();
@@ -898,17 +953,89 @@ public class JobDetailActivity extends AppCompatActivity {
             t.setPadding(0, dp(10), 0, dp(10));
             t.setTextColor(i == 0 ? 0xFFE91605 : 0xFF62666A);
             t.setTypeface(null, i == 0 ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+            t.setBackground(subrayado(i == 0));
             t.setOnClickListener(v -> {
                 for (int k = 0; k < tabs.getChildCount(); k++) {
                     TextView o = (TextView) tabs.getChildAt(k);
                     o.setTextColor(k == idx ? 0xFFE91605 : 0xFF62666A);
                     o.setTypeface(null, k == idx ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+                    o.setBackground(subrayado(k == idx));
                 }
                 if (ancla[idx] == null) sv.smoothScrollTo(0, 0); else irASeccion(sv, col, ancla[idx]);
             });
             tabs.addView(t, new android.widget.LinearLayout.LayoutParams(0, -2, 1f));
         }
         col.addView(tabs, 2);
+    }
+
+    private android.graphics.drawable.Drawable subrayado(boolean activa) {
+        GradientDrawable linea = new GradientDrawable();
+        linea.setColor(activa ? 0xFFE91605 : 0xFFE5E5E5);
+        GradientDrawable fondo = new GradientDrawable();
+        fondo.setColor(0x00000000);
+        android.graphics.drawable.LayerDrawable ld = new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{fondo, linea});
+        ld.setLayerGravity(1, android.view.Gravity.BOTTOM);
+        ld.setLayerHeight(1, dp(activa ? 3 : 1));
+        return ld;
+    }
+
+    private View filaIcono(int icono, int colorIcono, String texto, int colorTexto, View.OnClickListener ir) {
+        android.widget.LinearLayout f = new android.widget.LinearLayout(this);
+        f.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        f.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        f.setPadding(0, dp(6), 0, dp(2));
+        android.widget.ImageView iv = new android.widget.ImageView(this);
+        iv.setImageResource(icono);
+        iv.setColorFilter(colorIcono);
+        f.addView(iv, new android.widget.LinearLayout.LayoutParams(dp(18), dp(18)));
+        TextView t = new TextView(this);
+        t.setText(texto); t.setTextSize(15f); t.setTextColor(colorTexto);
+        t.setPadding(dp(8), 0, 0, 0);
+        f.addView(t);
+        f.setOnClickListener(ir);
+        return f;
+    }
+
+    private TextView etiqueta(String texto, int color) {
+        TextView t = new TextView(this);
+        t.setText(texto); t.setTextSize(12f); t.setTypeface(null, android.graphics.Typeface.BOLD); t.setTextColor(color);
+        t.setPadding(dp(12), dp(4), dp(12), dp(4));
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(dp(14)); g.setColor(0xFFFFFFFF); g.setStroke(dp(1), 0xFFE5E5E5);
+        t.setBackground(g);
+        android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(-2, -2);
+        lp.setMarginEnd(dp(8));
+        t.setLayoutParams(lp);
+        return t;
+    }
+
+    /** Oculta una vista de la lista antigua y la etiqueta que la precede (la vista sigue existiendo). */
+    private void ocultarPar(int id) {
+        View v = findViewById(id);
+        if (v == null) return;
+        v.setVisibility(View.GONE);
+        if (v.getParent() instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v.getParent();
+            int i = g.indexOfChild(v);
+            if (i > 0) g.getChildAt(i - 1).setVisibility(View.GONE);
+        }
+    }
+
+    private android.graphics.Bitmap primeraFotoBitmap() {
+        try {
+            for (com.lc.technician.model.PhotoEntity p : JobRepository.get().getPhotosForJob(job.id)) {
+                if (p.path == null || !new java.io.File(p.path).exists()) continue;
+                android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+                o.inJustDecodeBounds = true;
+                android.graphics.BitmapFactory.decodeFile(p.path, o);
+                int ss = 1;
+                while (o.outWidth / (ss * 2) >= 240) ss *= 2;
+                o = new android.graphics.BitmapFactory.Options();
+                o.inSampleSize = ss;
+                return android.graphics.BitmapFactory.decodeFile(p.path, o);
+            }
+        } catch (Exception ignored) { }
+        return null;
     }
 
     private void addAccion(android.widget.LinearLayout fila, int icono, String texto, View.OnClickListener ir) {
@@ -1044,7 +1171,8 @@ public class JobDetailActivity extends AppCompatActivity {
         // Siguiente paso del flujo (llegué, iniciar reparación, cerrar trabajo, factura…): sigue disponible, ahora dentro de la hoja
         final String idPrincipal = idAccionPrincipal();
         final String textoPrincipal = idPrincipal == null ? "Factura" : ("COMPLETE".equals(idPrincipal) ? "Cerrar trabajo" : acc(idPrincipal).substring(0, 1) + acc(idPrincipal).substring(1).toLowerCase(java.util.Locale.ROOT));
-        {
+        final boolean yaEnLas9 = "GO_ENROUTE".equals(idPrincipal) || "COMPLETE".equals(idPrincipal);
+        if (!yaEnLas9) {
             android.widget.LinearLayout f0 = new android.widget.LinearLayout(this);
             f0.setOrientation(android.widget.LinearLayout.HORIZONTAL);
             f0.setGravity(android.view.Gravity.CENTER_VERTICAL);
