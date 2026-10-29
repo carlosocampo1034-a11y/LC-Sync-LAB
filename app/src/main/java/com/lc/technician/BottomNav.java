@@ -56,9 +56,20 @@ public final class BottomNav {
             });
             barra.addView(t);
         }
-        InsetsHelper.padBottom(barra);
+        // La barra inferior se encarga del inset de navegación: el contenido de arriba lo recibe ya descontado (sin franja doble)
+        final int base = barra.getPaddingBottom();
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(envoltura, (v, ins) -> {
+            androidx.core.graphics.Insets b = ins.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            barra.setPadding(0, barra.getPaddingTop(), 0, base + b.bottom);
+            androidx.core.view.WindowInsetsCompat resto = new androidx.core.view.WindowInsetsCompat.Builder(ins)
+                    .setInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars(),
+                            androidx.core.graphics.Insets.of(b.left, b.top, b.right, 0))
+                    .build();
+            return resto;
+        });
         envoltura.addView(barra, new LinearLayout.LayoutParams(-1, -2));
         content.addView(envoltura);
+        envoltura.requestApplyInsets();
     }
 
     private static int dp(Activity a, int v) { return Math.round(v * a.getResources().getDisplayMetrics().density); }

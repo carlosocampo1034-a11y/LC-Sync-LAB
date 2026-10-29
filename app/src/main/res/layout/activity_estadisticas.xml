@@ -262,6 +262,9 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="Completados"
+                        android:maxLines="1"
+                        android:ellipsize="none"
+                        android:includeFontPadding="false"
                         android:textColor="@color/lc_text_tertiary"
                         android:textSize="11sp"
                         android:gravity="center" />

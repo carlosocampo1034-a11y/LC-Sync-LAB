@@ -287,15 +287,12 @@ public class MainActivity extends AppCompatActivity {
         actualizarJobActivo();
     }
 
-    private void actualizarJobActivo() {
+    /** El trabajo que va en la tarjeta destacada «EN CURSO», o null si esa tarjeta no se muestra (búsqueda activa o ninguno en curso). */
+    private Job elegirActivo() {
         // Mientras se busca, la tarjeta fija dejaría sin sitio a los resultados (sobre todo con teclado)
         androidx.core.view.WindowInsetsCompat ins = androidx.core.view.ViewCompat.getRootWindowInsets(etBusqueda);
         boolean teclado = ins != null && ins.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime());
-        if ((etBusqueda.hasFocus() && teclado) || etBusqueda.getText().toString().trim().length() > 0) {
-            layoutJobActivo.setVisibility(View.GONE);
-            return;
-        }
-        Job activo = null;
+        if ((etBusqueda.hasFocus() && teclado) || etBusqueda.getText().toString().trim().length() > 0) return null;
         String myTechId = SessionManager.get(this).getTechnicianName();
         for (Job j : allJobs) {
             // la tarjeta del trabajo activo: TÉCNICO siempre filtra por su ID
@@ -304,16 +301,21 @@ public class MainActivity extends AppCompatActivity {
             if (Job.STATUS_EN_ROUTE.equals(j.estado)
                     || Job.STATUS_ARRIVED.equals(j.estado)
                     || Job.STATUS_EN_REPARACION.equals(j.estado)) {
-                activo = j;
-                break;
+                return j;
             }
         }
+        return null;
+    }
+
+    private void actualizarJobActivo() {
+        Job activo = elegirActivo();
         if (activo == null) {
             layoutJobActivo.setVisibility(View.GONE);
             return;
         }
         final Job jobActivo = activo;
         tvActivoHora.setText(jobActivo.hora != null ? jobActivo.hora : "");
+        tvActivoHora.setVisibility(jobActivo.hora == null || jobActivo.hora.isEmpty() ? View.GONE : View.VISIBLE);
         tvActivoCliente.setText(jobActivo.cliente != null ? jobActivo.cliente : "");
         tvActivoDireccion.setText(jobActivo.direccion != null ? jobActivo.direccion : "");
         tvActivoDescripcion.setText(jobActivo.descripcion != null ? jobActivo.descripcion : "");
@@ -338,6 +340,10 @@ public class MainActivity extends AppCompatActivity {
             if (!query.isEmpty() && !pasaBusqueda(j, query)) continue;
             displayedJobs.add(j);
         }
+
+        // La orden destacada en «EN CURSO» no se repite en la lista
+        final Job destacado = elegirActivo();
+        if (destacado != null) displayedJobs.removeIf(j -> j.id == destacado.id);
 
         ordenar(displayedJobs);
 
