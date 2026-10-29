@@ -20,6 +20,8 @@
         <activity android:name=".PropertiesActivity" android:exported="false" />
         <activity android:name=".NewRequestActivity" android:exported="false" />
         <activity android:name=".RequestDetailActivity" android:exported="false" />
+        <activity android:name=".ProposalActivity" android:exported="false" />
+        <activity android:name=".PaymentActivity" android:exported="false" />
         <activity android:name=".PdfViewerActivity" android:exported="false" />
         <activity android:name=".FotoActivity" android:exported="false" />
         <activity android:name=".AsistenteActivity" android:exported="false" />

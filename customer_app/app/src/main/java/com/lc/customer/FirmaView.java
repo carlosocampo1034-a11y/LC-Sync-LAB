@@ -39,6 +39,8 @@ public class FirmaView extends View {
 
     boolean vacia() { return vacia; }
 
+    void limpiar() { trazo.reset(); vacia = true; invalidate(); }
+
     String pngBase64() {
         Bitmap b = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(b);

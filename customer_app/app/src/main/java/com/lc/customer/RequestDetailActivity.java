@@ -36,8 +36,6 @@ public class RequestDetailActivity extends AppCompatActivity {
     };
     private androidx.activity.result.ActivityResultLauncher<String> elegirFoto;
     private View secFotos, secEstado, secPropuesta;
-    private int metodoPago = 0;                       // 0 Tarjeta (prueba) · 1 Efectivo (solo informativo: lo confirma el técnico)
-    private TextView[] chipsMetodo;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -540,15 +538,7 @@ public class RequestDetailActivity extends AppCompatActivity {
             if (secPropuesta == null) secPropuesta = secP;
             LinearLayout pc = Ui.tarjeta(this, c);
             JSONArray ops = pr.optJSONArray("opciones");
-            for (int k = 0; ops != null && k < ops.length(); k++) {
-                JSONObject o = ops.optJSONObject(k);
-                fila(pc, etiquetaOpcion(ops, o.optString("nivel")) + " — " + o.optString("titulo"),
-                        (o.optString("descripcion").isEmpty() ? "" : o.optString("descripcion") + "\n")
-                        + detalle(o, "equipoPropuesto", "Equipo propuesto") + detalle(o, "especificaciones", "Especificaciones")
-                        + detalle(o, "garantia", "Garantía")
-                        + String.format(java.util.Locale.US, "Precio: $%.2f", o.optDouble("total")));
-                desglose(pc, o);
-            }
+            fila(pc, "Opciones", ops == null ? "" : ops.length() + (ops.length() == 1 ? " opción" : " opciones"));
             fila(pc, "Estado", estadoPropuesta(estP));
             if ("APROBADA".equals(estP)) {
                 fila(pc, "Aprobada", etiquetaOpcion(ops, pr.optString("opcionElegida")) + " · "
@@ -558,9 +548,13 @@ public class RequestDetailActivity extends AppCompatActivity {
                 fila(pc, "Rechazada", Ui.fecha(pr.optLong("decidedAt")));
             } else if ("PENDIENTE".equals(estP)) {
                 fila(pc, "Vence", Ui.fecha(pr.optLong("expiresAt")));
-                final JSONObject prf = pr;
-                Ui.boton(this, pc, "Aprobar y firmar", true).setOnClickListener(v -> decidirPropuesta(prf));
             }
+            // C10: la propuesta (opciones, firma, aprobar/rechazar) vive en su propia pantalla
+            Ui.boton(this, pc, "Ver propuesta", "PENDIENTE".equals(estP)).setOnClickListener(v -> {
+                android.content.Intent it = new android.content.Intent(this, ProposalActivity.class);
+                it.putExtra("id", id);
+                startActivity(it);
+            });
         }
 
         // Aprobación adicional: la factura difiere de la propuesta aprobada (nunca se ajusta sola)
@@ -667,49 +661,11 @@ public class RequestDetailActivity extends AppCompatActivity {
                 for (int q = 0; props != null && q < props.length(); q++) if ("APROBADA".equals(props.optJSONObject(q).optString("estado"))) aprobada = true;
                 if (aprobada) fc.addView(Ui.texto(this, "✓ Propuesta aprobada", 15, R.color.lc_ok, true));
                 filaMonto(fc, "Total a pagar", aPagar, true);
-                fc.addView(Ui.texto(this, "Método de pago", 13, R.color.lc_sec, true));
-                LinearLayout metodos = new LinearLayout(this);
-                metodos.setOrientation(LinearLayout.HORIZONTAL);
-                // Solo métodos con respaldo real (orden 54): tarjeta de prueba y efectivo. Zelle y «Otro» no existen en el backend.
-                String[] mn = {"Tarjeta", "Efectivo"};
-                chipsMetodo = new TextView[2];
-                for (int q = 0; q < 2; q++) {
-                    final int mi = q;
-                    TextView chip = Ui.texto(this, mn[q], 13, R.color.lc_texto, true);
-                    chip.setGravity(Gravity.CENTER);
-                    chip.setMinHeight(Ui.dp(this, 40));
-                    chipsMetodo[q] = chip;
-                    chip.setOnClickListener(v -> { metodoPago = mi; pintarMetodos(); });
-                    LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(0, -2, 1f);
-                    mlp.rightMargin = Ui.dp(this, 6);
-                    metodos.addView(chip, mlp);
-                }
-                fc.addView(metodos);
-                pintarMetodos();
-                fc.addView(Ui.texto(this, "Modo de prueba: no se cobra ningún método real; el pago queda registrado como prueba.", 12, R.color.lc_sec, false));
-                Ui.boton(this, fc, "Procesar pago", true).setOnClickListener(v -> {
-                    if (metodoPago == 1) {   // Efectivo: lo confirma el técnico al recibir el dinero; aquí no se registra nada
-                        new AlertDialog.Builder(this)
-                                .setTitle("Pago en efectivo")
-                                .setMessage(String.format(java.util.Locale.US, "Entrega $%.2f en efectivo a tu técnico. Él confirma el cobro en su app y la factura quedará pagada; no se registra nada hasta entonces.", aPagar))
-                                .setPositiveButton("Entendido", null).show();
-                        return;
-                    }
-                    new AlertDialog.Builder(this)
-                        .setTitle("Pagar (prueba)")
-                        .setMessage(String.format(java.util.Locale.US, "Se registrará un pago de prueba de $%.2f.\nNo se cobra nada a tu tarjeta.", aPagar))
-                        .setNegativeButton("Cancelar", null)
-                        .setPositiveButton("Pagar (prueba)", (d, w) -> Executors.newSingleThreadExecutor().execute(() -> {
-                            JSONObject cuerpoPago = new JSONObject();
-                            try { cuerpoPago.put("idempotencyKey", "pago-" + java.util.UUID.randomUUID()); } catch (Exception ignored) { }   // un id por intento: no cobra dos veces
-                            Api.Respuesta pr = Api.post(this, "/customer/requests/" + id + "/pay-test", cuerpoPago);
-                            final boolean enCola = pr.codigo == 202 && pr.cuerpo != null && pr.cuerpo.optBoolean("enCola");
-                            runOnUiThread(() -> {
-                                Toast.makeText(this, enCola ? "Sin conexión por ahora: tu pago quedó guardado y se enviará solo al volver la red."
-                                        : pr.ok() ? "Pago de prueba confirmado" : pr.error(), Toast.LENGTH_LONG).show();
-                                cargar();
-                            });
-                        })).show();
+                // C11: el cobro (método y confirmación) vive en su propia pantalla
+                Ui.boton(this, fc, "Pagar", true).setOnClickListener(v -> {
+                    android.content.Intent it = new android.content.Intent(this, PaymentActivity.class);
+                    it.putExtra("id", id);
+                    startActivity(it);
                 });
             } else if ("PAGADA".equals(f.optString("estado"))) {
                 fc.addView(Ui.texto(this, "✓ Pagada", 16, R.color.lc_texto, true));   // verde solo para «Completado»
@@ -734,18 +690,6 @@ public class RequestDetailActivity extends AppCompatActivity {
             } else if ("Técnico asignado".equals(e.optString("campo"))) valor = "Asignado";
             c.addView(Ui.texto(this, Ui.fecha(e.optLong("ts")) + " · " + e.optString("campo") + ": " + valor, 14,
                     R.color.lc_texto, false));
-        }
-    }
-
-    private void pintarMetodos() {
-        if (chipsMetodo == null) return;
-        for (int q = 0; q < chipsMetodo.length; q++) {
-            boolean on = q == metodoPago;
-            GradientDrawable g = new GradientDrawable();
-            g.setCornerRadius(Ui.dp(this, 10));
-            g.setColor(0xFFFFFFFF);
-            g.setStroke(Ui.dp(this, on ? 2 : 1), ContextCompat.getColor(this, on ? R.color.lc_rojo : R.color.lc_borde));
-            chipsMetodo[q].setBackground(g);
         }
     }
 
@@ -806,70 +750,6 @@ public class RequestDetailActivity extends AppCompatActivity {
     private static String detalle(JSONObject o, String clave, String etiqueta) {
         String v = o.optString(clave, "").trim();
         return v.isEmpty() ? "" : etiqueta + ": " + v + "\n";
-    }
-
-    /** Elegir opción + nombre + firma (aprobar) o rechazar. Se envía el sha de la versión que se está viendo. */
-    private void decidirPropuesta(JSONObject pr) {
-        LinearLayout f = new LinearLayout(this);
-        f.setOrientation(LinearLayout.VERTICAL);
-        f.setPadding(Ui.dp(this, 20), 0, Ui.dp(this, 20), 0);
-        android.widget.RadioGroup grupo = new android.widget.RadioGroup(this);
-        JSONArray ops = pr.optJSONArray("opciones");
-        for (int k = 0; ops != null && k < ops.length(); k++) {
-            JSONObject o = ops.optJSONObject(k);
-            android.widget.RadioButton rb = new android.widget.RadioButton(this);
-            rb.setText(etiquetaOpcion(ops, o.optString("nivel")) + " — " + o.optString("titulo")
-                    + String.format(java.util.Locale.US, " · $%.2f", o.optDouble("total")));
-            rb.setTag(o.optString("nivel"));
-            rb.setId(android.view.View.generateViewId());
-            grupo.addView(rb);
-        }
-        f.addView(grupo);
-        EditText nombre = Ui.campo(this, f, "Tu nombre completo",
-                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        f.addView(Ui.texto(this, "Firma aquí:", 14, R.color.lc_sec, false));
-        FirmaView firma = new FirmaView(this);
-        f.addView(firma, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 160)));
-        AlertDialog d = new AlertDialog.Builder(this).setTitle("Propuesta · versión " + pr.optInt("revision")).setView(f)
-                .setPositiveButton("Aprobar y firmar", null).setNegativeButton("Rechazar", null).setNeutralButton("Cerrar", null)
-                .create();
-        d.setOnShowListener(x -> {
-            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-                android.view.View sel = grupo.findViewById(grupo.getCheckedRadioButtonId());
-                if (sel == null) { Toast.makeText(this, "Elige una opción", Toast.LENGTH_SHORT).show(); return; }
-                if (nombre.getText().toString().trim().length() < 3) { nombre.setError("Escribe tu nombre"); return; }
-                if (firma.vacia()) { Toast.makeText(this, "Falta tu firma", Toast.LENGTH_SHORT).show(); return; }
-                enviarDecision(d, pr, "APROBADA", (String) sel.getTag(), nombre.getText().toString().trim(), firma.pngBase64());
-            });
-            d.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v ->
-                    enviarDecision(d, pr, "RECHAZADA", null, nombre.getText().toString().trim(), null));
-        });
-        d.show();
-    }
-
-    private void enviarDecision(AlertDialog d, JSONObject pr, String decision, String opcion, String firmante, String png) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("decision", decision).put("firmante", firmante).put("contenidoSha256", pr.optString("contenidoSha256"));
-            if (opcion != null) body.put("opcion", opcion);
-            if (png != null) body.put("firmaPngBase64", png);
-        } catch (Exception ignored) {}
-        Executors.newSingleThreadExecutor().execute(() -> {
-            Api.Respuesta r = Api.post(this, "/customer/proposals/" + pr.optLong("id") + "/decide", body);
-            runOnUiThread(() -> {
-                if (r.codigo == 202 && r.cuerpo != null && r.cuerpo.optBoolean("enCola")) {
-                    d.dismiss();
-                    Toast.makeText(this, "Sin conexión por ahora: tu decisión quedó guardada y se enviará sola al volver la red.", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                if (r.ok()) { d.dismiss(); cargar(); }
-                else {
-                    // p. ej. 409: el técnico cambió la propuesta → se recarga para ver la versión nueva
-                    Toast.makeText(this, r.error(), Toast.LENGTH_LONG).show();
-                    if (r.codigo == 409) { d.dismiss(); cargar(); }
-                }
-            });
-        });
     }
 
     private void decidirVariacion(JSONObject va) {

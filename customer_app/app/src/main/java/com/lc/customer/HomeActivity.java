@@ -398,6 +398,13 @@ public class HomeActivity extends AppCompatActivity {
             String estado = j.optString("estado");
             boolean asignado = !j.optString("tecnicoNombre").isEmpty() && !"null".equals(j.optString("tecnicoNombre"));
             LinearLayout card = Ui.tarjeta(this, dest);
+            // Maqueta C7: tarjeta blanca con sombra sutil (no gris claro)
+            GradientDrawable fondoCard = new GradientDrawable();
+            fondoCard.setColor(0xFFFFFFFF);
+            fondoCard.setCornerRadius(Ui.dp(this, 16));
+            fondoCard.setStroke(Ui.dp(this, 1), 0xFFEDEDF0);
+            card.setBackground(fondoCard);
+            card.setElevation(Ui.dp(this, 3));
             // Fila 1: insignia de estado · #ID a su derecha · fecha/hora arriba a la derecha
             LinearLayout cab = new LinearLayout(this);
             cab.setOrientation(LinearLayout.HORIZONTAL);

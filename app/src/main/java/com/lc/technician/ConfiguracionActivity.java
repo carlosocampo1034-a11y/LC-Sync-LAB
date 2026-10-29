@@ -206,6 +206,9 @@ public class ConfiguracionActivity extends AppCompatActivity {
                 .getBoolean(KEY_SYNC_AUTO, true);  // default ON
         if (switchSyncAuto != null) {
             switchSyncAuto.setChecked(autoEnabled);
+            switchSyncAuto.setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
+            switchSyncAuto.setTrackTintList(new android.content.res.ColorStateList(
+                    new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}}, new int[]{0xFFE91605, 0xFFC4C6C8}));
             switchSyncAuto.setOnCheckedChangeListener((btn, checked) -> {
                 getSharedPreferences(PREFS_SYNC, MODE_PRIVATE)
                     .edit().putBoolean(KEY_SYNC_AUTO, checked).apply();
@@ -1240,8 +1243,9 @@ public class ConfiguracionActivity extends AppCompatActivity {
         f.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
         android.widget.Switch sw = new android.widget.Switch(this);
         sw.setChecked(activo);
-        sw.setThumbTintList(android.content.res.ColorStateList.valueOf(activo ? 0xFFE91605 : 0xFF9A9DA0));
-        sw.setTrackTintList(android.content.res.ColorStateList.valueOf(activo ? 0x66E91605 : 0x55999999));
+        // Maqueta T4: pista roja llena con pulgar blanco cuando está activo; apagado de verdad = gris
+        sw.setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
+        sw.setTrackTintList(android.content.res.ColorStateList.valueOf(activo ? 0xFFE91605 : 0xFFC4C6C8));
         if (editable) {
             sw.setClickable(false);   // el cambio real se hace en los ajustes del sistema
             f.setOnClickListener(ir);
