@@ -399,7 +399,7 @@ public class JobDetailActivity extends AppCompatActivity {
         botonPrincipal.setOnClickListener(v -> accionPrincipal());
 
         // ── «Más acciones»: acciones secundarias de cada estado (una sola acción principal por pantalla) ────
-        botonSecundario.setOnClickListener(v -> mostrarMasAcciones());
+        botonSecundario.setOnClickListener(v -> mostrarCambiarEstado());
         botonSecundario2.setVisibility(View.GONE);
 
         ((ImageView) findViewById(R.id.btnAtras)).setOnClickListener(v -> finish());
@@ -784,7 +784,8 @@ public class JobDetailActivity extends AppCompatActivity {
             setBotonPrincipal(bg, "FACTURA", 0xFFE91605, btnFactura != null);   // trabajo completado: la factura es lo siguiente
         }
         // «Más acciones» agrupa todo lo demás (acciones de excepción y utilidades) en un solo botón
-        botonSecundario.setText("MÁS ACCIONES");
+        botonSecundario.setText("CAMBIAR ESTADO  ▴");
+        actualizarBadgeEstado();
         botonSecundario.setVisibility(View.VISIBLE);
     }
 
@@ -794,6 +795,218 @@ public class JobDetailActivity extends AppCompatActivity {
         String estado = job.estado != null ? job.estado : "";
         if (id == null) { if (btnFactura != null) btnFactura.performClick(); return; }
         manejarOpcionMenu(estado, id);
+    }
+
+    // ── Diseño premium: cabecera #ID + badge, acciones rápidas, pestañas y hoja «Cambiar estado» ──────────────────────
+
+    private TextView tvBadgeEstado;
+    private boolean cabeceraArmada;
+
+    private void actualizarBadgeEstado() {
+        armarCabeceraPremium();
+        if (tvBadgeEstado == null) return;
+        String e = job.estado != null ? job.estado : "";
+        tvBadgeEstado.setText(com.lc.technician.sync.Listas.etiqueta(this, "order_states.list", e, e));
+        int color;
+        switch (e) {
+            case Job.STATUS_DONE: color = 0xFF16A34A; break;
+            case Job.STATUS_EN_REPARACION: color = 0xFFE91605; break;
+            case Job.STATUS_EN_ROUTE: case Job.STATUS_ARRIVED: case Job.STATUS_AWAITING_APPROVAL: color = 0xFF0A0A0A; break;
+            default: color = 0xFF62666A;
+        }
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(40f);
+        g.setColor(color);
+        tvBadgeEstado.setBackground(g);
+    }
+
+    private void armarCabeceraPremium() {
+        if (cabeceraArmada) return;
+        cabeceraArmada = true;
+        android.widget.LinearLayout header = findViewById(R.id.header);
+        TextView cli = findViewById(R.id.detalleCliente);
+        if (cli != null) cli.setText("#" + job.id + "  " + job.cliente);
+        tvBadgeEstado = new TextView(this);
+        tvBadgeEstado.setTextColor(0xFFFFFFFF);
+        tvBadgeEstado.setTextSize(12f);
+        tvBadgeEstado.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvBadgeEstado.setPadding(dp(12), dp(5), dp(12), dp(5));
+        header.addView(tvBadgeEstado);
+
+        final android.widget.ScrollView sv = encontrarScroll(findViewById(android.R.id.content));
+        if (sv == null || !(sv.getChildAt(0) instanceof android.widget.LinearLayout)) return;
+        final android.widget.LinearLayout col = (android.widget.LinearLayout) sv.getChildAt(0);
+
+        // Acciones rápidas: Llamar · Mensajes · GPS · Cliente
+        android.widget.LinearLayout acciones = new android.widget.LinearLayout(this);
+        acciones.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        acciones.setPadding(0, dp(4), 0, dp(8));
+        addAccion(acciones, "☎", "Llamar", v -> {
+            if (job.telefono != null && !job.telefono.isEmpty())
+                startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + job.telefono)));
+        });
+        addAccion(acciones, "✉", "Mensajes", v -> startActivity(new Intent(this, ChatActivity.class)
+                .putExtra("job", job.id).putExtra("cliente", job.cliente)));
+        addAccion(acciones, "➤", "GPS", v -> { if (job.direccion != null && !job.direccion.isEmpty()) abrirMapa(job.direccion); });
+        addAccion(acciones, "☺", "Cliente", v -> irASeccion(sv, col, "CONTACTOS"));
+        col.addView(acciones, 0);
+
+        // Pestañas: Info · Fotos · Mediciones · Partes (llevan a la sección correspondiente de esta misma pantalla)
+        android.widget.LinearLayout tabs = new android.widget.LinearLayout(this);
+        tabs.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        String[] nombres = {"Info", "Fotos", "Mediciones", "Partes"};
+        final String[] ancla = {null, "EVIDENCIAS FOTOGRÁFICAS", "INSPECCIÓN TÉCNICA", "REPUESTOS USADOS"};
+        for (int i = 0; i < 4; i++) {
+            final int idx = i;
+            TextView t = new TextView(this);
+            t.setText(nombres[i]);
+            t.setGravity(android.view.Gravity.CENTER);
+            t.setTextSize(14f);
+            t.setPadding(0, dp(10), 0, dp(10));
+            t.setTextColor(i == 0 ? 0xFFE91605 : 0xFF62666A);
+            t.setTypeface(null, i == 0 ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+            t.setOnClickListener(v -> {
+                for (int k = 0; k < tabs.getChildCount(); k++) {
+                    TextView o = (TextView) tabs.getChildAt(k);
+                    o.setTextColor(k == idx ? 0xFFE91605 : 0xFF62666A);
+                    o.setTypeface(null, k == idx ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+                }
+                if (ancla[idx] == null) sv.smoothScrollTo(0, 0); else irASeccion(sv, col, ancla[idx]);
+            });
+            tabs.addView(t, new android.widget.LinearLayout.LayoutParams(0, -2, 1f));
+        }
+        col.addView(tabs, 1);
+    }
+
+    private void addAccion(android.widget.LinearLayout fila, String icono, String texto, View.OnClickListener ir) {
+        android.widget.LinearLayout b = new android.widget.LinearLayout(this);
+        b.setOrientation(android.widget.LinearLayout.VERTICAL);
+        b.setGravity(android.view.Gravity.CENTER);
+        b.setPadding(0, dp(10), 0, dp(10));
+        b.setBackgroundResource(R.drawable.bg_surface);
+        TextView i = new TextView(this);
+        i.setText(icono); i.setTextSize(20f); i.setGravity(android.view.Gravity.CENTER); i.setTextColor(0xFFE91605);
+        TextView t = new TextView(this);
+        t.setText(texto); t.setTextSize(12f); t.setGravity(android.view.Gravity.CENTER); t.setTextColor(0xFF0A0A0A);
+        b.addView(i); b.addView(t);
+        b.setOnClickListener(ir);
+        android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(0, -2, 1f);
+        lp.setMargins(dp(4), 0, dp(4), 0);
+        fila.addView(b, lp);
+    }
+
+    private void irASeccion(final android.widget.ScrollView sv, final android.widget.LinearLayout col, String titulo) {
+        View v = buscarTexto(col, titulo);
+        if (v == null) return;
+        int y = 0;
+        View cur = v;
+        while (cur != null && cur != col) { y += cur.getTop(); cur = (View) cur.getParent(); }
+        sv.smoothScrollTo(0, Math.max(0, y - dp(8)));
+    }
+
+    private View buscarTexto(View v, String t) {
+        if (v instanceof TextView && t.equals(((TextView) v).getText().toString())) return v;
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                View r = buscarTexto(g.getChildAt(i), t);
+                if (r != null) return r;
+            }
+        }
+        return null;
+    }
+
+    private android.widget.ScrollView encontrarScroll(View v) {
+        if (v instanceof android.widget.ScrollView) return (android.widget.ScrollView) v;
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                android.widget.ScrollView r = encontrarScroll(g.getChildAt(i));
+                if (r != null) return r;
+            }
+        }
+        return null;
+    }
+
+    private int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
+
+    /** Hoja inferior «Cambiar estado del trabajo» con las 9 opciones. Las opciones sin función real quedan atenuadas. */
+    private void mostrarCambiarEstado() {
+        final String estado = job.estado != null ? job.estado : "";
+        final boolean abierta = !Job.STATUS_DONE.equals(estado);
+        final android.app.Dialog dlg = new android.app.Dialog(this);
+        dlg.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        android.widget.LinearLayout hoja = new android.widget.LinearLayout(this);
+        hoja.setOrientation(android.widget.LinearLayout.VERTICAL);
+        hoja.setPadding(dp(20), dp(16), dp(20), dp(20));
+        GradientDrawable fondo = new GradientDrawable();
+        fondo.setColor(0xFFFFFFFF);
+        fondo.setCornerRadii(new float[]{dp(20), dp(20), dp(20), dp(20), 0, 0, 0, 0});
+        hoja.setBackground(fondo);
+        TextView titulo = new TextView(this);
+        titulo.setText("Cambiar estado del trabajo");
+        titulo.setTextSize(18f); titulo.setTypeface(null, android.graphics.Typeface.BOLD); titulo.setTextColor(0xFF0A0A0A);
+        titulo.setPadding(0, 0, 0, dp(8));
+        hoja.addView(titulo);
+        android.widget.ScrollView cuerpo = new android.widget.ScrollView(this);
+        android.widget.LinearLayout filas = new android.widget.LinearLayout(this);
+        filas.setOrientation(android.widget.LinearLayout.VERTICAL);
+        cuerpo.addView(filas);
+        hoja.addView(cuerpo, new android.widget.LinearLayout.LayoutParams(-1, -2));
+        final boolean pend = Job.STATUS_PENDING.equals(estado), rep = Job.STATUS_EN_REPARACION.equals(estado);
+        Object[][] op = {
+            {"En camino", "Voy al trabajo", 0xFF2563EB, pend, "GO_ENROUTE"},
+            {"Completar", "Trabajo terminado (sin pago)", 0xFF16A34A, rep, "COMPLETE"},
+            {"Pagado / Completado", "Trabajo terminado y pagado", 0xFF16A34A, false, "—"},
+            {"Requiere Gerente", "Necesita revisión de gerente", 0xFFF59E0B, abierta, "#GERENTE"},
+            {"Necesita Repuesto", "Esperando parte", 0xFF7C3AED, rep, "PART_HOLD"},
+            {"Repuesto Pre-cargado", "Parte ya asignada", 0xFF7C3AED, abierta, "#PRECARGADO"},
+            {"Cliente No Está", "Cliente no disponible en la dirección", 0xFFF59E0B, abierta, "NO_ACCESS"},
+            {"Cancelar", "Trabajo cancelado", 0xFFE91605, abierta, "CLIENT_CANCELLED"},
+            {"Nueva Orden", "Crear nueva orden desde este cliente", 0xFF62666A, abierta, "NEED_ORDER"}};
+        for (final Object[] o : op) {
+            final boolean on = (Boolean) o[3];
+            android.widget.LinearLayout f = new android.widget.LinearLayout(this);
+            f.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            f.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            f.setPadding(0, dp(10), 0, dp(10));
+            f.setAlpha(on ? 1f : 0.4f);
+            TextView pto = new TextView(this);
+            pto.setText("●"); pto.setTextSize(26f); pto.setTextColor((Integer) o[2]);
+            pto.setPadding(0, 0, dp(14), 0);
+            f.addView(pto);
+            android.widget.LinearLayout t = new android.widget.LinearLayout(this);
+            t.setOrientation(android.widget.LinearLayout.VERTICAL);
+            TextView a = new TextView(this);
+            a.setText((String) o[0]); a.setTextSize(16f); a.setTypeface(null, android.graphics.Typeface.BOLD); a.setTextColor(0xFF0A0A0A);
+            TextView b = new TextView(this);
+            b.setText(on || !"—".equals(o[4]) ? (String) o[1] : "Disponible cuando haya cobro en sitio");
+            b.setTextSize(13f); b.setTextColor(0xFF62666A);
+            t.addView(a); t.addView(b);
+            f.addView(t);
+            if (on) f.setOnClickListener(v -> {
+                dlg.dismiss();
+                String id = (String) o[4];
+                if ("#GERENTE".equals(id)) registrarNota("Técnico solicitó revisión de gerente");
+                else if ("#PRECARGADO".equals(id)) registrarNota("Repuesto pre-cargado: parte ya asignada");
+                else manejarOpcionMenu(estado, id);
+            });
+            filas.addView(f);
+        }
+        TextView mas = new TextView(this);
+        mas.setText("Más opciones del trabajo…");
+        mas.setTextSize(14f); mas.setTextColor(0xFFE91605); mas.setTypeface(null, android.graphics.Typeface.BOLD);
+        mas.setPadding(0, dp(14), 0, dp(4));
+        mas.setOnClickListener(v -> { dlg.dismiss(); mostrarMasAcciones(); });
+        filas.addView(mas);
+        dlg.setContentView(hoja);
+        android.view.Window w = dlg.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
+            w.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(android.view.Gravity.BOTTOM);
+        }
+        dlg.show();
     }
 
     private void mostrarMasAcciones() {
