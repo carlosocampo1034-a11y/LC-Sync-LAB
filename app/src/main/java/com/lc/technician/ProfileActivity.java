@@ -124,6 +124,32 @@ public class ProfileActivity extends AppCompatActivity {
         }
         // ADMIN: ve todo incluyendo Técnicos
 
+        // Rutas ya cubiertas por la barra inferior y el engranaje: se ocultan (las pantallas siguen existiendo)
+        setVisible(R.id.menuEstadisticas, -1, false);
+        setVisible(R.id.menuConfiguracion, -1, false);
+        // Notificaciones y Acerca de (reales): ajustes de notificaciones del sistema y versión instalada
+        View cerrarRef = findViewById(R.id.menuCerrarSesion);
+        if (cerrarRef != null && cerrarRef.getParent() instanceof android.view.ViewGroup) {
+            android.view.ViewGroup box = (android.view.ViewGroup) cerrarRef.getParent();
+            int pos = box.indexOfChild(cerrarRef);
+            View notif = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+            ((ImageView) notif.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_bell);
+            ((TextView) notif.findViewById(R.id.menuLabel)).setText("Notificaciones");
+            notif.setOnClickListener(v -> startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())));
+            View acerca = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+            ((ImageView) acerca.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_doc);
+            ((TextView) acerca.findViewById(R.id.menuLabel)).setText("Acerca de");
+            acerca.setOnClickListener(v -> {
+                String ver = "";
+                try { ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) { }
+                new android.app.AlertDialog.Builder(this).setTitle("L&C Technician")
+                        .setMessage("Versión " + ver + "\nL&C Home Services").setPositiveButton("Cerrar", null).show();
+            });
+            box.addView(notif, pos);
+            box.addView(acerca, pos + 1);
+        }
+
         // Cerrar sesión
         View cerrar = findViewById(R.id.menuCerrarSesion);
         ((ImageView) cerrar.findViewById(R.id.menuIcon)).setImageResource(R.drawable.ic_menu_logout);

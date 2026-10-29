@@ -325,7 +325,14 @@ public class EstadisticasActivity extends AppCompatActivity {
                 android.view.ViewGroup g = (android.view.ViewGroup) num.getParent();
                 for (int q = 0; q < g.getChildCount(); q++) {
                     View c = g.getChildAt(q);
-                    if (c != num && c instanceof TextView) ((TextView) c).setText(nom[k]);
+                    if (c != num && c instanceof TextView) {
+                        TextView tv = (TextView) c;
+                        tv.setText(nom[k]);
+                        tv.setMaxLines(1);
+                        tv.setSingleLine(true);
+                        tv.setTextSize(11f);
+                        tv.setEllipsize(null);
+                    }
                 }
             }
         }
@@ -737,6 +744,7 @@ public class EstadisticasActivity extends AppCompatActivity {
             }
         }
         agregarKpisPrincipales(col);
+        col.setPadding(col.getPaddingLeft(), col.getPaddingTop(), col.getPaddingRight(), Math.round(120 * getResources().getDisplayMetrics().density));
         if (primero < 0) return;
         primero++;   // la tarjeta de KPIs se insertó arriba
         final android.widget.TextView btn = new android.widget.TextView(this);

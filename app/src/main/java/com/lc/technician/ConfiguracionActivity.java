@@ -1142,6 +1142,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
         for (final String[] g : grupos) {
             final LinearLayout cuerpo = new LinearLayout(this);
             cuerpo.setOrientation(LinearLayout.VERTICAL);
+            if ("OPERACIÓN".equals(g[0])) cuerpo.addView(tarjetaPreferencias());
             for (int k = 1; k < g.length; k++) {
                 java.util.List<View> l = trozos.get(g[k]);
                 if (l != null) for (View v : l) cuerpo.addView(v);
@@ -1183,6 +1184,63 @@ public class ConfiguracionActivity extends AppCompatActivity {
             col.addView(cab, lcab);
             col.addView(cuerpo);
         }
+    }
+
+    /** Preferencias de la maqueta con estado REAL: permisos del sistema y protección offline (esta última no se puede apagar). */
+    private View tarjetaPreferencias() {
+        final LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(R.drawable.bg_card_f5);
+        card.setPadding(dpPx(16), dpPx(8), dpPx(16), dpPx(8));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dpPx(12);
+        card.setLayoutParams(lp);
+        boolean notif = androidx.core.app.NotificationManagerCompat.from(this).areNotificationsEnabled();
+        boolean gps = androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED
+                || androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        boolean cam = androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        int pend = PrivacidadLocal.pendientesSinSubir(this);
+        card.addView(filaPref("Notificaciones", "Se cambian en los ajustes del sistema", notif, true, v ->
+                startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName()))));
+        card.addView(filaPref("GPS y mapas", gps ? "Ubicación permitida" : "Ubicación no permitida · el mapa abre igual con la dirección", gps, true, v -> abrirAjustesApp()));
+        card.addView(filaPref("Captura de fotos", cam ? "Cámara permitida" : "Cámara no permitida · la galería sigue disponible", cam, true, v -> abrirAjustesApp()));
+        card.addView(filaPref("Guardado offline (8 seg)", pend == 0 ? "Siempre activo · sin pendientes de subir" : "Siempre activo · " + pend + " pendiente(s) de subir", true, false, null));
+        return card;
+    }
+
+    private void abrirAjustesApp() {
+        startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + getPackageName())));
+    }
+
+    private View filaPref(String titulo, String detalle, boolean activo, boolean editable, View.OnClickListener ir) {
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.HORIZONTAL);
+        f.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        f.setPadding(0, dpPx(10), 0, dpPx(10));
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL);
+        TextView a = new TextView(this);
+        a.setText(titulo); a.setTextSize(16f); a.setTextColor(0xFF0A0A0A);
+        TextView b = new TextView(this);
+        b.setText(detalle); b.setTextSize(12f); b.setTextColor(0xFF62666A);
+        t.addView(a); t.addView(b);
+        f.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        android.widget.Switch sw = new android.widget.Switch(this);
+        sw.setChecked(activo);
+        sw.setThumbTintList(android.content.res.ColorStateList.valueOf(activo ? 0xFFE91605 : 0xFF9A9DA0));
+        sw.setTrackTintList(android.content.res.ColorStateList.valueOf(activo ? 0x66E91605 : 0x55999999));
+        if (editable) {
+            sw.setClickable(false);   // el cambio real se hace en los ajustes del sistema
+            f.setOnClickListener(ir);
+        } else {
+            sw.setEnabled(false);
+        }
+        f.addView(sw);
+        return f;
     }
 
     private android.widget.ScrollView encontrarScroll(View v) {

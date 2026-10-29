@@ -895,6 +895,14 @@ public class JobDetailActivity extends AppCompatActivity {
         // Lo que ya muestra el bloque de arriba (dirección, teléfono, hora, descripción) se oculta de la lista antigua;
         // los TextView siguen existiendo para que el resto del código no cambie.
         ocultarPar(R.id.detalleDireccion); ocultarPar(R.id.detalleTelefono); ocultarPar(R.id.detalleHora); ocultarPar(R.id.detalleDescripcion);
+        // Equipo y encabezado «INFORMACIÓN DEL TRABAJO» ya no tienen contenido propio aquí: se ocultan si el equipo está vacío
+        View tituloInfo = buscarTexto(col, "INFORMACIÓN DEL TRABAJO");
+        if (tituloInfo != null) tituloInfo.setVisibility(View.GONE);
+        if (job.equipo == null || job.equipo.trim().isEmpty()) ocultarPar(R.id.detalleEquipo);
+        else {
+            TextView eqv = findViewById(R.id.detalleEquipo);
+            if (eqv != null) eqv.setText(job.equipo);
+        }
         // Tarjeta «Descripción del trabajo» con etiquetas (equipo y prioridad si existen)
         android.widget.LinearLayout desc = new android.widget.LinearLayout(this);
         desc.setOrientation(android.widget.LinearLayout.VERTICAL);

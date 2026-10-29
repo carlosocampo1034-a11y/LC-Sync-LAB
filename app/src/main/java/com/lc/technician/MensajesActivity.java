@@ -28,6 +28,7 @@ public class MensajesActivity extends AppCompatActivity {
     private LinearLayout lista;
     private final List<Job> jobs = new ArrayList<>();
     private String filtro = "";
+    private int pestana = 0;   // 0 Todos · 1 Cliente · 2 Despacho
     private java.util.Map<Long, String[]> ultimosCache = new java.util.HashMap<>();
 
     @Override
@@ -39,6 +40,22 @@ public class MensajesActivity extends AppCompatActivity {
         TextView titulo = t("Mensajes", 28, 0xFF0A0A0A, true);
         titulo.setPadding(dp(20), dp(24), dp(20), dp(12));
         raiz.addView(titulo);
+        final LinearLayout chips = new LinearLayout(this);
+        chips.setOrientation(LinearLayout.HORIZONTAL);
+        chips.setPadding(dp(16), 0, dp(16), dp(8));
+        final String[] pn = {"Todos", "Cliente", "Despacho"};
+        for (int i = 0; i < 3; i++) {
+            final int idx = i;
+            TextView c = t(pn[i], 13, 0xFF0A0A0A, false);
+            c.setPadding(dp(16), dp(8), dp(16), dp(8));
+            c.setTag("tab");
+            c.setOnClickListener(v -> { pestana = idx; pintarTabs(chips); pintar(ultimosCache); });
+            LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(-2, -2);
+            cl.setMarginEnd(dp(8));
+            chips.addView(c, cl);
+        }
+        pintarTabs(chips);
+        raiz.addView(chips);
         android.widget.EditText buscar = new android.widget.EditText(this);
         buscar.setHint("Buscar mensajes…");
         buscar.setSingleLine(true);
@@ -82,13 +99,31 @@ public class MensajesActivity extends AppCompatActivity {
                     JSONArray a = new JSONArray(r.body().string());
                     if (a.length() == 0) continue;
                     JSONObject m = a.getJSONObject(a.length() - 1);
+                    boolean hayDespacho = false;
+                    for (int q = 0; q < a.length(); q++) {
+                        JSONObject mq = a.getJSONObject(q);
+                        if (!mq.optBoolean("propio") && "L&C".equals(mq.optString("de"))) hayDespacho = true;
+                    }
                     int sinResponder = 0;
                     for (int q = a.length() - 1; q >= 0 && !a.getJSONObject(q).optBoolean("propio"); q--) sinResponder++;
-                    ultimos.put(j.id, new String[]{m.optString("texto"), m.optBoolean("propio") ? "1" : "0", String.valueOf(sinResponder), horaMensaje(m.optString("ts"))});
+                    ultimos.put(j.id, new String[]{m.optString("texto"), m.optBoolean("propio") ? "1" : "0", String.valueOf(sinResponder), horaMensaje(m.optString("ts")), hayDespacho ? "1" : "0", "CLIENTE".equals(m.optString("de")) ? "1" : "0"});
                 } catch (Exception ignored) { }
             }
             runOnUiThread(() -> { if (!isFinishing()) pintar(ultimos); });
         });
+    }
+
+    private void pintarTabs(LinearLayout chips) {
+        for (int i = 0; i < chips.getChildCount(); i++) {
+            TextView c = (TextView) chips.getChildAt(i);
+            boolean a = i == pestana;
+            android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+            g.setCornerRadius(dp(20));
+            g.setColor(a ? 0xFFE91605 : 0xFFF5F5F7);
+            c.setBackground(g);
+            c.setTextColor(a ? 0xFFFFFFFF : 0xFF0A0A0A);
+            c.setTypeface(null, a ? Typeface.BOLD : Typeface.NORMAL);
+        }
     }
 
     private void pintar(java.util.Map<Long, String[]> ultimos) {
@@ -101,6 +136,9 @@ public class MensajesActivity extends AppCompatActivity {
             return;
         }
         for (final Job j : jobs) {
+            String[] uu = ultimos.get(j.id);
+            if (pestana == 1 && !(uu == null || "1".equals(uu[5]) || "0".equals(uu[4]))) continue;   // Cliente: conversaciones con el cliente
+            if (pestana == 2 && !(uu != null && "1".equals(uu[4]))) continue;                        // Despacho: hubo mensajes de L&C
             if (!filtro.isEmpty() && !(j.cliente + " " + j.descripcion).toLowerCase(java.util.Locale.ROOT).contains(filtro)) continue;
             LinearLayout fila = new LinearLayout(this);
             fila.setOrientation(LinearLayout.HORIZONTAL);
