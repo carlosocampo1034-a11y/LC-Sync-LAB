@@ -417,7 +417,7 @@ public class NewRequestActivity extends AppCompatActivity {
             filaFotos.addView(iv, lp);
         }
         if (fotos.size() < MAX_FOTOS) {
-            TextView mas = Ui.texto(this, "+\nAgregar foto", 12, R.color.lc_rojo, true);
+            TextView mas = Ui.texto(this, "+\nAgregar\nfoto", 12, R.color.lc_rojo, true);
             mas.setGravity(Gravity.CENTER);
             GradientDrawable bg = new GradientDrawable();
             bg.setCornerRadius(Ui.dp(this, 12));
