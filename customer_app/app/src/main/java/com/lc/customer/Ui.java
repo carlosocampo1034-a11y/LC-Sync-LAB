@@ -154,7 +154,7 @@ final class Ui {
         b.setBackground(ContextCompat.getDrawable(a, R.drawable.bg_badge).mutate());
         int color;
         switch (idEstado == null ? "" : idEstado) {
-            case "COMPLETADO": color = R.color.lc_ok; break;
+            case "COMPLETADO": case "PAGADO": color = R.color.lc_ok; break;
             case "EN REPARACIÓN": color = R.color.lc_rojo; break;
             case "EN RUTA": case "LLEGUÉ": case "ESPERANDO APROBACIÓN": color = R.color.lc_texto; break;
             default: color = R.color.lc_sec;          // pendiente, pausado, falta repuesto, cancelado
@@ -162,6 +162,50 @@ final class Ui {
         b.getBackground().setTint(ContextCompat.getColor(a, color));
         b.setPadding(dp(a, 8), dp(a, 3), dp(a, 8), dp(a, 3));
         return b;
+    }
+
+    /** Línea de tiempo vertical: cada etapa es {texto, done|current|todo}. */
+    static void lineaTiempo(Activity a, LinearLayout card, java.util.List<String[]> etapas) {
+        for (int k = 0; k < etapas.size(); k++) {
+            String[] e = etapas.get(k);
+            boolean ultima = k == etapas.size() - 1;
+            LinearLayout fila = new LinearLayout(a);
+            fila.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout col = new LinearLayout(a);
+            col.setOrientation(LinearLayout.VERTICAL);
+            col.setGravity(Gravity.CENTER_HORIZONTAL);
+            TextView punto = texto(a, "done".equals(e[1]) ? "✓" : "", 12, android.R.color.white, true);
+            punto.setGravity(Gravity.CENTER);
+            android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+            g.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            if ("done".equals(e[1])) g.setColor(ContextCompat.getColor(a, R.color.lc_ok));
+            else if ("current".equals(e[1])) g.setColor(ContextCompat.getColor(a, R.color.lc_rojo));
+            else { g.setColor(0xFFFFFFFF); g.setStroke(dp(a, 2), ContextCompat.getColor(a, R.color.lc_borde)); }
+            punto.setBackground(g);
+            col.addView(punto, new LinearLayout.LayoutParams(dp(a, 22), dp(a, 22)));
+            if (!ultima) {
+                View linea = new View(a);
+                linea.setBackgroundColor(ContextCompat.getColor(a, "done".equals(e[1]) ? R.color.lc_ok : R.color.lc_borde));
+                col.addView(linea, new LinearLayout.LayoutParams(dp(a, 2), dp(a, 22)));
+            }
+            fila.addView(col, new LinearLayout.LayoutParams(dp(a, 28), ViewGroup.LayoutParams.WRAP_CONTENT));
+            TextView t = texto(a, e[0], 15, "todo".equals(e[1]) ? R.color.lc_sec : R.color.lc_texto, !"todo".equals(e[1]));
+            t.setPadding(dp(a, 8), dp(a, 1), 0, 0);
+            fila.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            card.addView(fila);
+        }
+    }
+
+    /** Soporte de L&C: llamar o escribir (contacto publicado en el sitio de L&C). */
+    static void dialogoSoporte(Activity a) {
+        new androidx.appcompat.app.AlertDialog.Builder(a)
+                .setTitle("Soporte L&C")
+                .setItems(new String[]{"Llamar · 786-922-7383", "Escribir un correo"}, (d, which) -> {
+                    if (which == 0) a.startActivity(new android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:+17869227383")));
+                    else a.startActivity(new android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:Carlosocampo1034@gmail.com"))
+                            .putExtra(android.content.Intent.EXTRA_SUBJECT, "Soporte L&C Cliente"));
+                })
+                .setNegativeButton("Cerrar", null).show();
     }
 
     /** Texto legible para el cliente a partir del estado interno (lista editable order_states.list). */

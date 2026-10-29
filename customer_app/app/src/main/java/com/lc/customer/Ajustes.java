@@ -127,7 +127,9 @@ final class Ajustes {
             {"PENDIENTE", "Pendiente", "Recibida"}, {"EN RUTA", "En ruta", "Tu técnico va en camino"}, {"LLEGUÉ", "Llegué", "Técnico en el lugar"},
             {"EN REPARACIÓN", "En reparación", "En reparación"}, {"ESPERANDO APROBACIÓN", "Esperando aprobación", "Esperando tu aprobación"},
             {"PART HOLD", "Falta repuesto", "Esperando repuesto"}, {"PAUSADO", "Pausado", "Pausada"},
-            {"COMPLETADO", "Completado", "Trabajo completado"}, {"CANCELADO", "Cancelado", "Cancelada"}};
+            {"COMPLETADO", "Completado", "Trabajo completado"}, {"CANCELADO", "Cancelado", "Cancelada"},
+            {"PAGADO", "Pagado", "Pagado"}, {"REQUIERE GERENTE", "Requiere gerente", "En revisión"},
+            {"REPUESTO PRECARGADO", "Repuesto pre-cargado", "Repuesto asignado"}, {"CLIENTE NO ESTÁ", "Cliente no está", "No pudimos atenderte"}};
 
     /** Texto del estado para el cliente (editable en Control → Listas editables → Estados de la orden). */
     static String estadoCliente(Context c, String estado) {

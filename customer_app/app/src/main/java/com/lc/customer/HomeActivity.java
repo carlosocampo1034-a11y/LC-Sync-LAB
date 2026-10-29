@@ -2,9 +2,11 @@ package com.lc.customer;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -26,7 +28,8 @@ public class HomeActivity extends AppCompatActivity {
     private Ui.Pantalla p;
     private final TextView[] botones = new TextView[4];
     private int tab = 0;
-    private int filtro = 0;                       // 0 activas · 1 todas · 2 completadas
+    private int filtro = 1;                       // 0 en curso · 1 todas · 2 completadas
+    private int nProps = -1;                      // -1 = aún sin saber
     private JSONArray reqs = null;                // null = aún sin datos
     private String errorCarga = null;
     private final java.util.Map<Long, JSONObject> detalles = new java.util.HashMap<>();
@@ -37,7 +40,8 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
-        if (b != null) { tab = b.getInt("tab", 0); filtro = b.getInt("filtro", 0); }
+        if (b != null) { tab = b.getInt("tab", 0); filtro = b.getInt("filtro", 1); }
+        else aplicarExtras(getIntent());
         p = Ui.pantalla(this, "Mi hogar", Api.nombre(this).isEmpty() ? null : Api.nombre(this), false);
         p.inferior.setPadding(0, 0, 0, 0);
         View linea = new View(this);
@@ -56,6 +60,20 @@ public class HomeActivity extends AppCompatActivity {
         }
         p.inferior.addView(barra);
         pintar();
+    }
+
+    private void aplicarExtras(Intent it) {
+        if (it == null) return;
+        if (it.hasExtra("tab")) tab = Math.max(0, Math.min(3, it.getIntExtra("tab", 0)));
+        if (it.hasExtra("filtro")) filtro = Math.max(0, Math.min(2, it.getIntExtra("filtro", 1)));
+    }
+
+    @Override
+    protected void onNewIntent(Intent it) {
+        super.onNewIntent(it);
+        setIntent(it);
+        aplicarExtras(it);
+        if (p != null) pintar();
     }
 
     @Override
@@ -103,11 +121,14 @@ public class HomeActivity extends AppCompatActivity {
                 Api.Respuesta d = Api.get(this, "/customer/requests/" + j.optLong("id"));
                 if (d.ok()) det.put(j.optLong("id"), d.cuerpo);
             }
+            Api.Respuesta pr = Api.get(this, "/customer/properties");
+            final int cuentaProps = pr.ok() && pr.cuerpo.optJSONArray("properties") != null ? pr.cuerpo.optJSONArray("properties").length() : -1;
             Api.Respuesta av = Api.get(this, "/customer/notifications");
             JSONArray avl = av.ok() ? av.cuerpo.optJSONArray("avisos") : null;
             runOnUiThread(() -> {
                 if (isFinishing()) return;
                 if (avl != null) avisos = avl;
+                if (cuentaProps >= 0) nProps = cuentaProps;
                 if (r.ok()) { reqs = lista == null ? new JSONArray() : lista; errorCarga = null; calcularNovedades(); }
                 else errorCarga = r.error();
                 detalles.clear();
@@ -117,7 +138,7 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    private static boolean activa(String e) { return !"COMPLETADO".equals(e) && !"CANCELADO".equals(e); }
+    private static boolean activa(String e) { return !"COMPLETADO".equals(e) && !"CANCELADO".equals(e) && !"PAGADO".equals(e); }
 
     /** Avisos: cambios de estado desde la última visita (el push FCM los complementa cuando existe). */
     private void calcularNovedades() {
@@ -142,6 +163,7 @@ public class HomeActivity extends AppCompatActivity {
         for (int i = 0; i < 4; i++) {
             botones[i].setTextColor(getResources().getColor(i == tab ? R.color.lc_rojo : R.color.lc_sec));
         }
+        armarCabecera();
         p.contenido.removeAllViews();
         if (tab == 3) { pintarPerfil(); return; }
         if (reqs == null) {
@@ -157,27 +179,82 @@ public class HomeActivity extends AppCompatActivity {
         else pintarSeguimiento();
     }
 
+    /** Inicio: logo L&C como la maqueta; las demás pestañas llevan su título. */
+    private void armarCabecera() {
+        p.cabecera.removeAllViews();
+        if (tab == 0) {
+            LinearLayout fila = new LinearLayout(this);
+            fila.setOrientation(LinearLayout.HORIZONTAL);
+            fila.setGravity(Gravity.CENTER_VERTICAL);
+            ImageView logo = new ImageView(this);
+            logo.setImageResource(R.drawable.ic_launcher);
+            logo.setContentDescription("L&C");
+            fila.addView(logo, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
+            LinearLayout tx = new LinearLayout(this);
+            tx.setOrientation(LinearLayout.VERTICAL);
+            tx.addView(Ui.texto(this, "L&C", 26, R.color.lc_texto, true));
+            tx.addView(Ui.texto(this, "HOME SERVICES", 11, R.color.lc_sec, true));
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-2, -2);
+            tlp.leftMargin = Ui.dp(this, 10);
+            fila.addView(tx, tlp);
+            p.cabecera.addView(fila);
+        } else {
+            String[] t = {"", "Mis solicitudes", "Seguimiento", "Perfil"};
+            p.cabecera.addView(Ui.texto(this, t[tab], 28, R.color.lc_texto, true));
+        }
+    }
+
     // ── Inicio ───────────────────────────────────────────────────────────────────────────────────
 
     private void pintarInicio() {
         LinearLayout c = p.contenido;
         String n = primerNombre(Api.nombre(this));
+        int activas = 0;
+        for (int i = 0; i < reqs.length(); i++) if (activa(reqs.optJSONObject(i).optString("estado"))) activas++;
         LinearLayout hero = Ui.tarjeta(this, c);
         hero.getBackground().mutate().setTint(getResources().getColor(R.color.lc_texto));
         hero.addView(Ui.texto(this, n.isEmpty() ? "Hola" : "Hola, " + n, 22, android.R.color.white, true));
-        hero.addView(Ui.texto(this, "Revisa tus solicitudes y el estado de cada visita.", 14, android.R.color.white, false));
-        int activas = 0;
-        for (int i = 0; i < reqs.length(); i++) if (activa(reqs.optJSONObject(i).optString("estado"))) activas++;
+        hero.addView(Ui.texto(this, "¿En qué podemos ayudarte hoy?", 14, android.R.color.white, false));
         hero.addView(Ui.texto(this, activas == 0 ? "Sin servicios activos" : activas + (activas == 1 ? " servicio activo" : " servicios activos"),
                 13, android.R.color.white, true));
-        // Accesos rápidos 2×2: las mismas acciones de antes, en tarjetas grandes
+        android.widget.Button solicitar = Ui.boton(this, c, "+  Solicitar servicio", true);
+        solicitar.setAllCaps(false);
+        solicitar.setOnClickListener(v -> startActivity(new Intent(this, NewRequestActivity.class)));
         LinearLayout fila1 = filaAccesos(c);
-        acceso(fila1, "＋", "Solicitar servicio", true, v -> startActivity(new Intent(this, NewRequestActivity.class)));
-        acceso(fila1, "⌂", "Mis propiedades", false, v -> startActivity(new Intent(this, PropertiesActivity.class)));
+        acceso(fila1, R.drawable.ic_home, "Mis propiedades", nProps < 0 ? "Ver y administrar" : nProps + (nProps == 1 ? " propiedad" : " propiedades"),
+                v -> startActivity(new Intent(this, PropertiesActivity.class)));
+        acceso(fila1, R.drawable.ic_list, "Mis solicitudes", activas + (activas == 1 ? " activa" : " activas"),
+                v -> { tab = 1; filtro = 0; pintar(); });
+        // Banner de confianza con las categorías
+        LinearLayout banner = Ui.tarjeta(this, c);
+        banner.addView(Ui.texto(this, "Servicio confiable para tu hogar", 16, R.color.lc_texto, true));
+        LinearLayout iconos = new LinearLayout(this);
+        iconos.setOrientation(LinearLayout.HORIZONTAL);
+        iconos.setPadding(0, Ui.dp(this, 10), 0, 0);
+        int[] ic = {R.drawable.ic_cat_hvac, R.drawable.ic_cat_plomeria, R.drawable.ic_cat_electricidad, R.drawable.ic_cat_electro};
+        String[] nm = {"A/C", "Plomería", "Electricidad", "Electrodomésticos"};
+        for (int k = 0; k < 4; k++) {
+            LinearLayout celda = new LinearLayout(this);
+            celda.setOrientation(LinearLayout.VERTICAL);
+            celda.setGravity(Gravity.CENTER_HORIZONTAL);
+            ImageView iv = new ImageView(this);
+            iv.setImageResource(ic[k]);
+            celda.addView(iv, new LinearLayout.LayoutParams(Ui.dp(this, 28), Ui.dp(this, 28)));
+            TextView t = Ui.texto(this, nm[k], 11, R.color.lc_sec, true);
+            t.setGravity(Gravity.CENTER);
+            celda.addView(t);
+            iconos.addView(celda, new LinearLayout.LayoutParams(0, -2, 1f));
+        }
+        banner.addView(iconos);
+        // Asistente · Ofertas · Avisos
         LinearLayout fila2 = filaAccesos(c);
-        acceso(fila2, "✦", "Asistente · Assistant", false, v -> startActivity(new Intent(this, AsistenteActivity.class)));
+        acceso(fila2, R.drawable.ic_assistant, "Asistente IA", null, v -> startActivity(new Intent(this, AsistenteActivity.class)));
+        acceso(fila2, R.drawable.ic_offer, "Ofertas", null, v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Ofertas")
+                .setMessage("Aquí verás las ofertas y promociones de L&C cuando estén disponibles.")
+                .setPositiveButton("Entendido", null).show());
         final int nAvisos = avisos.length() + (novedades.isEmpty() ? 0 : 1);
-        acceso(fila2, "◔", nAvisos == 0 ? "Avisos" : "Avisos (" + nAvisos + ")", false, v -> {
+        acceso(fila2, R.drawable.ic_bell, nAvisos == 0 ? "Avisos" : "Avisos (" + nAvisos + ")", null, v -> {
             if (tituloAvisos != null) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, tituloAvisos.getTop());
         });
         tituloAvisos = Ui.seccion(this, c, "Avisos");
@@ -209,21 +286,26 @@ public class HomeActivity extends AppCompatActivity {
         return f;
     }
 
-    /** Tarjeta de acceso rápido: ícono grande y texto; la principal va en rojo. */
-    private void acceso(LinearLayout fila, String icono, String texto, boolean principal, View.OnClickListener ir) {
+    /** Tarjeta de acceso rápido: ícono vectorial, título y, si hay, subtítulo. */
+    private void acceso(LinearLayout fila, int icono, String texto, String sub, View.OnClickListener ir) {
         LinearLayout t = new LinearLayout(this);
         t.setOrientation(LinearLayout.VERTICAL);
         t.setGravity(Gravity.CENTER);
         t.setMinimumHeight(Ui.dp(this, 96));
         t.setPadding(Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12));
-        t.setBackground(getDrawable(principal ? R.drawable.bg_boton : R.drawable.bg_card));
-        int col = principal ? android.R.color.white : R.color.lc_texto;
-        TextView i = Ui.texto(this, icono, 28, principal ? android.R.color.white : R.color.lc_rojo, true);
-        i.setGravity(Gravity.CENTER);
-        TextView x = Ui.texto(this, texto, 14, col, true);
+        t.setBackground(getDrawable(R.drawable.bg_card));
+        ImageView i = new ImageView(this);
+        i.setImageResource(icono);
+        t.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 28), Ui.dp(this, 28)));
+        TextView x = Ui.texto(this, texto, 14, R.color.lc_texto, true);
         x.setGravity(Gravity.CENTER);
-        t.addView(i);
+        x.setPadding(0, Ui.dp(this, 6), 0, 0);
         t.addView(x);
+        if (sub != null) {
+            TextView y = Ui.texto(this, sub, 12, R.color.lc_sec, false);
+            y.setGravity(Gravity.CENTER);
+            t.addView(y);
+        }
         t.setOnClickListener(ir);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
         lp.rightMargin = Ui.dp(this, 5);
@@ -237,14 +319,16 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout c = p.contenido;
         LinearLayout fila = new LinearLayout(this);
         fila.setOrientation(LinearLayout.HORIZONTAL);
-        String[] nombres = {"Activas", "Todas", "Completadas"};
+        String[] nombres = {"Todas", "En curso", "Completadas"};
+        int[] modo = {1, 0, 2};   // cada chip → filtro (0 en curso · 1 todas · 2 completadas)
         for (int i = 0; i < 3; i++) {
-            final int idx = i;
-            TextView t = Ui.texto(this, nombres[i], 14, i == filtro ? android.R.color.white : R.color.lc_texto, true);
+            final int m = modo[i];
+            boolean on = filtro == m;
+            TextView t = Ui.texto(this, nombres[i], 14, on ? android.R.color.white : R.color.lc_texto, true);
             t.setGravity(Gravity.CENTER);
             t.setMinHeight(Ui.dp(this, 44));
-            t.setBackgroundResource(i == filtro ? R.drawable.bg_boton : R.drawable.bg_boton_sec);
-            t.setOnClickListener(v -> { filtro = idx; pintar(); });
+            t.setBackgroundResource(on ? R.drawable.bg_boton : R.drawable.bg_boton_sec);
+            t.setOnClickListener(v -> { filtro = m; pintar(); });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             lp.rightMargin = Ui.dp(this, 6);
             fila.addView(t, lp);
@@ -253,6 +337,13 @@ public class HomeActivity extends AppCompatActivity {
         if (tarjetas(c, filtro) == 0) {
             c.addView(Ui.texto(this, "No hay solicitudes en esta lista.", 15, R.color.lc_sec, false));
         }
+    }
+
+    private String etiquetaCategoria(String id) {
+        for (Ajustes.Opcion o : Ajustes.lista(this, "categories.list", Ajustes.CATEGORIAS, true)) {
+            if (o.id.equals(id)) return o.label;
+        }
+        return id == null || id.isEmpty() || "null".equals(id) ? "Servicio" : id;
     }
 
     /** modo 0 activas · 1 todas · 2 completadas/canceladas. Devuelve cuántas dibujó. */
@@ -264,19 +355,38 @@ public class HomeActivity extends AppCompatActivity {
             if ((modo == 0 && !act) || (modo == 2 && act)) continue;
             n++;
             LinearLayout card = Ui.tarjeta(this, dest);
+            // estado a la izquierda · #ID y fecha a la derecha
             LinearLayout cab = new LinearLayout(this);
             cab.setOrientation(LinearLayout.HORIZONTAL);
-            cab.addView(Ui.texto(this, "Nº " + j.optLong("id"), 16, R.color.lc_texto, true),
-                    new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-            cab.addView(Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado")).toUpperCase()));
-            card.addView(cab);
-            TextView d = Ui.texto(this, limpiarDescripcion(j.optString("descripcion")), 15, R.color.lc_texto, false);
-            d.setPadding(0, Ui.dp(this, 6), 0, 0);
-            card.addView(d);
+            cab.setGravity(Gravity.CENTER_VERTICAL);
+            cab.addView(Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado"))));
+            View espacio = new View(this);
+            cab.addView(espacio, new LinearLayout.LayoutParams(0, 1, 1f));
             long cita = j.optLong("programadoPara", 0);
-            String citaTxt = cita > 0 ? "Cita: " + Ui.fecha(cita) : act ? "Cita por confirmar" : "";
+            cab.addView(Ui.texto(this, "#" + j.optLong("id") + (cita > 0 ? " · " + Ui.fecha(cita) : ""), 12, R.color.lc_sec, false));
+            card.addView(cab);
+            TextView cat = Ui.texto(this, etiquetaCategoria(j.optString("categoria")), 16, R.color.lc_texto, true);
+            cat.setPadding(0, Ui.dp(this, 8), 0, 0);
+            card.addView(cat);
             String dir = j.optString("direccion");
-            card.addView(Ui.texto(this, citaTxt + (citaTxt.isEmpty() || dir.isEmpty() ? "" : " · ") + dir, 13, R.color.lc_sec, false));
+            if (!dir.isEmpty() && !"null".equals(dir)) {
+                LinearLayout fd = new LinearLayout(this);
+                fd.setOrientation(LinearLayout.HORIZONTAL);
+                fd.setGravity(Gravity.CENTER_VERTICAL);
+                ImageView pin = new ImageView(this);
+                pin.setImageResource(R.drawable.ic_pin);
+                pin.setColorFilter(0xFF62666A);
+                fd.addView(pin, new LinearLayout.LayoutParams(Ui.dp(this, 16), Ui.dp(this, 16)));
+                TextView td = Ui.texto(this, dir, 13, R.color.lc_sec, false);
+                td.setPadding(Ui.dp(this, 6), 0, 0, 0);
+                fd.addView(td);
+                card.addView(fd);
+            }
+            TextView d = Ui.texto(this, limpiarDescripcion(j.optString("descripcion")), 14, R.color.lc_texto, false);
+            d.setPadding(0, Ui.dp(this, 6), 0, 0);
+            d.setMaxLines(2);
+            d.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            card.addView(d);
             final long jid = j.optLong("id");
             card.setOnClickListener(v -> {
                 Intent it = new Intent(this, RequestDetailActivity.class);
@@ -303,23 +413,75 @@ public class HomeActivity extends AppCompatActivity {
             if (!activa(j.optString("estado"))) continue;
             n++;
             JSONObject d = detalles.containsKey(j.optLong("id")) ? detalles.get(j.optLong("id")) : j;
-            Ui.seccion(this, c, "Nº " + j.optLong("id") + " · " + limpiarDescripcion(j.optString("descripcion")));
-            LinearLayout card = Ui.tarjeta(this, c);
-            for (String[] e : etapas(d)) {
-                boolean hecho = "1".equals(e[1]);
-                TextView t = Ui.texto(this, (hecho ? "✓  " : "○  ") + e[0], 15,
-                        hecho ? R.color.lc_texto : R.color.lc_sec, hecho);
-                t.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
-                card.addView(t);
-            }
             final long jid = j.optLong("id");
-            card.setOnClickListener(v -> {
-                Intent it = new Intent(this, RequestDetailActivity.class);
-                it.putExtra("id", jid);
-                startActivity(it);
-            });
+            Ui.seccion(this, c, "Solicitud #" + jid);
+            c.addView(Ui.texto(this, limpiarDescripcion(j.optString("descripcion")), 14, R.color.lc_sec, false));
+            LinearLayout card = Ui.tarjeta(this, c);
+            List<String[]> etapas = lineaTiempo(d);
+            Ui.lineaTiempo(this, card, etapas);
+            String tec = d.optString("tecnicoNombre");
+            if (!tec.isEmpty() && !"null".equals(tec)) {
+                LinearLayout tc = Ui.tarjeta(this, c);
+                LinearLayout fila = new LinearLayout(this);
+                fila.setOrientation(LinearLayout.HORIZONTAL);
+                fila.setGravity(Gravity.CENTER_VERTICAL);
+                TextView av = Ui.texto(this, tec.substring(0, 1).toUpperCase(), 20, android.R.color.white, true);
+                av.setGravity(Gravity.CENTER);
+                GradientDrawable ag = new GradientDrawable();
+                ag.setShape(GradientDrawable.OVAL);
+                ag.setColor(getResources().getColor(R.color.lc_rojo));
+                av.setBackground(ag);
+                fila.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+                LinearLayout tx = new LinearLayout(this);
+                tx.setOrientation(LinearLayout.VERTICAL);
+                tx.setPadding(Ui.dp(this, 12), 0, 0, 0);
+                tx.addView(Ui.texto(this, tec, 16, R.color.lc_texto, true));
+                tx.addView(Ui.texto(this, "Técnico asignado · L&C", 13, R.color.lc_sec, false));
+                fila.addView(tx);
+                tc.addView(fila);
+                LinearLayout bs = new LinearLayout(this);
+                bs.setOrientation(LinearLayout.HORIZONTAL);
+                android.widget.Button llamar = Ui.boton(this, bs, "Llamar", false);
+                llamar.setAllCaps(false);
+                llamar.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:+17869227383"))));
+                android.widget.Button msg = Ui.boton(this, bs, "Mensaje", true);
+                msg.setAllCaps(false);
+                msg.setOnClickListener(v -> startActivity(new Intent(this, RequestDetailActivity.class).putExtra("id", jid)));
+                for (int q = 0; q < bs.getChildCount(); q++) {
+                    LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) bs.getChildAt(q).getLayoutParams();
+                    lp.width = 0;
+                    lp.weight = 1f;
+                    lp.rightMargin = q == 0 ? Ui.dp(this, 8) : 0;
+                }
+                tc.addView(bs);
+            }
+            card.setOnClickListener(v -> startActivity(new Intent(this, RequestDetailActivity.class).putExtra("id", jid)));
         }
         if (n == 0) c.addView(Ui.texto(this, "Cuando tengas una solicitud activa verás aquí cada etapa.", 15, R.color.lc_sec, false));
+    }
+
+    /** Línea de tiempo del cliente: {texto, done|current|todo}; solo con campos reales del servidor. */
+    static List<String[]> lineaTiempo(JSONObject d) {
+        String est = d.optString("estado");
+        boolean asignado = !d.optString("tecnicoNombre").isEmpty() && !"null".equals(d.optString("tecnicoNombre"));
+        boolean enRevision = asignado || d.optLong("programadoPara", 0) > 0 || !"PENDIENTE".equals(est);
+        boolean enRuta = "EN RUTA".equals(est) || "LLEGUÉ".equals(est) || "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est)
+                || "PART HOLD".equals(est) || "PAUSADO".equals(est) || "REQUIERE GERENTE".equals(est) || "REPUESTO PRECARGADO".equals(est)
+                || "COMPLETADO".equals(est) || "PAGADO".equals(est);
+        boolean enSitio = enRuta && !"EN RUTA".equals(est);
+        boolean reparacion = "EN REPARACIÓN".equals(est) || "ESPERANDO APROBACIÓN".equals(est) || "PART HOLD".equals(est) || "PAUSADO".equals(est)
+                || "REQUIERE GERENTE".equals(est) || "REPUESTO PRECARGADO".equals(est) || "COMPLETADO".equals(est) || "PAGADO".equals(est);
+        boolean fin = "COMPLETADO".equals(est) || "PAGADO".equals(est);
+        String[] nombres = {"Solicitada", "En revisión", "Asignada", "En camino", "En el lugar", "En reparación", "Completado"};
+        boolean[] hecho = {true, enRevision, asignado, enRuta, enSitio, reparacion, fin};
+        List<String[]> l = new ArrayList<>();
+        boolean actualMarcada = false;
+        for (int i = 0; i < nombres.length; i++) {
+            String st = hecho[i] ? "done" : (!actualMarcada ? "current" : "todo");
+            if (!hecho[i]) actualMarcada = true;
+            l.add(new String[]{nombres[i], st});
+        }
+        return l;
     }
 
     /** Etapas {texto, "1"/"0"} calculadas solo con campos reales; nada se inventa. */
@@ -353,29 +515,93 @@ public class HomeActivity extends AppCompatActivity {
 
     private void pintarPerfil() {
         LinearLayout c = p.contenido;
-        LinearLayout card = Ui.tarjeta(this, c);
-        card.addView(Ui.texto(this, "Cuenta", 13, R.color.lc_sec, false));
-        card.addView(Ui.texto(this, Api.nombre(this).isEmpty() ? "—" : Api.nombre(this), 18, R.color.lc_texto, true));
-        android.widget.Button props = Ui.boton(this, c, "Mis propiedades y equipos", false);
-        props.setOnClickListener(v -> startActivity(new Intent(this, PropertiesActivity.class)));
-        android.widget.Button mias = Ui.boton(this, c, "Mis solicitudes", false);
-        mias.setOnClickListener(v -> { filtro = 1; tab = 1; pintar(); });
-        if (!CloudApi.activo()) {   // herramienta técnica solo en el laboratorio con servidor propio
-            android.widget.Button diag = Ui.boton(this, c, "Diagnóstico de conexión", false);
-            diag.setOnClickListener(v -> startActivity(new Intent(this, DiagnosticoActivity.class)));
-        }
+        String nombre = Api.nombre(this).isEmpty() ? "—" : Api.nombre(this);
+        LinearLayout cab = new LinearLayout(this);
+        cab.setOrientation(LinearLayout.VERTICAL);
+        cab.setGravity(Gravity.CENTER_HORIZONTAL);
+        TextView av = Ui.texto(this, nombre.substring(0, 1).toUpperCase(), 32, android.R.color.white, true);
+        av.setGravity(Gravity.CENTER);
+        GradientDrawable ag = new GradientDrawable();
+        ag.setShape(GradientDrawable.OVAL);
+        ag.setColor(getResources().getColor(R.color.lc_rojo));
+        av.setBackground(ag);
+        cab.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 80), Ui.dp(this, 80)));
+        TextView nm = Ui.texto(this, nombre, 22, R.color.lc_texto, true);
+        nm.setPadding(0, Ui.dp(this, 12), 0, 0);
+        cab.addView(nm);
+        cab.addView(Ui.texto(this, "Cliente", 14, R.color.lc_sec, false));
+        c.addView(cab, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout menu = new LinearLayout(this);
+        menu.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(-1, -2);
+        mlp.topMargin = Ui.dp(this, 20);
+        c.addView(menu, mlp);
+        filaMenu(menu, R.drawable.ic_home, "Mis propiedades", v -> startActivity(new Intent(this, PropertiesActivity.class)));
+        filaMenu(menu, R.drawable.ic_list, "Mis solicitudes", v -> { filtro = 1; tab = 1; pintar(); });
+        filaMenu(menu, R.drawable.ic_card, "Métodos de pago", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Métodos de pago")
+                .setMessage("Por ahora los pagos son de prueba y se hacen desde cada solicitud con «Pagar (prueba)». "
+                        + "Aquí podrás guardar tus tarjetas cuando se active el cobro real.")
+                .setPositiveButton("Entendido", null).show());
+        filaMenu(menu, R.drawable.ic_bell, "Notificaciones", v -> startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())));
+        filaMenu(menu, R.drawable.ic_help, "Soporte", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Soporte L&C")
+                .setItems(new String[]{"Llamar · 786-922-7383", "Escribir un correo"}, (dlg, which) -> {
+                    if (which == 0) startActivity(new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:+17869227383")));
+                    else startActivity(new Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:Carlosocampo1034@gmail.com"))
+                            .putExtra(Intent.EXTRA_SUBJECT, "Soporte L&C Cliente"));
+                })
+                .setNegativeButton("Cerrar", null).show());
         String ver = "";
         try { ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) { }
-        TextView acerca = Ui.texto(this, "Acerca de · L&C Cliente " + ver, 13, R.color.lc_sec, false);
-        acerca.setPadding(0, Ui.dp(this, 14), 0, 0);
-        c.addView(acerca);
-        android.widget.Button salir = Ui.boton(this, c, "Cerrar sesión", false);
+        final String verF = ver;
+        filaMenu(menu, R.drawable.ic_pin, "Acerca de", v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("L&C Cliente").setMessage("Versión " + verF + "\nL&C Home Services")
+                .setPositiveButton("Cerrar", null).show());
+        if (!CloudApi.activo()) {   // herramienta técnica solo en el laboratorio con servidor propio
+            filaMenu(menu, R.drawable.ic_list, "Diagnóstico de conexión", v -> startActivity(new Intent(this, DiagnosticoActivity.class)));
+        }
+        TextView salir = Ui.texto(this, "Cerrar sesión", 16, R.color.lc_rojo, true);
+        salir.setGravity(Gravity.CENTER);
+        GradientDrawable sb = new GradientDrawable();
+        sb.setCornerRadius(Ui.dp(this, 12));
+        sb.setColor(0xFFFFFFFF);
+        sb.setStroke(Ui.dp(this, 1), getResources().getColor(R.color.lc_rojo));
+        salir.setBackground(sb);
         salir.setOnClickListener(v -> {
             Api.cerrarSesion(this);
             ColaCliente.borrarTodo(this);   // la cola pertenece al usuario que cerró sesión: no se envía con otra cuenta
             startActivity(new Intent(this, LoginActivity.class));
             finish();
         });
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 52));
+        slp.topMargin = Ui.dp(this, 20);
+        c.addView(salir, slp);
+    }
+
+    /** Fila de menú: ícono, texto y flecha, con línea divisoria. */
+    private void filaMenu(LinearLayout dest, int icono, String texto, View.OnClickListener ir) {
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.HORIZONTAL);
+        f.setGravity(Gravity.CENTER_VERTICAL);
+        f.setMinimumHeight(Ui.dp(this, 56));
+        ImageView ic = new ImageView(this);
+        ic.setImageResource(icono);
+        ic.setColorFilter(0xFF62666A);
+        f.addView(ic, new LinearLayout.LayoutParams(Ui.dp(this, 22), Ui.dp(this, 22)));
+        TextView t = Ui.texto(this, texto, 16, R.color.lc_texto, false);
+        t.setPadding(Ui.dp(this, 14), 0, 0, 0);
+        f.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        ImageView ch = new ImageView(this);
+        ch.setImageResource(R.drawable.ic_chevron);
+        ch.setColorFilter(0xFF9A9DA0);
+        f.addView(ch, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
+        f.setOnClickListener(ir);
+        dest.addView(f);
+        View l = new View(this);
+        l.setBackgroundColor(getResources().getColor(R.color.lc_borde));
+        dest.addView(l, new LinearLayout.LayoutParams(-1, Ui.dp(this, 1)));
     }
 
     private static String primerNombre(String n) {

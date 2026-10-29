@@ -146,8 +146,33 @@ public class ProfileActivity extends AppCompatActivity {
                 new android.app.AlertDialog.Builder(this).setTitle("L&C Technician")
                         .setMessage("Versión " + ver + "\nL&C Home Services").setPositiveButton("Cerrar", null).show();
             });
+            View soporte = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+            ((ImageView) soporte.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_chat);
+            ((TextView) soporte.findViewById(R.id.menuLabel)).setText("Soporte");
+            soporte.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
+                    .setTitle("Soporte L&C")
+                    .setItems(new String[]{"Llamar · 786-922-7383", "Escribir un correo"}, (d, which) -> {
+                        if (which == 0) startActivity(new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:+17869227383")));
+                        else startActivity(new Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:Carlosocampo1034@gmail.com"))
+                                .putExtra(Intent.EXTRA_SUBJECT, "Soporte L&C Technician"));
+                    })
+                    .setNegativeButton("Cerrar", null).show());
             box.addView(notif, pos);
-            box.addView(acerca, pos + 1);
+            box.addView(soporte, pos + 1);
+            box.addView(acerca, pos + 2);
+            // «Documentos» justo bajo «Mi información» (orden de la maqueta)
+            View datosItem = findViewById(R.id.menuDatos);
+            if (datosItem != null && datosItem.getParent() == box) {
+                View docs = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+                ((ImageView) docs.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_doc);
+                ((TextView) docs.findViewById(R.id.menuLabel)).setText("Documentos");
+                docs.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
+                        .setTitle("Documentos")
+                        .setMessage("Aquí verás tus documentos (licencia, seguro, certificaciones). Esta sección se activa "
+                                + "cuando L&C defina qué documentos se suben y dónde se guardan.")
+                        .setPositiveButton("Entendido", null).show());
+                box.addView(docs, box.indexOfChild(datosItem) + 1);
+            }
         }
 
         // Cerrar sesión
@@ -184,7 +209,7 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupItemDatos(SharedPreferences prefs, String rol) {
         View item = findViewById(R.id.menuDatos);
         ((ImageView) item.findViewById(R.id.menuIcon)).setImageResource(R.drawable.ic_menu_datos);
-        ((TextView)  item.findViewById(R.id.menuLabel)).setText("Mis datos personales");
+        ((TextView)  item.findViewById(R.id.menuLabel)).setText("Mi información");
         String name  = prefs.getString(LoginActivity.KEY_NAME, Technician.NOMBRE);
         item.setOnClickListener(v -> {
             LinearLayout layout = new LinearLayout(this);
@@ -212,7 +237,7 @@ public class ProfileActivity extends AppCompatActivity {
             }
 
             new AlertDialog.Builder(this)
-                    .setTitle("Mis datos personales")
+                    .setTitle("Mi información")
                     .setView(layout)
                     .setPositiveButton("Cerrar", null)
                     .show();

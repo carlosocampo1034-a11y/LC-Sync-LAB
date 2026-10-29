@@ -1,7 +1,10 @@
 package com.lc.customer;
 
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.Gravity;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -11,6 +14,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,6 +35,9 @@ public class RequestDetailActivity extends AppCompatActivity {
         @Override public void run() { if (activa) { cargarMensajes(); revisarEstado(); h.postDelayed(this, 6000); } }
     };
     private androidx.activity.result.ActivityResultLauncher<String> elegirFoto;
+    private View secFotos, secEstado, secPropuesta;
+    private int metodoPago = 0;                       // 0 Tarjeta · 1 Zelle · 2 Efectivo · 3 Otro (prueba: no cambia el cobro)
+    private TextView[] chipsMetodo;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -139,7 +146,7 @@ public class RequestDetailActivity extends AppCompatActivity {
 
     // ── Fotos de la solicitud ───────────────────────────────────────────────────────────────────
     private void seccionFotos(LinearLayout c) {
-        Ui.seccion(this, c, "Fotos");
+        secFotos = Ui.seccion(this, c, "Fotos");
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
         LinearLayout tira = new LinearLayout(this);
         tira.setOrientation(LinearLayout.HORIZONTAL);
@@ -223,14 +230,164 @@ public class RequestDetailActivity extends AppCompatActivity {
         c.addView(tv);
     }
 
+    // ── Accesos rápidos, pestañas y desplazamiento a secciones (maqueta C8) ───────────────────────────
+    private int topEnScroll(View v) {
+        int y = 0;
+        View x = v;
+        while (x != null && x != p.contenido) {
+            y += x.getTop();
+            android.view.ViewParent par = x.getParent();
+            x = par instanceof View ? (View) par : null;
+        }
+        return y;
+    }
+
+    private void irA(View v) {
+        if (v == null) return;
+        ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, Math.max(0, topEnScroll(v) - Ui.dp(this, 8)));
+    }
+
+    private void abrirMapa(String dir) {
+        if (dir == null || dir.isEmpty() || "null".equals(dir)) { Toast.makeText(this, "Esta solicitud no tiene dirección", Toast.LENGTH_SHORT).show(); return; }
+        try {
+            startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("geo:0,0?q=" + android.net.Uri.encode(dir))));
+        } catch (Exception e) {
+            Toast.makeText(this, "No hay una app de mapas instalada", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void accesoRapido(LinearLayout fila, int icono, String texto, View.OnClickListener ir) {
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 4), Ui.dp(this, 12));
+        t.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_card));
+        ImageView i = new ImageView(this);
+        i.setImageResource(icono);
+        t.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 24), Ui.dp(this, 24)));
+        TextView x = Ui.texto(this, texto, 13, R.color.lc_texto, true);
+        x.setGravity(Gravity.CENTER);
+        x.setPadding(0, Ui.dp(this, 4), 0, 0);
+        t.addView(x);
+        t.setOnClickListener(ir);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        lp.leftMargin = Ui.dp(this, 4);
+        lp.rightMargin = Ui.dp(this, 4);
+        fila.addView(t, lp);
+    }
+
+    private void agregarAccesos(LinearLayout c, JSONObject j) {
+        LinearLayout fila = new LinearLayout(this);
+        fila.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(-1, -2);
+        flp.topMargin = Ui.dp(this, 12);
+        c.addView(fila, flp);
+        final String dir = j.optString("direccion");
+        accesoRapido(fila, R.drawable.ic_phone, "Llamar", v -> startActivity(new android.content.Intent(android.content.Intent.ACTION_DIAL,
+                android.net.Uri.parse("tel:+17869227383"))));
+        accesoRapido(fila, R.drawable.ic_chat, "Mensajes", v -> irA(chat));
+        accesoRapido(fila, R.drawable.ic_nav, "GPS", v -> abrirMapa(dir));
+        accesoRapido(fila, R.drawable.ic_help, "Soporte", v -> Ui.dialogoSoporte(this));
+    }
+
+    private android.graphics.drawable.Drawable subrayado(boolean activa) {
+        GradientDrawable linea = new GradientDrawable();
+        linea.setColor(ContextCompat.getColor(this, activa ? R.color.lc_rojo : R.color.lc_borde));
+        GradientDrawable fondo = new GradientDrawable();
+        fondo.setColor(0x00000000);
+        android.graphics.drawable.LayerDrawable ld = new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{fondo, linea});
+        ld.setLayerGravity(1, Gravity.BOTTOM);
+        ld.setLayerHeight(1, Ui.dp(this, activa ? 3 : 1));
+        return ld;
+    }
+
+    /** Pestañas Resumen · Fotos · Estado · Propuesta: llevan a la sección correspondiente de esta pantalla. */
+    private void agregarPestanas(LinearLayout c) {
+        final LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        final String[] nombres = {"Resumen", "Fotos", "Estado", "Propuesta"};
+        for (int i = 0; i < 4; i++) {
+            final int idx = i;
+            TextView t = Ui.texto(this, nombres[i], 14, i == 0 ? R.color.lc_rojo : R.color.lc_sec, i == 0);
+            t.setGravity(Gravity.CENTER);
+            t.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 10));
+            t.setBackground(subrayado(i == 0));
+            t.setOnClickListener(v -> {
+                for (int k = 0; k < tabs.getChildCount(); k++) {
+                    TextView o = (TextView) tabs.getChildAt(k);
+                    o.setTextColor(ContextCompat.getColor(this, k == idx ? R.color.lc_rojo : R.color.lc_sec));
+                    o.setTypeface(null, k == idx ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+                    o.setBackground(subrayado(k == idx));
+                }
+                if (idx == 0) ((android.widget.ScrollView) p.contenido.getParent()).smoothScrollTo(0, 0);
+                else if (idx == 1) irA(secFotos);
+                else if (idx == 2) irA(secEstado);
+                else if (secPropuesta != null) irA(secPropuesta);
+                else Toast.makeText(this, "Todavía no hay una propuesta del técnico", Toast.LENGTH_SHORT).show();
+            });
+            tabs.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        }
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = Ui.dp(this, 12);
+        c.addView(tabs, lp);
+    }
+
+    /** Dos botones lado a lado: «Ver ubicación» y «Contactar técnico». */
+    private void filaBotones(LinearLayout dest, String a, View.OnClickListener ia, String b, View.OnClickListener ib) {
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.HORIZONTAL);
+        Button x = Ui.boton(this, f, a, false);
+        Button y = Ui.boton(this, f, b, true);
+        x.setAllCaps(false);
+        y.setAllCaps(false);
+        x.setOnClickListener(ia);
+        y.setOnClickListener(ib);
+        for (int q = 0; q < f.getChildCount(); q++) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) f.getChildAt(q).getLayoutParams();
+            lp.width = 0;
+            lp.weight = 1f;
+            lp.rightMargin = q == 0 ? Ui.dp(this, 8) : 0;
+        }
+        dest.addView(f);
+    }
+
+    private void filaMonto(LinearLayout dest, String etiqueta, double monto, boolean fuerte) {
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.HORIZONTAL);
+        f.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
+        f.addView(Ui.texto(this, etiqueta, fuerte ? 16 : 14, fuerte ? R.color.lc_texto : R.color.lc_sec, fuerte),
+                new LinearLayout.LayoutParams(0, -2, 1f));
+        f.addView(Ui.texto(this, String.format(java.util.Locale.US, "$%.2f", monto), fuerte ? 16 : 14, R.color.lc_texto, fuerte));
+        dest.addView(f);
+    }
+
+    /** Desglose de una opción de la propuesta (solo los conceptos con importe) y su total. */
+    private void desglose(LinearLayout dest, JSONObject o) {
+        String[][] k = {{"costoManoObra", "Mano de obra"}, {"costoMateriales", "Materiales"}, {"costoEquipo", "Equipo"},
+                {"costoPermiso", "Permiso"}, {"costoRemocion", "Remoción"}, {"costoAccesorios", "Accesorios"}};
+        for (String[] par : k) {
+            double v = o.optDouble(par[0], 0);
+            if (v > 0) filaMonto(dest, par[1], v, false);
+        }
+        double desc = o.optDouble("descuentoMonto", 0);
+        if (desc > 0) filaMonto(dest, "Descuento", -desc, false);
+        if (o.has("total")) filaMonto(dest, "Total", o.optDouble("total"), true);
+    }
+
     private void mostrar(Api.Respuesta r) {
+        secPropuesta = null;
+        secEstado = null;
         if (r.ok()) firmaEstado = r.cuerpo.optString("estado") + "|" + r.cuerpo.optLong("programadoPara", 0) + "|" + r.cuerpo.optString("tecnicoNombre");
         LinearLayout c = dinamico;
         c.removeAllViews();
         if (!r.ok()) { c.addView(Ui.texto(this, r.error(), 15, R.color.lc_rojo, false)); return; }
         JSONObject j = r.cuerpo;
-        TextView est = Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado")).toUpperCase());
+        ((TextView) p.cabecera.getChildAt(1)).setText("#" + id);
+        ((TextView) p.cabecera.getChildAt(2)).setText(Ajustes.etiqueta(this, "categories.list", Ajustes.CATEGORIAS, j.optString("categoria")));
+        TextView est = Ui.badgeEstado(this, j.optString("estado"), Ui.estadoCliente(this, j.optString("estado")));
         c.addView(est);
+        agregarAccesos(c, j);
+        agregarPestanas(c);
         LinearLayout card = Ui.tarjeta(this, c);
         fila(card, "Problema", j.optString("descripcion"));
         fila(card, "Equipo", j.optString("equipo"));
@@ -239,6 +396,8 @@ public class RequestDetailActivity extends AppCompatActivity {
         fila(card, "Cita", cita > 0 ? Ui.fecha(cita) : "Por programar · L&C te confirmará la hora");
         fila(card, "Técnico", j.optString("tecnicoNombre"));
         fila(card, "Dirección", j.optString("direccion"));
+        final String dirResumen = j.optString("direccion");
+        filaBotones(card, "Ver ubicación", v -> abrirMapa(dirResumen), "Contactar técnico", v -> irA(chat));
         String diag = j.optString("diagnostico");
         if (!diag.isEmpty() && !"null".equals(diag)) {   // lo que anotó el técnico
             Ui.seccion(this, c, "Diagnóstico del técnico");
@@ -253,7 +412,8 @@ public class RequestDetailActivity extends AppCompatActivity {
             JSONObject pr = props.optJSONObject(i);
             String estP = pr.optString("estado");
             if ("SUPERADA".equals(estP)) continue;           // versiones reemplazadas: no se muestran para decidir
-            Ui.seccion(this, c, "Propuesta del técnico · versión " + pr.optInt("revision"));
+            View secP = Ui.seccion(this, c, "Propuesta del técnico · versión " + pr.optInt("revision"));
+            if (secPropuesta == null) secPropuesta = secP;
             LinearLayout pc = Ui.tarjeta(this, c);
             JSONArray ops = pr.optJSONArray("opciones");
             for (int k = 0; ops != null && k < ops.length(); k++) {
@@ -263,6 +423,7 @@ public class RequestDetailActivity extends AppCompatActivity {
                         + detalle(o, "equipoPropuesto", "Equipo propuesto") + detalle(o, "especificaciones", "Especificaciones")
                         + detalle(o, "garantia", "Garantía")
                         + String.format(java.util.Locale.US, "Precio: $%.2f", o.optDouble("total")));
+                desglose(pc, o);
             }
             fila(pc, "Estado", estadoPropuesta(estP));
             if ("APROBADA".equals(estP)) {
@@ -274,7 +435,7 @@ public class RequestDetailActivity extends AppCompatActivity {
             } else if ("PENDIENTE".equals(estP)) {
                 fila(pc, "Vence", Ui.fecha(pr.optLong("expiresAt")));
                 final JSONObject prf = pr;
-                Ui.boton(this, pc, "Revisar y firmar propuesta", true).setOnClickListener(v -> decidirPropuesta(prf));
+                Ui.boton(this, pc, "Aprobar y firmar", true).setOnClickListener(v -> decidirPropuesta(prf));
             }
         }
 
@@ -376,7 +537,30 @@ public class RequestDetailActivity extends AppCompatActivity {
             }
             if ("EMITIDA".equals(f.optString("estado")) && "simulated".equals(Ajustes.texto(this, "payments.mode", "off"))) {
                 final double aPagar = f.optDouble("saldo", f.optDouble("total"));
-                Ui.boton(this, fc, "Pagar (prueba)", true).setOnClickListener(v -> new AlertDialog.Builder(this)
+                boolean aprobada = false;
+                for (int q = 0; props != null && q < props.length(); q++) if ("APROBADA".equals(props.optJSONObject(q).optString("estado"))) aprobada = true;
+                if (aprobada) fc.addView(Ui.texto(this, "✓ Propuesta aprobada", 15, R.color.lc_ok, true));
+                filaMonto(fc, "Total a pagar", aPagar, true);
+                fc.addView(Ui.texto(this, "Método de pago", 13, R.color.lc_sec, true));
+                LinearLayout metodos = new LinearLayout(this);
+                metodos.setOrientation(LinearLayout.HORIZONTAL);
+                String[] mn = {"Tarjeta", "Zelle", "Efectivo", "Otro"};
+                chipsMetodo = new TextView[4];
+                for (int q = 0; q < 4; q++) {
+                    final int mi = q;
+                    TextView chip = Ui.texto(this, mn[q], 13, R.color.lc_texto, true);
+                    chip.setGravity(Gravity.CENTER);
+                    chip.setMinHeight(Ui.dp(this, 40));
+                    chipsMetodo[q] = chip;
+                    chip.setOnClickListener(v -> { metodoPago = mi; pintarMetodos(); });
+                    LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(0, -2, 1f);
+                    mlp.rightMargin = Ui.dp(this, 6);
+                    metodos.addView(chip, mlp);
+                }
+                fc.addView(metodos);
+                pintarMetodos();
+                fc.addView(Ui.texto(this, "Modo de prueba: no se cobra ningún método real; el pago queda registrado como prueba.", 12, R.color.lc_sec, false));
+                Ui.boton(this, fc, "Procesar pago", true).setOnClickListener(v -> new AlertDialog.Builder(this)
                         .setTitle("Pagar (prueba)")
                         .setMessage(String.format(java.util.Locale.US, "Se registrará un pago de prueba de $%.2f.\nNo se cobra nada a tu tarjeta.", aPagar))
                         .setNegativeButton("Cancelar", null)
@@ -403,6 +587,9 @@ public class RequestDetailActivity extends AppCompatActivity {
                 });
             }
         }
+        secEstado = Ui.seccion(this, c, "Estado del servicio");
+        LinearLayout tl = Ui.tarjeta(this, c);
+        Ui.lineaTiempo(this, tl, HomeActivity.lineaTiempo(j));
         Ui.seccion(this, c, "Historial");
         JSONArray h = j.optJSONArray("historial");
         for (int i = 0; h != null && i < h.length(); i++) {
@@ -414,6 +601,18 @@ public class RequestDetailActivity extends AppCompatActivity {
             } else if ("Técnico asignado".equals(e.optString("campo"))) valor = "Asignado";
             c.addView(Ui.texto(this, Ui.fecha(e.optLong("ts")) + " · " + e.optString("campo") + ": " + valor, 14,
                     R.color.lc_texto, false));
+        }
+    }
+
+    private void pintarMetodos() {
+        if (chipsMetodo == null) return;
+        for (int q = 0; q < chipsMetodo.length; q++) {
+            boolean on = q == metodoPago;
+            GradientDrawable g = new GradientDrawable();
+            g.setCornerRadius(Ui.dp(this, 10));
+            g.setColor(0xFFFFFFFF);
+            g.setStroke(Ui.dp(this, on ? 2 : 1), ContextCompat.getColor(this, on ? R.color.lc_rojo : R.color.lc_borde));
+            chipsMetodo[q].setBackground(g);
         }
     }
 
@@ -499,7 +698,7 @@ public class RequestDetailActivity extends AppCompatActivity {
         FirmaView firma = new FirmaView(this);
         f.addView(firma, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 160)));
         AlertDialog d = new AlertDialog.Builder(this).setTitle("Propuesta · versión " + pr.optInt("revision")).setView(f)
-                .setPositiveButton("Aprobar", null).setNegativeButton("Rechazar", null).setNeutralButton("Cerrar", null)
+                .setPositiveButton("Aprobar y firmar", null).setNegativeButton("Rechazar", null).setNeutralButton("Cerrar", null)
                 .create();
         d.setOnShowListener(x -> {
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
