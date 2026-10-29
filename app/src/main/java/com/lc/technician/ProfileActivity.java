@@ -95,6 +95,38 @@ public class ProfileActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.statCompletados)).setText(String.valueOf(enCurso));
     }
 
+    private static int posicionConTag(android.view.ViewGroup box, String tag) {
+        for (int i = 0; i < box.getChildCount(); i++) if (tag.equals(box.getChildAt(i).getTag())) return i;
+        return -1;
+    }
+
+    /**
+     * El menú de la maqueta tiene cinco entradas. Las demás funciones (completados, repuestos, equipos, favoritos, reportes,
+     * dispatch…) se conservan, agrupadas bajo «Más opciones» entre «Documentos» y «Notificaciones».
+     */
+    private void agruparOpcionesExtra(android.view.ViewGroup box) {
+        int a = posicionConTag(box, "docs"), b = posicionConTag(box, "notif");
+        if (a < 0 || b <= a + 1) return;
+        final LinearLayout extras = new LinearLayout(this);
+        extras.setOrientation(LinearLayout.VERTICAL);
+        extras.setVisibility(View.GONE);
+        java.util.List<View> mover = new java.util.ArrayList<>();
+        for (int i = a + 1; i < b; i++) mover.add(box.getChildAt(i));
+        for (View v : mover) { box.removeView(v); extras.addView(v); }
+        final View mas = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+        ((ImageView) mas.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_gear);
+        final TextView etiqueta = mas.findViewById(R.id.menuLabel);
+        etiqueta.setText("Más opciones  ⌄");
+        mas.setOnClickListener(v -> {
+            boolean abrir = extras.getVisibility() != View.VISIBLE;
+            extras.setVisibility(abrir ? View.VISIBLE : View.GONE);
+            etiqueta.setText(abrir ? "Más opciones  ⌃" : "Más opciones  ⌄");
+        });
+        int ac = posicionConTag(box, "acerca");
+        box.addView(mas, ac + 1);
+        box.addView(extras, ac + 2);
+    }
+
     private void configurarMenu(SharedPreferences prefs, String rol) {
         boolean esTecnico    = "TECNICO".equals(rol);
         boolean esDispatcher = "DISPATCHER".equals(rol);
@@ -135,11 +167,13 @@ public class ProfileActivity extends AppCompatActivity {
             android.view.ViewGroup box = (android.view.ViewGroup) cerrarRef.getParent();
             int pos = box.indexOfChild(cerrarRef);
             View notif = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+            notif.setTag("notif");
             ((ImageView) notif.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_bell);
             ((TextView) notif.findViewById(R.id.menuLabel)).setText("Notificaciones");
             notif.setOnClickListener(v -> startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                     .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())));
             View acerca = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+            acerca.setTag("acerca");
             ((ImageView) acerca.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_doc);
             ((TextView) acerca.findViewById(R.id.menuLabel)).setText("Acerca de");
             acerca.setOnClickListener(v -> {
@@ -166,6 +200,7 @@ public class ProfileActivity extends AppCompatActivity {
             View datosItem = findViewById(R.id.menuDatos);
             if (datosItem != null && datosItem.getParent() == box) {
                 View docs = getLayoutInflater().inflate(R.layout.item_menu, box, false);
+                docs.setTag("docs");
                 ((ImageView) docs.findViewById(R.id.menuIcon)).setImageResource(R.drawable.m_doc);
                 ((TextView) docs.findViewById(R.id.menuLabel)).setText("Documentos");
                 docs.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
@@ -175,6 +210,7 @@ public class ProfileActivity extends AppCompatActivity {
                         .setPositiveButton("Entendido", null).show());
                 box.addView(docs, box.indexOfChild(datosItem) + 1);
             }
+            agruparOpcionesExtra(box);
         }
 
         // Cerrar sesión

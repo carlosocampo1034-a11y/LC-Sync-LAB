@@ -1148,7 +1148,7 @@ public class ConfiguracionActivity extends AppCompatActivity {
                 if (l != null) for (View v : l) cuerpo.addView(v);
             }
             if (cuerpo.getChildCount() == 0) continue;
-            final boolean abierto = !"AVANZADO".equals(g[0]);
+            final boolean abierto = "OPERACIÓN".equals(g[0]);   // como la maqueta: solo Operación abierta; el resto se despliega al tocar
             // Tarjeta de sección como la maqueta: ícono, título en negrita y chevron; se pliega al tocarla
             final LinearLayout cab = new LinearLayout(this);
             cab.setOrientation(LinearLayout.HORIZONTAL);
@@ -1202,13 +1202,22 @@ public class ConfiguracionActivity extends AppCompatActivity {
                 == android.content.pm.PackageManager.PERMISSION_GRANTED;
         boolean cam = androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
                 == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        int pend = PrivacidadLocal.pendientesSinSubir(this);
         card.addView(filaPref("Notificaciones", "Se cambian en los ajustes del sistema", notif, true, v ->
                 startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                         .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName()))));
         card.addView(filaPref("GPS y mapas", gps ? "Ubicación permitida" : "Ubicación no permitida · el mapa abre igual con la dirección", gps, true, v -> abrirAjustesApp()));
         card.addView(filaPref("Captura de fotos", cam ? "Cámara permitida" : "Cámara no permitida · la galería sigue disponible", cam, true, v -> abrirAjustesApp()));
-        card.addView(filaPref("Guardado offline (8 seg)", pend == 0 ? "Siempre activo · sin pendientes de subir" : "Siempre activo · " + pend + " pendiente(s) de subir", true, false, null));
+        // El conteo consulta Room: se calcula fuera del hilo principal (antes devolvía el valor de seguridad 2147483647)
+        final View filaOffline = filaPref("Guardado offline (8 seg)", "Siempre activo", true, false, null);
+        card.addView(filaOffline);
+        final TextView detalleOffline = (TextView) ((LinearLayout) ((LinearLayout) filaOffline).getChildAt(0)).getChildAt(1);
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+            final int pend = PrivacidadLocal.pendientesSinSubir(getApplicationContext());
+            runOnUiThread(() -> {
+                if (isFinishing() || pend == Integer.MAX_VALUE) return;   // sin dato fiable no se muestra una cifra
+                detalleOffline.setText(pend == 0 ? "Siempre activo · sin pendientes de subir" : "Siempre activo · " + pend + " pendiente(s) de subir");
+            });
+        });
         return card;
     }
 
