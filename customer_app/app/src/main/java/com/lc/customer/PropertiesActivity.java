@@ -31,7 +31,12 @@ public class PropertiesActivity extends AppCompatActivity {
         lista.setOrientation(LinearLayout.VERTICAL);
         p.contenido.addView(lista);
         Ui.boton(this, p.inferior, "Agregar propiedad", true).setOnClickListener(v -> dialogoPropiedad());
-        cargar();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        cargar();   // también al volver de registrar o editar un equipo
     }
 
     private void cargar() {
@@ -60,13 +65,26 @@ public class PropertiesActivity extends AppCompatActivity {
                             String v = e.isNull(campo) ? "" : e.optString(campo).trim();
                             if (!v.isEmpty()) linea.append(" · ").append(v);
                         }
-                        c.addView(Ui.texto(this, linea.toString(), 14, R.color.lc_texto, false));
+                        final long pidEq = pr.optLong("id");
+                        final JSONObject eqf = e;
+                        LinearLayout fila = new LinearLayout(this);
+                        fila.setOrientation(LinearLayout.HORIZONTAL);
+                        fila.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                        fila.setMinimumHeight(Ui.dp(this, 48));
+                        fila.addView(Ui.texto(this, linea.toString(), 14, R.color.lc_texto, false), new LinearLayout.LayoutParams(0, -2, 1f));
+                        android.widget.ImageView ch = new android.widget.ImageView(this);
+                        ch.setImageResource(R.drawable.ic_chevron);
+                        ch.setColorFilter(0xFF62666A);
+                        fila.addView(ch, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
+                        fila.setOnClickListener(v -> startActivity(new android.content.Intent(this, EquipoActivity.class)
+                                .putExtra("pid", pidEq).putExtra("equipo", eqf.toString())));   // abre y edita el equipo (mismo id)
+                        c.addView(fila);
                     }
                     long pid = pr.optLong("id");
                     TextView add = Ui.texto(this, "+ Agregar equipo", 14, R.color.lc_rojo, true);
                     add.setPadding(0, Ui.dp(this, 8), 0, 0);
                     add.setMinHeight(Ui.dp(this, 44));
-                    add.setOnClickListener(v -> dialogoEquipo(pid));
+                    add.setOnClickListener(v -> startActivity(new android.content.Intent(this, EquipoActivity.class).putExtra("pid", pid)));
                     c.addView(add);
                 }
             });
@@ -113,36 +131,6 @@ public class PropertiesActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
             Executors.newSingleThreadExecutor().execute(() -> {
                 Api.Respuesta r = Api.post(this, "/customer/properties", body);
-                runOnUiThread(() -> {
-                    v.setEnabled(true);
-                    if (r.ok()) { d.dismiss(); cargar(); } else Toast.makeText(this, r.error(), Toast.LENGTH_LONG).show();
-                });
-            });
-        }));
-        d.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-        d.show();
-    }
-
-    private void dialogoEquipo(long pid) {
-        LinearLayout f = new LinearLayout(this);
-        f.setOrientation(LinearLayout.VERTICAL);
-        f.setPadding(Ui.dp(this, 20), 0, Ui.dp(this, 20), 0);
-        EditText nombre = Ui.campo(this, f, "Equipo (ej. Nevera, Lavadora, Aire acondicionado)");
-        EditText marca = Ui.campo(this, f, "Marca (opcional)");
-        EditText modelo = Ui.campo(this, f, "Modelo (opcional)");
-        EditText serial = Ui.campo(this, f, "Serie (opcional)");
-        AlertDialog d = new AlertDialog.Builder(this).setTitle("Nuevo equipo").setView(f)
-                .setPositiveButton("Guardar", null).setNegativeButton("Cancelar", null).create();
-        d.setOnShowListener(x -> d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (nombre.getText().toString().trim().length() < 2) { nombre.setError("Nombre requerido"); return; }
-            v.setEnabled(false);
-            JSONObject body = new JSONObject();
-            try {
-                body.put("nombre", nombre.getText().toString().trim()).put("marca", marca.getText().toString().trim())
-                        .put("modelo", modelo.getText().toString().trim()).put("serial", serial.getText().toString().trim());
-            } catch (Exception ignored) {}
-            Executors.newSingleThreadExecutor().execute(() -> {
-                Api.Respuesta r = Api.post(this, "/customer/properties/" + pid + "/equipment", body);
                 runOnUiThread(() -> {
                     v.setEnabled(true);
                     if (r.ok()) { d.dismiss(); cargar(); } else Toast.makeText(this, r.error(), Toast.LENGTH_LONG).show();

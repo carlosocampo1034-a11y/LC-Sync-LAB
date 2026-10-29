@@ -41,6 +41,9 @@ final class CloudApi {
             if ("POST".equals(metodo) && ruta.matches("/customer/properties/\\d+/equipment")) {
                 return nuevoEquipo(c, Long.parseLong(ruta.split("/")[3]), body);
             }
+            if ("POST".equals(metodo) && ruta.matches("/customer/equipment/-?\\d+/update")) {
+                return editarEquipo(c, Long.parseLong(ruta.split("/")[3]), body);
+            }
             if ("GET".equals(metodo) && "/customer/requests".equals(ruta)) {
                 Api.Respuesta r = lcApi(c, "GET", "/orders", null);
                 if (!r.ok()) return r;
@@ -314,7 +317,9 @@ final class CloudApi {
             JSONObject e = in.optJSONObject(i);
             eq.put(new JSONObject().put("id", e.optLong("id")).put("nombre", e.optString("tipo"))
                     .put("marca", e.isNull("marca") ? "" : e.optString("marca"))
-                    .put("modelo", e.isNull("modelo") ? "" : e.optString("modelo")));
+                    .put("modelo", e.isNull("modelo") ? "" : e.optString("modelo"))
+                    .put("serial", deNotas(e.isNull("notas") ? "" : e.optString("notas"), "Serie"))
+                    .put("capacidad", deNotas(e.isNull("notas") ? "" : e.optString("notas"), "Capacidad")));
         }
         return p.put("equipos", eq);
     }
@@ -327,10 +332,46 @@ final class CloudApi {
     }
 
     private static JSONObject equipoANube(JSONObject e) throws Exception {
-        String serie = e.optString("serial").trim();
+        String serie = e.optString("serial").trim(), cap = e.optString("capacidad").trim();
+        StringBuilder notas = new StringBuilder();
+        if (!serie.isEmpty()) notas.append("Serie: ").append(serie);
+        if (!cap.isEmpty()) notas.append(notas.length() > 0 ? "\n" : "").append("Capacidad: ").append(cap);
         return new JSONObject().put("request_id", e.optString("request_id")).put("tipo", e.optString("nombre"))
-                .put("marca", e.optString("marca")).put("modelo", e.optString("modelo"))
-                .put("notas", serie.isEmpty() ? "" : "Serie: " + serie);
+                .put("marca", e.optString("marca")).put("modelo", e.optString("modelo")).put("notas", notas.toString());
+    }
+
+    /** «Serie: X» / «Capacidad: Y» guardados en las notas del equipo → campos del formulario. */
+    private static String deNotas(String notas, String clave) {
+        for (String l : notas.split("\n")) if (l.startsWith(clave + ": ")) return l.substring(clave.length() + 2).trim();
+        return "";
+    }
+
+    /**
+     * Edita un equipo existente conservando su id y su propiedad (orden 73). Los equipos aún sin subir (id negativo) se
+     * corrigen en la copia local y se suben con los datos nuevos; los de la nube necesitan conexión.
+     */
+    private static Api.Respuesta editarEquipo(Context c, long eid, JSONObject body) throws Exception {
+        if (body == null || body.optString("nombre").trim().length() < 2) {
+            return new Api.Respuesta(422, new JSONObject().put("error", "Escribe el tipo de equipo"));
+        }
+        JSONArray ps = listaPropiedades(c);
+        JSONObject e = null;
+        for (int i = 0; i < ps.length() && e == null; i++) {
+            JSONArray eq = ps.optJSONObject(i).optJSONArray("equipos");
+            for (int k = 0; eq != null && k < eq.length(); k++) if (eq.optJSONObject(k).optLong("id") == eid) e = eq.optJSONObject(k);
+        }
+        if (e == null) return new Api.Respuesta(404, new JSONObject().put("error", "Equipo no encontrado"));
+        JSONObject nuevo = new JSONObject(e.toString());
+        for (String k : new String[]{"nombre", "marca", "modelo", "serial", "capacidad"}) nuevo.put(k, body.optString(k).trim());
+        if (eid > 0) {
+            Api.Respuesta r = lcApi(c, "POST", "/equipment/" + eid + "/update", equipoANube(nuevo));
+            if (r.codigo <= 0) return new Api.Respuesta(503, new JSONObject().put("error", "Sin conexión: para editar un equipo ya guardado necesitas internet"));
+            if (!r.ok()) return r;
+        }
+        for (String k : new String[]{"nombre", "marca", "modelo", "serial", "capacidad"}) e.put(k, nuevo.optString(k));
+        guardar(c, ps);
+        if (eid > 0) sincronizarPropiedades(c);
+        return new Api.Respuesta(200, new JSONObject().put("id", eid));
     }
 
     /** Sube lo pendiente (propiedades de versiones anteriores incluidas) y devuelve la lista de la nube. */

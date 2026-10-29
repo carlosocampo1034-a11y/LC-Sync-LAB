@@ -74,6 +74,8 @@ configurations.all {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
+    // OCR local (ML Kit, modelo incluido en la app): lee etiquetas sin enviar fotos a ningún servidor
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
 }
 
 // applicationId propio para QA (los build types solo admiten sufijo y daría com.lc.customer.lab.qa)

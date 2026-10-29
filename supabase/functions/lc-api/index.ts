@@ -478,6 +478,22 @@ Deno.serve(async (req) => {
       return error ? out(500, { error: "create_failed" }) : out(201, { id: data.id });
     }
 
+    // Editar un equipo propio (orden 73): conserva id y propiedad; solo cambia los datos descriptivos
+    const meq = route.match(/^\/equipment\/(\d+)\/update$/);
+    if (meq && req.method === "POST") {
+      if (user.role !== "CUSTOMER") return out(403, { error: "role_denied" });
+      const cid = await miCliente(user);
+      const { data: eq } = await db.from("customer_equipment").select("id,property_id").eq("id", Number(meq[1])).maybeSingle();
+      if (!eq) return out(404, { error: "not_found" });
+      const { data: p } = await db.from("customer_properties").select("customer_id").eq("id", eq.property_id).maybeSingle();
+      if (!p || p.customer_id !== cid) return out(404, { error: "not_found" });
+      const tipo = txt(body?.tipo, 60);
+      if (!tipo) return out(422, { error: "tipo requerido" });
+      const { error } = await db.from("customer_equipment").update({ tipo,
+        marca: txt(body?.marca, 60) || null, modelo: txt(body?.modelo, 60) || null, notas: txt(body?.notas, 300) || null }).eq("id", eq.id);
+      return error ? out(500, { error: "update_failed" }) : out(200, { id: eq.id });
+    }
+
     // ── Notificaciones ───────────────────────────────────────────────────────────────────────
     if (route === "/notifications" && req.method === "GET") {
       const since = url.searchParams.get("since") || "0";
